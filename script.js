@@ -1,4 +1,24 @@
-const sentences = [
+// --- Загальні функції для меню ---
+function showGame(id) {
+  document.getElementById('menu').style.display = 'none';
+  document.querySelectorAll('.game').forEach(g => g.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+
+  if(id === 'nagolosy') startNagolosy();
+  if(id === 'lexpomylka') startLexpomylka();
+}
+
+function backToMenu() {
+  document.getElementById('menu').style.display = 'block';
+  document.querySelectorAll('.game').forEach(g => g.style.display = 'none');
+}
+
+// --------------------
+// --- Гра Наголоси ---
+// --------------------
+
+const nagolosyData = [
+  ["пітнИй", "пІтний"],
   ["павИч", "пАвич"],
   ["партЕр", "пАртер"],
   ["пЕкарський", "пекАрський"],
@@ -10,7 +30,6 @@ const sentences = [
   ["(дієприкметник) пІдданий", "піддАний"],
   ["(іменник, істота) піддАний", "пІдданий"],
   ["пІдлітковий", "підліткОвий", "підлітковИй"],
-  ["пітнИй", "пІтний"],
   ["пОдруга", "подрУга"],
   ["пОзначка", "познАчка"],
   ["помІщик", "поміщИк"],
@@ -25,73 +44,171 @@ const sentences = [
   ["псевдонІм", "псевдОнім"]
 ];
 
-let score = 0;
-let lives = 3;
-let currentSentence = [];
-let correctWord = "";
+let nagolosyScore = 0;
+let nagolosyLives = 3;
+let currentNagolosy = [];
+let correctNagolosy = "";
 
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+function shuffleArray(arr) {
+  for(let i = arr.length -1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 }
 
-function startGame() {
-  score = 0;
-  lives = 3;
-  document.getElementById('score').textContent = `Очки: ${score}`;
-  document.getElementById('lives').textContent = `Життя: ${lives}`;
-  document.getElementById('restart').style.display = 'none';
-  nextRound();
+function startNagolosy() {
+  nagolosyScore = 0;
+  nagolosyLives = 3;
+  document.getElementById('score-nagolosy').textContent = `Очки: ${nagolosyScore}`;
+  document.getElementById('lives-nagolosy').textContent = `Життя: ${nagolosyLives}`;
+  document.getElementById('restart-nagolosy').style.display = 'none';
+  nextNagolosyRound();
 }
 
-function nextRound() {
-  const randomIndex = Math.floor(Math.random() * sentences.length);
-  currentSentence = sentences[randomIndex];
-  correctWord = currentSentence[0];  // правильне слово
-
-  let shuffledWords = currentSentence.slice();
-  shuffleArray(shuffledWords);
-
-  displaySentence(shuffledWords);
+function nextNagolosyRound() {
+  const idx = Math.floor(Math.random()*nagolosyData.length);
+  currentNagolosy = nagolosyData[idx];
+  correctNagolosy = currentNagolosy[0];
+  let shuffled = currentNagolosy.slice();
+  shuffleArray(shuffled);
+  displayNagolosy(shuffled);
 }
 
-function displaySentence(wordsToDisplay) {
-  const sentenceElement = document.getElementById('sentence');
-  if (sentenceElement) sentenceElement.innerHTML = ''; // на всяк випадок
-
-  const wordsContainer = document.getElementById('words');
-  wordsContainer.innerHTML = '';
-
-  wordsToDisplay.forEach(word => {
-    const button = document.createElement('button');
-    button.textContent = word;
-    button.className = 'word-button';
-    button.onclick = () => checkAnswer(word);
-    wordsContainer.appendChild(button);
+function displayNagolosy(words) {
+  const container = document.getElementById('words');
+  container.innerHTML = "";
+  words.forEach(w => {
+    const btn = document.createElement('button');
+    btn.textContent = w;
+    btn.className = "word-button";
+    btn.onclick = () => nagolosyCheck(w);
+    container.appendChild(btn);
   });
 }
 
-function checkAnswer(selectedWord) {
-  if (selectedWord === correctWord) {
-    score++;
-    document.getElementById('score').textContent = `Очки: ${score}`;
-    nextRound();
+function nagolosyCheck(selected) {
+  if(selected === correctNagolosy) {
+    nagolosyScore++;
+    document.getElementById('score-nagolosy').textContent = `Очки: ${nagolosyScore}`;
+    nextNagolosyRound();
   } else {
-    lives--;
-    document.getElementById('lives').textContent = `Життя: ${lives}`;
-    if (lives === 0) {
-      endGame();
+    nagolosyLives--;
+    document.getElementById('lives-nagolosy').textContent = `Життя: ${nagolosyLives}`;
+    if(nagolosyLives === 0) {
+      endNagolosyGame();
     }
   }
 }
 
-function endGame() {
-  alert('Гра завершена! Ви втратили всі життя.');
-  document.getElementById('restart').style.display = 'block';
+function endNagolosyGame() {
+  alert("Гра завершена! Ви втратили всі життя.");
+  document.getElementById('restart-nagolosy').style.display = "inline-block";
 }
 
-document.getElementById('restart').onclick = startGame;
+document.getElementById('restart-nagolosy').onclick = startNagolosy;
 
-startGame();
+// ------------------------
+// --- Гра Лексична помилка ---
+// ------------------------
+
+const lexSentencesRaw = [
+  "Сьогодні я *прийняв* участь у змаганнях.",
+  "Наш захід відвідали *багаточисельні* гості.",
+  "Ми мали шалену *виручку* після свят!",
+  "*Бажаючих* поділитись на пам'ятник було багато.",
+  "Ми *внесли вклад* у розвиток мистецтва."
+];
+
+let lexSentences = [];
+let lexScore = 0;
+let lexLives = 3;
+let lexCurrentIndex = -1;
+
+function parseLexSentences() {
+  lexSentences = lexSentencesRaw.map(s => {
+    // Знаходимо виділений фрагмент між *...*
+    const match = s.match(/\*(.+?)\*/);
+    if(!match) return null;
+    const correct = match[1];
+    // Розбиваємо речення на масив частин, розділених на correct слово
+    const parts = s.split(/\*(.+?)\*/);
+    // parts: [до, correct, після]
+    return {
+      full: s.replace(/\*/g, ""), // речення без зірочок
+      correct,
+      before: parts[0],
+      after: parts[2]
+    };
+  }).filter(Boolean);
+  shuffleArray(lexSentences);
+}
+
+function startLexpomylka() {
+  lexScore = 0;
+  lexLives = 3;
+  lexCurrentIndex = -1;
+  document.getElementById('score-lexpomylka').textContent = `Очки: ${lexScore}`;
+  document.getElementById('lives-lexpomylka').textContent = `Життя: ${lexLives}`;
+  document.getElementById('restart-lexpomylka').style.display = 'none';
+  parseLexSentences();
+  nextLexSentence();
+}
+
+function nextLexSentence() {
+  lexCurrentIndex++;
+  if(lexCurrentIndex >= lexSentences.length) {
+    alert(`Вітаємо! Ви пройшли всі речення. Ваш результат: ${lexScore} очок.`);
+    document.getElementById('restart-lexpomylka').style.display = 'inline-block';
+    return;
+  }
+  const data = lexSentences[lexCurrentIndex];
+  displayLexSentence(data);
+}
+
+function displayLexSentence(data) {
+  const container = document.getElementById('sentence-container');
+  container.innerHTML = "";
+
+  // before частина
+  const beforeSpan = document.createElement("span");
+  beforeSpan.textContent = data.before;
+  container.appendChild(beforeSpan);
+
+  // correct clickable частина
+  const correctSpan = document.createElement("span");
+  correctSpan.textContent = data.correct;
+  correctSpan.className = "highlight";
+  correctSpan.onclick = () => lexCheck(true, correctSpan);
+  container.appendChild(correctSpan);
+
+  // after частина
+  const afterSpan = document.createElement("span");
+  afterSpan.textContent = data.after;
+  container.appendChild(afterSpan);
+}
+
+function lexCheck(isCorrect, element) {
+  if(isCorrect) {
+    lexScore++;
+    document.getElementById('score-lexpomylka').textContent = `Очки: ${lexScore}`;
+  } else {
+    lexLives--;
+    document.getElementById('lives-lexpomylka').textContent = `Життя: ${lexLives}`;
+  }
+
+  // Анімація закреслення
+  element.classList.add("strikethrough");
+
+  if(lexLives === 0) {
+    alert("Гру завершено! Ви втратили всі життя.");
+    document.getElementById('restart-lexpomylka').style.display = "inline-block";
+    return;
+  }
+
+  setTimeout(() => {
+    nextLexSentence();
+  }, 800);
+}
+
+document.getElementById('restart-lexpomylka').onclick = startLexpomylka;
+
