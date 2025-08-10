@@ -1,3 +1,11 @@
+// --- Звукові ефекти ---
+const soundCorrect = new Audio('https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg');
+const soundWrong = new Audio('https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum_hit.ogg');
+
+// Помірна гучність
+soundCorrect.volume = 0.15;
+soundWrong.volume = 0.15;
+
 // --- Загальні функції для меню ---
 function showGame(id) {
   document.getElementById('menu').style.display = 'none';
@@ -59,10 +67,14 @@ function shuffleArray(arr) {
 function startNagolosy() {
   nagolosyScore = 0;
   nagolosyLives = 3;
-  document.getElementById('score-nagolosy').textContent = `Очки: ${nagolosyScore}`;
-  document.getElementById('lives-nagolosy').textContent = `Життя: ${nagolosyLives}`;
+  updateNagolosyScoreLives();
   document.getElementById('restart-nagolosy').style.display = 'none';
   nextNagolosyRound();
+}
+
+function updateNagolosyScoreLives() {
+  document.getElementById('score-nagolosy').textContent = `Очки: ${nagolosyScore}`;
+  document.getElementById('lives-nagolosy').innerHTML = `Життя: <span class="hearts">${"❤️".repeat(nagolosyLives)}</span>`;
 }
 
 function nextNagolosyRound() {
@@ -89,11 +101,13 @@ function displayNagolosy(words) {
 function nagolosyCheck(selected) {
   if(selected === correctNagolosy) {
     nagolosyScore++;
-    document.getElementById('score-nagolosy').textContent = `Очки: ${nagolosyScore}`;
+    soundCorrect.play();
+    updateNagolosyScoreLives();
     nextNagolosyRound();
   } else {
     nagolosyLives--;
-    document.getElementById('lives-nagolosy').textContent = `Життя: ${nagolosyLives}`;
+    soundWrong.play();
+    updateNagolosyScoreLives();
     if(nagolosyLives === 0) {
       endNagolosyGame();
     }
@@ -126,89 +140,10 @@ let lexCurrentIndex = -1;
 
 function parseLexSentences() {
   lexSentences = lexSentencesRaw.map(s => {
-    // Знаходимо виділений фрагмент між *...*
     const match = s.match(/\*(.+?)\*/);
     if(!match) return null;
     const correct = match[1];
-    // Розбиваємо речення на масив частин, розділених на correct слово
     const parts = s.split(/\*(.+?)\*/);
-    // parts: [до, correct, після]
     return {
-      full: s.replace(/\*/g, ""), // речення без зірочок
-      correct,
-      before: parts[0],
-      after: parts[2]
-    };
-  }).filter(Boolean);
-  shuffleArray(lexSentences);
-}
-
-function startLexpomylka() {
-  lexScore = 0;
-  lexLives = 3;
-  lexCurrentIndex = -1;
-  document.getElementById('score-lexpomylka').textContent = `Очки: ${lexScore}`;
-  document.getElementById('lives-lexpomylka').textContent = `Життя: ${lexLives}`;
-  document.getElementById('restart-lexpomylka').style.display = 'none';
-  parseLexSentences();
-  nextLexSentence();
-}
-
-function nextLexSentence() {
-  lexCurrentIndex++;
-  if(lexCurrentIndex >= lexSentences.length) {
-    alert(`Вітаємо! Ви пройшли всі речення. Ваш результат: ${lexScore} очок.`);
-    document.getElementById('restart-lexpomylka').style.display = 'inline-block';
-    return;
-  }
-  const data = lexSentences[lexCurrentIndex];
-  displayLexSentence(data);
-}
-
-function displayLexSentence(data) {
-  const container = document.getElementById('sentence-container');
-  container.innerHTML = "";
-
-  // before частина
-  const beforeSpan = document.createElement("span");
-  beforeSpan.textContent = data.before;
-  container.appendChild(beforeSpan);
-
-  // correct clickable частина
-  const correctSpan = document.createElement("span");
-  correctSpan.textContent = data.correct;
-  correctSpan.className = "highlight";
-  correctSpan.onclick = () => lexCheck(true, correctSpan);
-  container.appendChild(correctSpan);
-
-  // after частина
-  const afterSpan = document.createElement("span");
-  afterSpan.textContent = data.after;
-  container.appendChild(afterSpan);
-}
-
-function lexCheck(isCorrect, element) {
-  if(isCorrect) {
-    lexScore++;
-    document.getElementById('score-lexpomylka').textContent = `Очки: ${lexScore}`;
-  } else {
-    lexLives--;
-    document.getElementById('lives-lexpomylka').textContent = `Життя: ${lexLives}`;
-  }
-
-  // Анімація закреслення
-  element.classList.add("strikethrough");
-
-  if(lexLives === 0) {
-    alert("Гру завершено! Ви втратили всі життя.");
-    document.getElementById('restart-lexpomylka').style.display = "inline-block";
-    return;
-  }
-
-  setTimeout(() => {
-    nextLexSentence();
-  }, 800);
-}
-
-document.getElementById('restart-lexpomylka').onclick = startLexpomylka;
+      full: s.replace(/\*/g
 
