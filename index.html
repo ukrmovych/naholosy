@@ -1,39 +1,41 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Мультигра: Наголоси і Лексична помилка</title>
-<link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мовні ігри</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="game-container">
+        <!-- Головне меню -->
+        <div id="main-menu">
+            <h1>🎯 Мовні ігри</h1>
+            <button onclick="startGame('nagolosi')">Наголоси</button>
+            <button onclick="startGame('leksychna')">Лексична помилка</button>
+        </div>
 
-<div id="menu">
-  <h1>Оберіть гру</h1>
-  <button class="menu-btn" onclick="showGame('nagolosy')">Наголоси</button>
-  <button class="menu-btn" onclick="showGame('lexpomylka')">Лексична помилка</button>
-</div>
+        <!-- Поле гри -->
+        <div id="game-screen" style="display:none;">
+            <div id="top-bar">
+                <span id="lives"></span>
+                <button id="exit-btn" onclick="exitToMenu()">В меню</button>
+            </div>
+            <div id="task"></div>
+            <div id="answers"></div>
+        </div>
 
-<!-- Гра "Наголоси" -->
-<div id="nagolosy" class="game" style="display:none;">
-  <h2>Гра "Наголоси"</h2>
-  <div id="words"></div>
-  <div id="score-nagolosy">Очки: 0</div>
-  <div id="lives-nagolosy">Життя: 3</div>
-  <button id="restart-nagolosy" class="restart-btn" style="display:none;">Почати заново</button>
-  <button class="menu-btn" onclick="backToMenu()">Назад у меню</button>
-</div>
+        <!-- Кінець гри -->
+        <div id="game-over" style="display:none;">
+            <h2>Гру завершено!</h2>
+            <p>Ваш рахунок: <span id="final-score"></span></p>
+            <button onclick="exitToMenu()">В меню</button>
+        </div>
+    </div>
 
-<!-- Гра "Лексична помилка" -->
-<div id="lexpomylka" class="game" style="display:none;">
-  <h2>Гра "Лексична помилка"</h2>
-  <div id="sentence-container"></div>
-  <div id="score-lexpomylka">Очки: 0</div>
-  <div id="lives-lexpomylka">Життя: 3</div>
-  <button id="restart-lexpomylka" class="restart-btn" style="display:none;">Почати заново</button>
-  <button class="menu-btn" onclick="backToMenu()">Назад у меню</button>
-</div>
+    <audio id="correct-sound" src="data:audio/mp3;base64,//uQZ..."></audio>
+    <audio id="wrong-sound" src="data:audio/mp3;base64,//uQZ..."></audio>
 
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
