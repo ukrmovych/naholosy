@@ -1,0 +1,59 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+#game-container {
+  text-align: center;
+  border: 2px solid #ccc;
+  padding: 20px;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#sentence {
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+#words button {
+  margin: 5px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  background-color: #4CAF50;
+  color: white;
+  transition: background-color 0.3s;
+}
+
+#words button:hover {
+  background-color: #45a049;
+}
+
+#score, #lives {
+  font-size: 18px;
+  margin-top: 20px;
+}
+
+#restart {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  background-color: #008CBA;
+  color: white;
+}
+
+#restart:hover {
+  background-color: #007bb5;
+}
