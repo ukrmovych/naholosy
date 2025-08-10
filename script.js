@@ -28,6 +28,7 @@ const sentences = [
 let score = 0;
 let lives = 3;
 let currentSentence = [];
+let correctWord = "";
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -48,26 +49,32 @@ function startGame() {
 function nextRound() {
   const randomIndex = Math.floor(Math.random() * sentences.length);
   currentSentence = sentences[randomIndex];
-  shuffleArray(currentSentence);
-  displaySentence();
+  correctWord = currentSentence[0];  // правильне слово
+
+  let shuffledWords = currentSentence.slice();
+  shuffleArray(shuffledWords);
+
+  displaySentence(shuffledWords);
 }
 
-function displaySentence() {
+function displaySentence(wordsToDisplay) {
   const sentenceElement = document.getElementById('sentence');
-  sentenceElement.innerHTML = currentSentence.join(' ');
+  if (sentenceElement) sentenceElement.innerHTML = ''; // на всяк випадок
 
   const wordsContainer = document.getElementById('words');
   wordsContainer.innerHTML = '';
-  currentSentence.forEach(word => {
+
+  wordsToDisplay.forEach(word => {
     const button = document.createElement('button');
     button.textContent = word;
+    button.className = 'word-button';
     button.onclick = () => checkAnswer(word);
     wordsContainer.appendChild(button);
   });
 }
 
-function checkAnswer(word) {
-  if (word === currentSentence[0]) {
+function checkAnswer(selectedWord) {
+  if (selectedWord === correctWord) {
     score++;
     document.getElementById('score').textContent = `Очки: ${score}`;
     nextRound();
