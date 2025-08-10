@@ -13,19 +13,31 @@ body {
     padding: 20px;
 }
 
-button {
+.menu-btn {
     background-color: #FF7900;
     color: #000;
     border: none;
     padding: 12px 20px;
     margin: 10px;
     border-radius: 10px;
-    font-size: 18px;
+    font-size: 20px;
+    font-family: 'Comic Sans MS', cursive;
     cursor: pointer;
 }
-
-button:hover {
+.menu-btn:hover {
     background-color: #ff9a33;
+}
+
+button {
+    font-family: 'Comic Sans MS', cursive;
+}
+
+#exit-btn {
+    background-color: #333;
+    color: #FF7900;
+    font-size: 14px;
+    padding: 6px 12px;
+    border-radius: 6px;
 }
 
 #top-bar {
@@ -59,5 +71,26 @@ button:hover {
 
 .strike {
     text-decoration: line-through;
-    transition: all 0.5s ease;
+}
+
+.correct {
+    background-color: #32CD32 !important;
+    color: white !important;
+}
+
+.blink {
+    animation: blink 0.5s alternate 4;
+}
+
+@keyframes blink {
+    from { opacity: 1; }
+    to { opacity: 0.3; }
+}
+
+#monkey-container {
+    margin-top: 20px;
+}
+#monkey-container img {
+    max-width: 100%;
+    border-radius: 10px;
 }

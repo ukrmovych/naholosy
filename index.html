@@ -11,8 +11,8 @@
         <!-- Головне меню -->
         <div id="main-menu">
             <h1>🎯 Мовні ігри</h1>
-            <button onclick="startGame('nagolosi')">Наголоси</button>
-            <button onclick="startGame('leksychna')">Лексична помилка</button>
+            <button class="menu-btn" onclick="startGame('nagolosi')">Наголоси</button>
+            <button class="menu-btn" onclick="startGame('leksychna')">Лексична помилка</button>
         </div>
 
         <!-- Поле гри -->
@@ -31,8 +31,12 @@
             <p>Ваш рахунок: <span id="final-score"></span></p>
             <button onclick="exitToMenu()">В меню</button>
         </div>
+
+        <!-- GIF з мавпою -->
+        <div id="monkey-container"></div>
     </div>
 
+    <!-- Звуки -->
     <audio id="correct-sound" src="data:audio/mp3;base64,//uQZ..."></audio>
     <audio id="wrong-sound" src="data:audio/mp3;base64,//uQZ..."></audio>
 

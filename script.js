@@ -14,6 +14,13 @@ const leksychnaData = [
     "Ми *внесли вклад* у розвиток мистецтва."
 ];
 
+const monkeyGifs = [
+    "https://media.giphy.com/media/13borq7Zo2kulO/giphy.gif",
+    "https://media.giphy.com/media/GeimqsH0TLDt4tScGw/giphy.gif",
+    "https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif",
+    "https://media.giphy.com/media/5xaOcLT6R2vWC5fKpYA/giphy.gif"
+];
+
 let currentGame = "";
 let score = 0;
 let lives = 3;
@@ -32,6 +39,7 @@ function startGame(type) {
     shuffle(tasks);
 
     updateLives();
+    showRandomMonkey();
     nextTask();
 }
 
@@ -39,6 +47,7 @@ function exitToMenu() {
     document.getElementById("main-menu").style.display = "block";
     document.getElementById("game-screen").style.display = "none";
     document.getElementById("game-over").style.display = "none";
+    document.getElementById("monkey-container").innerHTML = "";
 }
 
 function updateLives() {
@@ -59,13 +68,14 @@ function nextTask() {
     taskEl.innerHTML = "";
 
     if (currentGame === "nagolosi") {
-        let words = [...task];
+        let [correct, wrong] = task;
+        let words = [correct, wrong];
         shuffle(words);
         words.forEach(w => {
             const btn = document.createElement("div");
             btn.className = "answer-btn";
             btn.textContent = w;
-            btn.onclick = () => checkNagolosi(w, task[0]);
+            btn.onclick = () => checkNagolosi(w, correct, btn, answersEl);
             answersEl.appendChild(btn);
         });
     } else {
@@ -78,38 +88,49 @@ function nextTask() {
         }).join(" ");
 
         document.querySelectorAll("#task .answer-btn").forEach(btn => {
-            btn.onclick = () => checkLeks(btn.textContent, correct, btn);
+            btn.onclick = () => checkLeks(btn.textContent, correct, btn, taskEl);
         });
     }
 }
 
-function checkNagolosi(selected, correct) {
+function checkNagolosi(selected, correct, btn, container) {
     if (selected === correct) {
-        score++;
+        btn.classList.add("correct");
         document.getElementById("correct-sound").play();
+        score++;
+        setTimeout(nextTask, 500);
     } else {
         lives--;
         document.getElementById("wrong-sound").play();
+        [...container.children].forEach(b => {
+            if (b.textContent === correct) {
+                b.classList.add("correct", "blink");
+            }
+        });
+        updateLives();
+        if (lives <= 0) endGame();
+        else setTimeout(nextTask, 2000);
     }
-    updateLives();
-    if (lives <= 0) endGame();
-    else nextTask();
 }
 
-function checkLeks(selected, correct, element) {
-    element.classList.add("strike");
+function checkLeks(selected, correct, clickedBtn, container) {
     if (selected === correct) {
-        score++;
+        clickedBtn.classList.add("correct", "strike");
         document.getElementById("correct-sound").play();
+        score++;
+        setTimeout(nextTask, 800);
     } else {
         lives--;
         document.getElementById("wrong-sound").play();
-    }
-    updateLives();
-    setTimeout(() => {
+        container.querySelectorAll(".answer-btn").forEach(b => {
+            if (b.textContent === correct) {
+                b.classList.add("correct", "strike", "blink");
+            }
+        });
+        updateLives();
         if (lives <= 0) endGame();
-        else nextTask();
-    }, 800);
+        else setTimeout(nextTask, 2000);
+    }
 }
 
 function endGame() {
@@ -123,4 +144,11 @@ function shuffle(array) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
+}
+
+function showRandomMonkey() {
+    const img = document.createElement("img");
+    img.src = monkeyGifs[Math.floor(Math.random() * monkeyGifs.length)];
+    document.getElementById("monkey-container").innerHTML = "";
+    document.getElementById("monkey-container").appendChild(img);
 }
