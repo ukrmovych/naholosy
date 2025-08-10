@@ -146,4 +146,3 @@ function parseLexSentences() {
     const parts = s.split(/\*(.+?)\*/);
     return {
       full: s.replace(/\*/g
-
