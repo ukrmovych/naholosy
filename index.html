@@ -1,19 +1,40 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Гра на вибір правильного слова</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Мультигра: Наголоси і Лексична помилка</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="game-container">
-    <!-- Прибрали текстове відображення рядка -->
-    <div id="words"></div>
-    <div id="score">Очки: 0</div>
-    <div id="lives">Життя: 3</div>
-    <button id="restart" style="display:none;">Почати заново</button>
-  </div>
-  <script src="script.js"></script>
+
+<div id="menu">
+  <h1>Оберіть гру</h1>
+  <button class="menu-btn" onclick="showGame('nagolosy')">Наголоси</button>
+  <button class="menu-btn" onclick="showGame('lexpomylka')">Лексична помилка</button>
+</div>
+
+<!-- Гра "Наголоси" -->
+<div id="nagolosy" class="game" style="display:none;">
+  <h2>Гра "Наголоси"</h2>
+  <div id="words"></div>
+  <div id="score-nagolosy">Очки: 0</div>
+  <div id="lives-nagolosy">Життя: 3</div>
+  <button id="restart-nagolosy" class="restart-btn" style="display:none;">Почати заново</button>
+  <button class="menu-btn" onclick="backToMenu()">Назад у меню</button>
+</div>
+
+<!-- Гра "Лексична помилка" -->
+<div id="lexpomylka" class="game" style="display:none;">
+  <h2>Гра "Лексична помилка"</h2>
+  <div id="sentence-container"></div>
+  <div id="score-lexpomylka">Очки: 0</div>
+  <div id="lives-lexpomylka">Життя: 3</div>
+  <button id="restart-lexpomylka" class="restart-btn" style="display:none;">Почати заново</button>
+  <button class="menu-btn" onclick="backToMenu()">Назад у меню</button>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
+
