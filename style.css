@@ -50,20 +50,18 @@ button {
 }
 
 .correct {
-  background-color: green;
+  background-color: #4CAF50 !important;
   color: white !important;
 }
 
 .blink {
-  animation: blink 0.5s linear infinite;
+  animation: blink 0.5s step-start 0s infinite;
 }
 
 @keyframes blink {
-  50% { background-color: yellow; }
+  50% { opacity: 0; }
 }
 
 .strikethrough {
   text-decoration: line-through;
 }
-
-
