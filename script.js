@@ -14,11 +14,7 @@ let currentGame = "";
 let currentQuestion = null;
 let lock = false;
 
-// Щоб відслідковувати використані питання в поточній грі:
-let usedNaholosyIndices = [];
-let usedLeksychnaIndices = [];
-
-// Дані для наголосів
+// Дані для наголосів (скорочений варіант)
 const naholosyData = [
   { words: ["асиметрІя", "асимЕтрія"], correct: "асиметрІя" },
   { words: ["відвезтИ", "відвЕзти"], correct: "відвезтИ" },
@@ -252,28 +248,24 @@ const leksychnaData = [
   "Ми *внесли* *вклад* у розвиток мистецтва."
 ];
 
-// Функція для перемішування масиву (Fisher-Yates shuffle)
-function shuffleArray(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
+// Питання, що залишились у поточній грі
+let remainingQuestions = [];
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+    [array[i], array[j]] = [array[j], array[i]];
   }
-  return arr;
 }
 
 function startGame(gameType) {
   currentGame = gameType;
   score = 0;
   lives = 3;
-  lock = false;
   updateUI();
+  remainingQuestions = gameType === "naholosy" ? [...naholosyData] : [...leksychnaData];
   menu.style.display = "none";
   game.style.display = "block";
-
-  // Очищуємо історію використаних питань при початку нової гри
-  usedNaholosyIndices = [];
-  usedLeksychnaIndices = [];
-
   nextQuestion();
 }
 
@@ -295,25 +287,18 @@ function nextQuestion() {
   lock = false;
   answersEl.innerHTML = "";
 
-  if (currentGame === "naholosy") {
-    // Вибираємо індекс випадкового питання, якого ще не було
-    if (usedNaholosyIndices.length === naholosyData.length) {
-      // Всі питання використані — кінець гри
-      alert(`Ви пройшли всі наголоси! Ваш рахунок: ${score}`);
-      showMenu();
-      return;
-    }
-    let idx;
-    do {
-      idx = Math.floor(Math.random() * naholosyData.length);
-    } while (usedNaholosyIndices.includes(idx));
-    usedNaholosyIndices.push(idx);
+  if (remainingQuestions.length === 0) {
+    remainingQuestions = currentGame === "naholosy" ? [...naholosyData] : [...leksychnaData];
+  }
 
-    currentQuestion = naholosyData[idx];
+  const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
+  currentQuestion = remainingQuestions.splice(randomIndex, 1)[0];
+
+  if (currentGame === "naholosy") {
     questionEl.textContent = "Обери правильний наголос";
 
-    // Перемішуємо кнопки перед додаванням
-    const shuffledWords = shuffleArray([...currentQuestion.words]);
+    const shuffledWords = [...currentQuestion.words];
+    shuffleArray(shuffledWords);
 
     shuffledWords.forEach(word => {
       const btn = document.createElement("button");
@@ -322,25 +307,28 @@ function nextQuestion() {
         if (lock) return;
         lock = true;
 
-        let isCorrect = Array.isArray(currentQuestion.correct)
-          ? currentQuestion.correct.includes(word)
-          : word === currentQuestion.correct;
+        const correctArray = Array.isArray(currentQuestion.correct)
+          ? currentQuestion.correct
+          : [currentQuestion.correct];
+        const isCorrect = correctArray.includes(word);
 
         if (isCorrect) {
-          btn.classList.add("correct");
+          // Підсвітити всі правильні варіанти
+          Array.from(answersEl.children).forEach(b => {
+            if (correctArray.includes(b.textContent)) {
+              b.classList.add("correct");
+            }
+          });
           score++;
           updateUI();
           setTimeout(nextQuestion, 500);
         } else {
-          // Підсвічуємо правильну відповідь
-          const correctBtn = Array.from(answersEl.children).find(b =>
-            Array.isArray(currentQuestion.correct)
-              ? currentQuestion.correct.includes(b.textContent)
-              : b.textContent === currentQuestion.correct
-          );
-          if (correctBtn) {
-            correctBtn.classList.add("correct", "blink");
-          }
+          // Підсвітити всі правильні варіанти як правильні та блимаючі
+          Array.from(answersEl.children).forEach(b => {
+            if (correctArray.includes(b.textContent)) {
+              b.classList.add("correct", "blink");
+            }
+          });
           loseLife();
           setTimeout(nextQuestion, 2000);
         }
@@ -349,27 +337,14 @@ function nextQuestion() {
     });
 
   } else if (currentGame === "leksychna") {
-    if (usedLeksychnaIndices.length === leksychnaData.length) {
-      alert(`Ви пройшли всі лексичні помилки! Ваш рахунок: ${score}`);
-      showMenu();
-      return;
-    }
-    let idx;
-    do {
-      idx = Math.floor(Math.random() * leksychnaData.length);
-    } while (usedLeksychnaIndices.includes(idx));
-    usedLeksychnaIndices.push(idx);
-
-    const rawSentence = leksychnaData[idx];
+    const rawSentence = currentQuestion;
     const correctWords = rawSentence.match(/\*(.*?)\*/g).map(w => w.replace(/\*/g, ""));
-
-    // Відображаємо речення без *
     const displaySentence = rawSentence.replace(/\*/g, "");
 
     questionEl.textContent = "";
 
-    // Створюємо кнопки з словами
-    const buttons = displaySentence.split(" ").map(word => {
+    // Тут без перемішування — зберігаємо порядок слів у реченні
+    displaySentence.split(" ").forEach(word => {
       const btn = document.createElement("button");
       btn.textContent = word;
       btn.onclick = () => {
@@ -377,7 +352,7 @@ function nextQuestion() {
         lock = true;
 
         const cleanWord = word.replace(/^[.,!?:;"'()]+|[.,!?:;"'()]+$/g, "");
-        let isCorrect = correctWords.some(correctWord => correctWord === cleanWord);
+        const isCorrect = correctWords.includes(cleanWord);
 
         if (isCorrect) {
           btn.classList.add("correct", "strikethrough");
@@ -385,7 +360,6 @@ function nextQuestion() {
           updateUI();
           setTimeout(nextQuestion, 500);
         } else {
-          // Підсвічуємо правильні слова
           Array.from(answersEl.children).forEach(b => {
             const bClean = b.textContent.replace(/^[.,!?:;"'()]+|[.,!?:;"'()]+$/g, "");
             if (correctWords.includes(bClean)) {
@@ -396,11 +370,8 @@ function nextQuestion() {
           setTimeout(nextQuestion, 2000);
         }
       };
-      return btn;
+      answersEl.appendChild(btn);
     });
-
-    // Перемішуємо кнопки і додаємо в answersEl
-    shuffleArray(buttons).forEach(btn => answersEl.appendChild(btn));
   }
 }
 

@@ -1,30 +1,27 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Мовні ігри</title>
-<link rel="stylesheet" href="style.css">
-<link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Гра з наголосами та лексичними помилками</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div id="menu">
-  <h1>Що качатимемо?</h1>
-  <button id="btn-naholosy">Наголоси</button>
-  <button id="btn-leksychna">Лексична помилка</button>
-</div>
-
-<div id="game" style="display:none;">
-  <div class="top-bar">
-    <span id="score">Очки: 0</span>
-    <span id="lives">❤️❤️❤️</span>
-    <button id="btn-menu">В меню</button>
+  <div id="menu">
+    <h1>Вибери гру</h1>
+    <button id="btn-naholosy">Гра: Наголоси</button>
+    <button id="btn-leksychna">Гра: Лексична помилка</button>
   </div>
-  <div id="question"></div>
-  <div id="answers"></div>
-</div>
 
-<script src="script.js"></script>
+  <div id="game" style="display:none;">
+    <div id="stats">
+      <span id="score">Очки: 0</span>
+      <span id="lives">❤️❤️❤️</span>
+    </div>
+    <div id="question"></div>
+    <div id="answers"></div>
+    <button id="btn-menu">Повернутися в меню</button>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
