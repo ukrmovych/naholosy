@@ -1,132 +1,151 @@
-const nagolosiWords = [
-    ["павИч", "пАвич"],
-    ["партЕр", "пАртер"],
-    ["пЕкарський", "пекАрський"],
-    ["перЕкис", "пЕрекис"],
-    ["пітнИй", "пІтний"]
+const accentPairs = [
+    { words: ["пІтний", "пітнИй"], correct: 1 },
+    { words: ["зАвжди", "завждИ"], correct: 1 },
+    { words: ["фОльга", "фольгА"], correct: 0 }
 ];
 
 const lexicalSentences = [
-    "Ми *внесли* свій *вклад* у розвиток проекту.",
     "Сьогодні я *прийняв* участь у змаганнях.",
     "Наш захід відвідали *багаточисельні* гості.",
-    "Ми мали шалену *виручку* після свят!"
+    "Ми мали шалену *виручку* після свят!",
+    "*Бажаючих* поділитись на пам'ятник було багато.",
+    "Ми *внесли вклад* у розвиток мистецтва."
 ];
 
+const menu = document.getElementById("menu");
+const game = document.getElementById("game");
+const scoreEl = document.getElementById("score");
+const livesEl = document.getElementById("lives");
+const questionEl = document.getElementById("question");
+const answersEl = document.getElementById("answers");
+const menuBtn = document.getElementById("menuBtn");
+
+let gameType = "";
 let score = 0;
 let lives = 3;
-let currentGame = "";
 
-function startGame(gameType) {
-    currentGame = gameType;
+document.getElementById("accentGameBtn").addEventListener("click", () => startGame("accent"));
+document.getElementById("lexicalGameBtn").addEventListener("click", () => startGame("lexical"));
+menuBtn.addEventListener("click", backToMenu);
+
+function startGame(type) {
+    gameType = type;
     score = 0;
     lives = 3;
-    updateHUD();
-    document.getElementById("menu").style.display = "none";
-    document.getElementById("game").style.display = "block";
-    loadQuestion();
+    menu.style.display = "none";
+    game.style.display = "block";
+    updateScore();
+    updateLives();
+    nextQuestion();
 }
 
-function updateHUD() {
-    document.getElementById("score").innerText = "Очки: " + score;
-    document.getElementById("lives").innerText = "❤️".repeat(lives);
+function backToMenu() {
+    game.style.display = "none";
+    menu.style.display = "block";
 }
 
-function loadQuestion() {
-    const questionElem = document.getElementById("question");
-    const answersElem = document.getElementById("answers");
-    answersElem.innerHTML = "";
-    questionElem.innerHTML = "";
+function updateScore() {
+    scoreEl.textContent = `Очки: ${score}`;
+}
 
-    if (currentGame === "nagolosi") {
-        const pair = nagolosiWords[Math.floor(Math.random() * nagolosiWords.length)];
-        const correctWord = pair[0];
-        const shuffled = [...pair].sort(() => Math.random() - 0.5);
+function updateLives() {
+    livesEl.innerHTML = "❤️".repeat(lives);
+}
 
-        questionElem.innerText = "Оберіть правильне слово:";
-        shuffled.forEach(word => {
-            const btn = document.createElement("button");
-            btn.className = "answer-btn";
-            btn.innerText = word;
-            btn.onclick = () => checkNagolosi(word, correctWord, answersElem);
-            answersElem.appendChild(btn);
+function nextQuestion() {
+    answersEl.innerHTML = "";
+    if (gameType === "accent") {
+        let pair = accentPairs[Math.floor(Math.random() * accentPairs.length)];
+        questionEl.textContent = "Оберіть правильне слово:";
+        pair.words.forEach((w, idx) => {
+            let btn = document.createElement("button");
+            btn.textContent = w;
+            btn.onclick = () => checkAccentAnswer(idx, pair.correct, btn);
+            answersEl.appendChild(btn);
         });
-    }
-
-    if (currentGame === "lexical") {
-        const sentence = lexicalSentences[Math.floor(Math.random() * lexicalSentences.length)];
-        const correctWords = (sentence.match(/\*(.*?)\*/g) || []).map(w => w.replace(/\*/g, ""));
-        const displayed = sentence.replace(/\*/g, "");
-
-        questionElem.innerText = displayed;
-        const uniqueWords = [...new Set(correctWords)];
-        uniqueWords.forEach(word => {
-            const btn = document.createElement("button");
-            btn.className = "answer-btn";
-            btn.innerText = word;
-            btn.onclick = () => checkLexical(word, correctWords, answersElem);
-            answersElem.appendChild(btn);
-        });
+    } else if (gameType === "lexical") {
+        let sentence = lexicalSentences[Math.floor(Math.random() * lexicalSentences.length)];
+        showLexicalSentence(sentence);
     }
 }
 
-function checkNagolosi(selected, correct, container) {
-    disableButtons(container);
+function checkAccentAnswer(selected, correct, btn) {
+    disableButtons();
     if (selected === correct) {
-        highlightCorrect(container, correct, false);
+        btn.style.backgroundColor = "#4CAF50";
         score++;
-        updateHUD();
-        setTimeout(loadQuestion, 500);
+        updateScore();
+        setTimeout(nextQuestion, 500);
     } else {
+        btn.style.backgroundColor = "#FF4444";
+        let correctBtn = answersEl.children[correct];
+        blinkGreen(correctBtn);
         lives--;
-        updateHUD();
-        highlightCorrect(container, correct, true);
-        if (lives <= 0) {
-            setTimeout(endGame, 2000);
-        } else {
-            setTimeout(loadQuestion, 2000);
-        }
+        updateLives();
+        if (lives <= 0) endGame();
+        else setTimeout(nextQuestion, 2000);
     }
 }
 
-function checkLexical(selected, correctWords, container) {
-    disableButtons(container);
-    if (correctWords.includes(selected)) {
-        highlightCorrect(container, correctWords, false);
-        score++;
-        updateHUD();
-        setTimeout(loadQuestion, 500);
-    } else {
-        lives--;
-        updateHUD();
-        highlightCorrect(container, correctWords, true);
-        if (lives <= 0) {
-            setTimeout(endGame, 2000);
+function showLexicalSentence(sentence) {
+    questionEl.innerHTML = "";
+    let parts = sentence.split(/(\*.*?\*)/);
+    parts.forEach(part => {
+        if (part.startsWith("*") && part.endsWith("*")) {
+            let word = part.slice(1, -1);
+            let span = document.createElement("button");
+            span.textContent = word;
+            span.onclick = () => checkLexicalAnswer(true, span);
+            questionEl.appendChild(span);
         } else {
-            setTimeout(loadQuestion, 2000);
-        }
-    }
-}
-
-function highlightCorrect(container, correct, blink) {
-    [...container.children].forEach(btn => {
-        if (Array.isArray(correct) ? correct.includes(btn.innerText) : btn.innerText === correct) {
-            btn.classList.add("correct");
-            if (blink) btn.classList.add("blink");
+            part.split(" ").forEach(w => {
+                if (w.trim()) {
+                    let btn = document.createElement("button");
+                    btn.textContent = w;
+                    btn.onclick = () => checkLexicalAnswer(false, btn, sentence);
+                    questionEl.appendChild(btn);
+                }
+            });
         }
     });
 }
 
-function disableButtons(container) {
-    [...container.children].forEach(btn => btn.disabled = true);
+function checkLexicalAnswer(isCorrect, btn, sentence) {
+    disableButtons();
+    if (isCorrect) {
+        btn.style.backgroundColor = "#4CAF50";
+        btn.style.textDecoration = "line-through";
+        score++;
+        updateScore();
+        setTimeout(nextQuestion, 500);
+    } else {
+        btn.style.backgroundColor = "#FF4444";
+        let correctBtn = [...questionEl.children].find(b => lexicalSentences.some(s => b.textContent === s.match(/\*(.*?)\*/)?.[1]));
+        if (correctBtn) {
+            blinkGreen(correctBtn);
+            correctBtn.style.textDecoration = "line-through";
+        }
+        lives--;
+        updateLives();
+        if (lives <= 0) endGame();
+        else setTimeout(nextQuestion, 2000);
+    }
+}
+
+function blinkGreen(btn) {
+    let i = 0;
+    let blink = setInterval(() => {
+        btn.style.backgroundColor = i % 2 ? "#4CAF50" : "";
+        i++;
+        if (i > 5) clearInterval(blink);
+    }, 300);
+}
+
+function disableButtons() {
+    [...answersEl.children, ...questionEl.children].forEach(b => b.disabled = true);
 }
 
 function endGame() {
-    alert("Гру закінчено!");
-    goToMenu();
-}
-
-function goToMenu() {
-    document.getElementById("menu").style.display = "block";
-    document.getElementById("game").style.display = "none";
+    alert("Гру завершено!");
+    backToMenu();
 }
