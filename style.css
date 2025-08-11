@@ -12,6 +12,13 @@ body {
   color: white;
 }
 
+.brand {
+  font-size: 14px;       /* Розмір тексту */
+  color: #ffe3c9;           /* Колір */
+  text-align: center;    /* По центру */
+  margin-bottom: 15px;    /* Відступ від заголовка */
+  font-family: 'Comic Neue', 'Comic Sans MS';
+
 button {
   background-color: #FF7900;
   border: none;
@@ -75,3 +82,4 @@ button {
 @keyframes blink {
   50% { background-color: yellow; }
 }
+
