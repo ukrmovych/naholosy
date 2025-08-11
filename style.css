@@ -36,12 +36,14 @@ button {
   background-color: #574435;
   font-size: 14px;
   padding: 5px 15px;
+  font-family: 'Comic Neue', 'Comic Sans MS';
 }
 
 #question {
   font-size: 24px;
   margin: 20px 0;
   color: white;
+  font-family: 'Comic Neue', 'Comic Sans MS';
 }
 
 #answers button {
