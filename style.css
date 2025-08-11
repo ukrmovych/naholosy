@@ -1,111 +1,148 @@
 body {
-    font-family: 'Comic Sans MS', cursive, sans-serif;
-    background-color: #222222;
-    color: #fff;
-    margin: 0; padding: 0;
-    display: flex; flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+  background-color: #1a1a1a;
+  color: #fff;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
 }
 
-button {
-    font-family: 'Comic Sans MS', cursive, sans-serif;
-    font-size: 1.3rem;
-    margin: 8px;
-    padding: 12px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    background-color: #ff7900;
-    color: black;
-    transition: background-color 0.3s ease;
-    user-select: none;
+h1 {
+  margin-top: 30px;
+  font-size: 2rem;
+  text-align: center;
 }
 
-button:hover:enabled {
-    background-color: #e06b00;
+#gameSelectButtons {
+  margin-top: 40px;
+  display: flex;
+  gap: 25px;
+  justify-content: center;
+  width: 100%;
+  max-width: 400px;
 }
 
-button:disabled {
-    opacity: 0.6;
-    cursor: default;
+#gameSelectButtons button {
+  flex: 1;
+  padding: 15px;
+  font-size: 18px;
+  background-color: #FF7900;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
 }
 
-.container {
-    max-width: 480px;
-    width: 95vw;
-    padding: 20px;
+#gameSelectButtons button:hover {
+  background-color: #e06c00;
 }
 
-#gameTitle {
-    font-size: 2rem;
-    margin-bottom: 20px;
-    text-align: center;
+#gameContainer {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 40px;
+  padding: 0 15px;
 }
 
-#wordButtons {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 12px;
-    margin-bottom: 20px;
+#scoreLives {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
-.scoreLives {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
+.heart {
+  color: #FF7900;
+  font-size: 1.5rem;
+  margin-left: 5px;
+  user-select: none;
 }
 
-.lives {
-    font-size: 1.5rem;
-    color: #ff3300;
+button.word-btn {
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+  font-size: 20px;
+  margin: 10px 5px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 7px;
+  background-color: #333;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+  user-select: none;
+  white-space: nowrap;
 }
 
-.score {
-    font-size: 1.5rem;
-    color: #ff7900;
+button.word-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
-/* Зелений колір кнопок на правильну відповідь */
-.correct {
-    background-color: #00cc66 !important;
-    color: white !important;
+button.correct {
+  background-color: #28a745 !important; /* зелений */
+  color: white;
+  animation: none !important;
 }
 
-/* Блимання зеленим */
+button.correct.blink {
+  animation: blinkGreen 0.5s ease-in-out 3;
+}
+
+button.incorrect {
+  background-color: #28a745 !important; /* зафарбовуємо зеленим правильне слово */
+  color: white;
+  animation: blinkGreen 0.5s ease-in-out 6;
+}
+
 @keyframes blinkGreen {
-    0%, 100% { background-color: #00cc66; }
-    50% { background-color: #66ffaa; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
-.blink {
-    animation: blinkGreen 1s ease-in-out 2;
+#btnBackToMenu {
+  margin-top: 30px;
+  background-color: #555;
+  font-size: 14px;
+  padding: 8px 15px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+  align-self: center;
+  transition: background-color 0.3s ease;
 }
 
-/* Менша менш помітна кнопка "В меню" */
-#btnMenu {
-    font-size: 1rem;
-    background-color: #444444;
-    color: #ccc;
-    padding: 8px 14px;
-    border-radius: 6px;
-    margin-top: 10px;
-    align-self: center;
+#btnBackToMenu:hover {
+  background-color: #444;
 }
 
-#btnMenu:hover {
-    background-color: #555555;
-    color: #eee;
-}
-
-/* Для адаптивності на мобільних */
 @media (max-width: 480px) {
-    button {
-        font-size: 1.1rem;
-        padding: 10px 16px;
-    }
-    #gameTitle {
-        font-size: 1.6rem;
-    }
+  #gameSelectButtons {
+    flex-direction: column;
+    gap: 15px;
+  }
+  #gameSelectButtons button {
+    font-size: 16px;
+    padding: 12px;
+  }
+  button.word-btn {
+    font-size: 18px;
+    padding: 10px 15px;
+  }
+  #scoreLives {
+    font-size: 1rem;
+  }
+  .heart {
+    font-size: 1.3rem;
+  }
 }
