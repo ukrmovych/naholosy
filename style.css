@@ -18,6 +18,7 @@ body {
   text-align: center;    /* По центру */
   margin-bottom: 15px;    /* Відступ від заголовка */
   font-family: 'Comic Neue', 'Comic Sans MS';
+}
 
 button {
   background-color: #FF7900;
@@ -82,4 +83,5 @@ button {
 @keyframes blink {
   50% { background-color: yellow; }
 }
+
 
