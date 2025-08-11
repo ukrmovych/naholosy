@@ -48,7 +48,7 @@ function loseLife() {
   lives--;
   updateUI();
   if (lives <= 0) {
-    alert(`Гру закінчено! Ваш рахунок: ${score}`);
+    alert(`Гру закінчено! Твій рахунок: ${score}`);
     showMenu();
   }
 }
