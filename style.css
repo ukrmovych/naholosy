@@ -8,6 +8,7 @@ body {
 
 #menu {
   margin-top: 50px;
+  color: white;
 }
 
 button {
@@ -54,5 +55,6 @@ button {
 .strikethrough {
   text-decoration: line-through;
 }
+
 
 
