@@ -23,7 +23,7 @@ button {
 }
 
 #btn-menu {
-  background-color: #ccc;
+  background-color: #574435;
   font-size: 14px;
   padding: 5px 15px;
 }
@@ -54,4 +54,5 @@ button {
 .strikethrough {
   text-decoration: line-through;
 }
+
 
