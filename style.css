@@ -3,6 +3,7 @@ body {
   text-align: center;
   background-color: #211a14;
   margin: 0;
+  color: white;
   padding: 0;
 }
 
@@ -32,6 +33,7 @@ button {
 #question {
   font-size: 24px;
   margin: 20px 0;
+  color: white;
 }
 
 #answers button {
@@ -55,6 +57,7 @@ button {
 .strikethrough {
   text-decoration: line-through;
 }
+
 
 
 
