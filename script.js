@@ -16,9 +16,6 @@ let lock = false;
 
 // Дані для наголосів
 const naholosyData = [
-  { words: ["пітнИй", "пІтний"], correct: "пітнИй" },
-
-  const naholosyData = [
   { words: ["асиметрІя", "асимЕтрія"], correct: "асиметрІя" },
   { words: ["відвезтИ", "відвЕзти"], correct: "відвезтИ" },
   { words: ["відвестИ", "відвЕсти"], correct: "відвестИ" },
@@ -57,7 +54,6 @@ const naholosyData = [
   { words: ["травестІя", "травЕстія", "трАвестія"], correct: "травестІя" },
   { words: ["уподОбання", "уподобАння"], correct: "уподОбання" },
   { words: ["читАння", "читаннЯ", "чИтання"], correct: "читАння" },
-
   { words: ["Аркушик", "аркУшик"], correct: "Аркушик" },
   { words: ["багаторазОвий", "багаторАзовий"], correct: "багаторазОвий" },
   { words: ["безпринцИпний", "безпрИнципний"], correct: "безпринцИпний" },
@@ -340,6 +336,7 @@ function showMenu() {
 btnNaholosy.addEventListener("click", () => startGame("naholosy"));
 btnLeksychna.addEventListener("click", () => startGame("leksychna"));
 btnMenu.addEventListener("click", showMenu);
+
 
 
 
