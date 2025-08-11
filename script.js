@@ -1,188 +1,126 @@
-const btnNagolosi = document.getElementById("btnNagolosi");
-const btnLexicalError = document.getElementById("btnLexicalError");
-const gameTitle = document.getElementById("gameTitle");
-const gameSelectButtons = document.getElementById("gameSelectButtons");
-const gameContainer = document.getElementById("gameContainer");
+const nagolosiData = [
+    ["павИч", "пАвич"],
+    ["партЕр", "пАртер"],
+    ["пЕкарський", "пекАрський"],
+    ["перЕкис", "пЕрекис"],
+    ["пІтний", "пітнИй"]
+];
 
-btnNagolosi.addEventListener("click", () => {
-  startNagolosi();
-});
-btnLexicalError.addEventListener("click", () => {
-  startLexicalError();
-});
+const leksychnaData = [
+    "Сьогодні я *прийняв* участь у змаганнях.",
+    "Наш захід відвідали *багаточисельні* гості.",
+    "Ми мали шалену *виручку* після свят!",
+    "*Бажаючих* поділитись на пам'ятник було багато.",
+    "Ми *внесли вклад* у розвиток мистецтва."
+];
 
-// --- Загальні змінні ---
+let currentGame = "";
 let score = 0;
 let lives = 3;
-let currentQuestionIndex = 0;
+let tasks = [];
 
-// --- Дані для Наголосів ---
-const nagolosiPairs = [
-  ["павИч", "пАвич"],
-  ["партЕр", "пАртер"],
-  ["пЕкарський", "пекАрський"],
-  ["перЕкис", "пЕрекис"],
-  ["перелЯк", "перЕляк"],
-  ["перЕпад", "перепАд"],
-  ["перЕпис", "пЕрепис"],
-  ["піалА", "піАла"],
-  ["пІдданий", "піддАний"],
-  ["піддАний", "пІдданий"],
-  ["пітнИй", "пІтний"],  // Правильне слово - пітнИй
-  ["пОдруга", "подрУга"],
-  ["пОзначка", "познАчка"],
-  ["помІщик", "поміщИк"],
-  ["помОвчати", "помовчАти"],
-  ["понЯття", "поняттЯ"],
-  ["порядкОвий", "порЯдковий"],
-  ["посерЕдині", "посередИні"],
-  ["прИморозок", "приморОзок"],
-  ["прИчіп", "причІп"],
-  ["прОділ", "продІл"],
-  ["промІжок", "прОміжок"],
-  ["псевдонІм", "псевдОнім"],
-];
+function startGame(type) {
+    currentGame = type;
+    score = 0;
+    lives = 3;
 
-// --- Дані для Лексичної помилки ---
-const lexicalSentencesRaw = [
-  "Сьогодні я *прийняв* участь у змаганнях.",
-  "Наш захід відвідали *багаточисельні* гості.",
-  "Ми мали шалену *виручку* після свят!",
-  "Бажаючих поділитись на пам'ятник було багато.",
-  "Ми *внесли вклад* у розвиток мистецтва.",
-];
+    document.getElementById("main-menu").style.display = "none";
+    document.getElementById("game-over").style.display = "none";
+    document.getElementById("game-screen").style.display = "block";
 
-// Обробка речень для лексичної гри (розбиття і позначення правильних слів)
-const lexicalSentences = lexicalSentencesRaw.map(raw => {
-  // Знайти фрагмент у зірочках
-  const regex = /\*(.+?)\*/g;
-  let match;
-  let correctPhrases = [];
-  let text = raw;
-  while ((match = regex.exec(raw)) !== null) {
-    correctPhrases.push(match[1]);
-  }
-  // Видалити зірочки з тексту
-  text = raw.replace(/\*/g, "");
-  // Повертаємо об'єкт з текстом і правильними фразами
-  return { text, correctPhrases };
-});
+    tasks = [...(type === "nagolosi" ? nagolosiData : leksychnaData)];
+    shuffle(tasks);
 
-// --- СТИЛІ для зеленого кольору (спільний) ---
-const greenColorClass = "correct"; // css клас для зеленого кольору
-const blinkClass = "blinkGreen"; // css анімація блиму
-
-// --- Функції для обробки життів і очок ---
-function renderScoreLives() {
-  gameContainer.innerHTML = `
-    <div id="scoreLives">
-      Очки: ${score}
-      <span id="lives">${"❤️".repeat(lives)}</span>
-    </div>
-  `;
+    updateLives();
+    nextTask();
 }
 
-function showBackToMenuButton() {
-  const btn = document.createElement("button");
-  btn.id = "btnBackToMenu";
-  btn.textContent = "В меню";
-  btn.style.fontFamily = "'Comic Sans MS', cursive, sans-serif";
-  btn.onclick = () => {
-    resetGame();
-    showMainMenu();
-  };
-  gameContainer.appendChild(btn);
+function exitToMenu() {
+    document.getElementById("main-menu").style.display = "block";
+    document.getElementById("game-screen").style.display = "none";
+    document.getElementById("game-over").style.display = "none";
 }
 
-// --- Функція для повернення в головне меню ---
-function showMainMenu() {
-  gameTitle.textContent = "Виберіть гру";
-  gameSelectButtons.style.display = "flex";
-  gameContainer.innerHTML = "";
+function updateLives() {
+    document.getElementById("lives").innerHTML = "❤️".repeat(lives);
 }
 
-// --- Скидання параметрів гри ---
-function resetGame() {
-  score = 0;
-  lives = 3;
-  currentQuestionIndex = 0;
+function nextTask() {
+    if (tasks.length === 0) {
+        endGame();
+        return;
+    }
+
+    const task = tasks.pop();
+    const taskEl = document.getElementById("task");
+    const answersEl = document.getElementById("answers");
+
+    answersEl.innerHTML = "";
+    taskEl.innerHTML = "";
+
+    if (currentGame === "nagolosi") {
+        let words = [...task];
+        shuffle(words);
+        words.forEach(w => {
+            const btn = document.createElement("div");
+            btn.className = "answer-btn";
+            btn.textContent = w;
+            btn.onclick = () => checkNagolosi(w, task[0]);
+            answersEl.appendChild(btn);
+        });
+    } else {
+        let match = task.match(/\*(.*?)\*/);
+        let correct = match[1];
+        let sentence = task.replace(/\*/g, "");
+
+        taskEl.innerHTML = sentence.split(" ").map(word => {
+            return `<span class="answer-btn">${word}</span>`;
+        }).join(" ");
+
+        document.querySelectorAll("#task .answer-btn").forEach(btn => {
+            btn.onclick = () => checkLeks(btn.textContent, correct, btn);
+        });
+    }
 }
 
-// --- НАГОЛОСИ ---
-
-function startNagolosi() {
-  resetGame();
-  gameTitle.textContent = "Гра: Наголоси";
-  gameSelectButtons.style.display = "none";
-  renderScoreLives();
-  showNextNagolosiQuestion();
-  showBackToMenuButton();
-}
-
-function showNextNagolosiQuestion() {
-  if (lives <= 0) {
-    gameContainer.innerHTML += `<p>Гра завершена! Ваш результат: ${score} очок.</p>`;
-    return;
-  }
-  if (currentQuestionIndex >= nagolosiPairs.length) {
-    currentQuestionIndex = 0; // нескінченний цикл
-  }
-
-  renderScoreLives();
-
-  // Отримуємо пару та перемішуємо порядок (щоб правильне слово не було завжди першим)
-  let pair = [...nagolosiPairs[currentQuestionIndex]];
-  shuffleArray(pair);
-
-  // Очистити попередні кнопки
-  gameContainer.innerHTML = `
-    <div id="scoreLives">
-      Очки: ${score} <span id="lives">${"❤️".repeat(lives)}</span>
-    </div>
-  `;
-
-  // Створюємо кнопки для слів
-  pair.forEach(word => {
-    const btn = document.createElement("button");
-    btn.className = "word-btn";
-    btn.textContent = word;
-    btn.disabled = false;
-    gameContainer.appendChild(btn);
-
-    btn.onclick = () => {
-      // Відключити всі кнопки після натискання, щоб не спамили
-      Array.from(gameContainer.querySelectorAll("button.word-btn")).forEach(b => b.disabled = true);
-
-      const correctWord = nagolosiPairs[currentQuestionIndex][0]; // перше слово завжди правильне
-
-      if (word === correctWord) {
+function checkNagolosi(selected, correct) {
+    if (selected === correct) {
         score++;
-        btn.classList.add("correct");
-        // Не блимаємо, відразу показуємо наступне
-        setTimeout(() => {
-          currentQuestionIndex++;
-          showNextNagolosiQuestion();
-        }, 500);
-      } else {
+        document.getElementById("correct-sound").play();
+    } else {
         lives--;
-        btn.classList.add("incorrect"); // зафарбуємо кнопку зеленою і блиматиме
-        // Показати правильне слово зеленим і блимаючим
-        const correctBtn = Array.from(gameContainer.querySelectorAll("button.word-btn"))
-          .find(b => b.textContent === correctWord);
-        if (correctBtn) {
-          correctBtn.classList.add("incorrect");
-        }
-        // Затримка 2.5 с, потім наступне питання
-        setTimeout(() => {
-          currentQuestionIndex++;
-          showNextNagolosiQuestion();
-        }, 2500);
-      }
-      renderScoreLives();
-    };
-  });
+        document.getElementById("wrong-sound").play();
+    }
+    updateLives();
+    if (lives <= 0) endGame();
+    else nextTask();
 }
 
-// --- ЛЕКСИЧНА ПОМИЛКА ---
+function checkLeks(selected, correct, element) {
+    element.classList.add("strike");
+    if (selected === correct) {
+        score++;
+        document.getElementById("correct-sound").play();
+    } else {
+        lives--;
+        document.getElementById("wrong-sound").play();
+    }
+    updateLives();
+    setTimeout(() => {
+        if (lives <= 0) endGame();
+        else nextTask();
+    }, 800);
+}
 
-funct
+function endGame() {
+    document.getElementById("game-screen").style.display = "none";
+    document.getElementById("game-over").style.display = "block";
+    document.getElementById("final-score").textContent = score;
+}
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}

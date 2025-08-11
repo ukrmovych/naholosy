@@ -1,117 +1,41 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Мовні ігри</title>
-<style>
-  body {
-    font-family: 'Comic Sans MS', cursive, sans-serif;
-    background-color: #1a1a1a;
-    color: #fff;
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  h1 {
-    margin-top: 30px;
-    font-size: 2rem;
-  }
-  #gameSelectButtons {
-    margin-top: 40px;
-    display: flex;
-    gap: 25px;
-    justify-content: center;
-    width: 100%;
-    max-width: 400px;
-  }
-  #gameSelectButtons button {
-    flex: 1;
-    padding: 15px;
-    font-size: 18px;
-    background-color: #FF7900;
-    border: none;
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  #gameSelectButtons button:hover {
-    background-color: #e06c00;
-  }
-
-  #gameContainer {
-    width: 100%;
-    max-width: 480px;
-    margin-top: 40px;
-    padding: 0 15px;
-  }
-
-  #scoreLives {
-    font-size: 1.2rem;
-    margin-bottom: 15px;
-    user-select: none;
-  }
-  .heart {
-    color: #FF7900;
-    font-size: 1.5rem;
-    margin-left: 5px;
-  }
-  button.word-btn {
-    font-family: 'Comic Sans MS', cursive, sans-serif;
-    font-size: 20px;
-    margin: 10px 5px;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 7px;
-    background-color: #333;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.25s ease;
-  }
-  button.word-btn:disabled {
-    cursor: default;
-    opacity: 0.6;
-  }
-  button.correct {
-    background-color: #28a745 !important; /* зелений */
-    color: white;
-    animation: none !important;
-  }
-  button.correct.blink {
-    animation: blinkGreen 0.5s ease-in-out 3;
-  }
-  button.incorrect {
-    background-color: #28a745 !important; /* показуємо правильне слово зеленим */
-    color: white;
-    animation: blinkGreen 0.5s ease-in-out 6;
-  }
-  @keyframes blinkGreen {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-  #btnBackToMenu {
-    margin-top: 30px;
-    background-color: #555;
-    font-size: 14px;
-    padding: 8px 15px;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мовні ігри</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="game-container">
+        <!-- Головне меню -->
+        <div id="main-menu">
+            <h1>🎯 Мовні ігри</h1>
+            <button onclick="startGame('nagolosi')">Наголоси</button>
+            <button onclick="startGame('leksychna')">Лексична помилка</button>
+        </div>
 
-<h1 id="gameTitle">Виберіть гру</h1>
+        <!-- Поле гри -->
+        <div id="game-screen" style="display:none;">
+            <div id="top-bar">
+                <span id="lives"></span>
+                <button id="exit-btn" onclick="exitToMenu()">В меню</button>
+            </div>
+            <div id="task"></div>
+            <div id="answers"></div>
+        </div>
 
-<div id="gameSelectButtons">
-  <button id="btnNagolosi">Наголоси</button>
-  <button id="btnLexicalError">Лексична помилка</button>
-</div>
+        <!-- Кінець гри -->
+        <div id="game-over" style="display:none;">
+            <h2>Гру завершено!</h2>
+            <p>Ваш рахунок: <span id="final-score"></span></p>
+            <button onclick="exitToMenu()">В меню</button>
+        </div>
+    </div>
 
-<div id="gameContainer"></div>
+    <audio id="correct-sound" src="data:audio/mp3;base64,//uQZ..."></audio>
+    <audio id="wrong-sound" src="data:audio/mp3;base64,//uQZ..."></audio>
 
-<script src="scripts.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
