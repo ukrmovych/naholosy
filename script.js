@@ -18,7 +18,7 @@ let lock = false;
 const naholosyData = [
   { words: ["асиметрІя", "асимЕтрія"], correct: "асиметрІя" },
   { words: ["відвезтИ", "відвЕзти"], correct: "відвезтИ" },
-  { words: ["відвестИ", "відвЕсти"], correct: "відвестИ" },
+ { words: ["відвестИ", "відвЕсти"], correct: "відвестИ" },
   { words: ["віднестИ", "віднЕсти"], correct: "віднестИ" },
   { words: ["децимЕтр", "децИметр"], correct: "децимЕтр" },
   { words: ["довезтИ", "довЕзти"], correct: "довезтИ" },
@@ -282,14 +282,25 @@ function nextQuestion() {
       btn.onclick = () => {
         if (lock) return;
         lock = true;
-        if (word === currentQuestion.correct) {
+        // Перевірка правильності відповіді (якщо correct - масив або рядок)
+        let isCorrect = Array.isArray(currentQuestion.correct)
+          ? currentQuestion.correct.includes(word)
+          : word === currentQuestion.correct;
+
+        if (isCorrect) {
           btn.classList.add("correct");
           score++;
           updateUI();
           setTimeout(nextQuestion, 500);
         } else {
-          const correctBtn = Array.from(answersEl.children).find(b => b.textContent === currentQuestion.correct);
-          correctBtn.classList.add("correct", "blink");
+          const correctBtn = Array.from(answersEl.children).find(b => 
+            Array.isArray(currentQuestion.correct)
+              ? currentQuestion.correct.includes(b.textContent)
+              : b.textContent === currentQuestion.correct
+          );
+          if (correctBtn) {
+            correctBtn.classList.add("correct", "blink");
+          }
           loseLife();
           setTimeout(nextQuestion, 2000);
         }
@@ -299,15 +310,28 @@ function nextQuestion() {
   } else if (currentGame === "leksychna") {
     const rawSentence = leksychnaData[Math.floor(Math.random() * leksychnaData.length)];
     const correctWords = rawSentence.match(/\*(.*?)\*/g).map(w => w.replace(/\*/g, ""));
+
+    // Відображаємо речення без *
     const displaySentence = rawSentence.replace(/\*/g, "");
+
     questionEl.textContent = "";
+
     displaySentence.split(" ").forEach(word => {
       const btn = document.createElement("button");
       btn.textContent = word;
       btn.onclick = () => {
         if (lock) return;
         lock = true;
-        if (correctWords.includes(word)) {
+
+        // Очищаємо слово від пунктуації для перевірки
+        const cleanWord = word.replace(/^[.,!?:;"'()]+|[.,!?:;"'()]+$/g, "");
+
+        // Перевірка, чи правильне слово
+        let isCorrect = correctWords.some(correctWord => {
+          return correctWord === cleanWord;
+        });
+
+        if (isCorrect) {
           btn.classList.add("correct", "strikethrough");
           score++;
           updateUI();
@@ -315,7 +339,8 @@ function nextQuestion() {
         } else {
           // Закреслити і підсвітити правильні слова
           Array.from(answersEl.children).forEach(b => {
-            if (correctWords.includes(b.textContent)) {
+            const bClean = b.textContent.replace(/^[.,!?:;"'()]+|[.,!?:;"'()]+$/g, "");
+            if (correctWords.includes(bClean)) {
               b.classList.add("correct", "blink", "strikethrough");
             }
           });
