@@ -278,7 +278,7 @@ function loseLife() {
   lives--;
   updateUI();
   if (lives <= 0) {
-    alert(`Гру закінчено! Твій рахунок: ${score}`);
+    alert(`Цю гру закінчено) Твій рахунок: ${score} 🙌`);
     showMenu();
   }
 }
@@ -337,6 +337,7 @@ function nextQuestion() {
     });
 
   } else if (currentGame === "leksychna") {
+    questionEl.textContent = "Натискай на лексичну помилку!";
     const rawSentence = currentQuestion;
     const correctWords = rawSentence.match(/\*(.*?)\*/g).map(w => w.replace(/\*/g, ""));
     const displaySentence = rawSentence.replace(/\*/g, "");
