@@ -9,12 +9,20 @@
 <body>
   <div class="container" id="container">
     <h1 id="gameTitle">Виберіть гру</h1>
-    <div id="scoreLives" class="scoreLives">
+    
+    <div id="gameSelectButtons">
+      <button class="game-select" id="btnNagolosi">Наголоси</button>
+      <button class="game-select" id="btnLexicalError">Лексична помилка</button>
+    </div>
+
+    <div id="scoreLives" class="scoreLives" style="display:none;">
       <div id="score">Очки: 0</div>
       <div id="lives">❤️❤️❤️</div>
     </div>
+    
     <div id="wordButtons"></div>
-    <button id="btnMenu">В меню</button>
+
+    <button id="btnMenu" style="display:none;">В меню</button>
   </div>
 
   <script src="script.js"></script>
