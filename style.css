@@ -1,63 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
+
 body {
-    font-family: 'Comic Sans MS', cursive;
-    background-color: #000;
-    color: #FF7900;
+    font-family: 'Comic Neue', 'Comic Sans MS', cursive, sans-serif;
+    background-color: #1a1a1a;
+    color: #ff7900;
     text-align: center;
     margin: 0;
     padding: 0;
 }
 
-#game-container {
-    max-width: 500px;
-    margin: auto;
-    padding: 20px;
+h1 {
+    margin-top: 50px;
 }
 
-button {
-    background-color: #FF7900;
-    color: #000;
+.menu-btn {
+    font-family: 'Comic Neue', 'Comic Sans MS', cursive, sans-serif;
+    background-color: #ff7900;
     border: none;
-    padding: 12px 20px;
+    padding: 15px 30px;
     margin: 10px;
-    border-radius: 10px;
+    color: white;
     font-size: 18px;
+    border-radius: 10px;
     cursor: pointer;
 }
 
-button:hover {
-    background-color: #ff9a33;
+.menu-btn:hover {
+    background-color: #e86e00;
 }
 
-#top-bar {
+#scoreboard {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-}
-
-#lives {
-    font-size: 22px;
-}
-
-#task {
-    margin: 20px 0;
+    padding: 20px;
     font-size: 20px;
 }
 
+#question {
+    margin-top: 50px;
+    font-size: 24px;
+}
+
+#answers {
+    margin-top: 30px;
+}
+
 .answer-btn {
-    display: inline-block;
-    background-color: #222;
-    color: #FF7900;
-    padding: 10px 15px;
-    margin: 8px;
+    font-family: 'Comic Neue', 'Comic Sans MS', cursive, sans-serif;
+    background-color: #333;
+    border: 2px solid #ff7900;
+    padding: 10px 20px;
+    margin: 5px;
+    color: white;
+    font-size: 20px;
     border-radius: 8px;
     cursor: pointer;
 }
 
 .answer-btn:hover {
-    background-color: #333;
+    background-color: #ff7900;
+    color: black;
 }
 
-.strike {
-    text-decoration: line-through;
-    transition: all 0.5s ease;
+.correct {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+}
+
+.blink {
+    animation: blink 0.5s step-start 0s infinite;
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+#menuBtn {
+    margin-top: 40px;
+    background-color: #444;
+    font-size: 14px;
+    padding: 6px 14px;
+    font-family: 'Comic Neue', 'Comic Sans MS', cursive, sans-serif;
 }

@@ -1,126 +1,132 @@
-const nagolosiData = [
+const nagolosiWords = [
     ["павИч", "пАвич"],
     ["партЕр", "пАртер"],
     ["пЕкарський", "пекАрський"],
     ["перЕкис", "пЕрекис"],
-    ["пІтний", "пітнИй"]
+    ["пітнИй", "пІтний"]
 ];
 
-const leksychnaData = [
+const lexicalSentences = [
+    "Ми *внесли* свій *вклад* у розвиток проекту.",
     "Сьогодні я *прийняв* участь у змаганнях.",
     "Наш захід відвідали *багаточисельні* гості.",
-    "Ми мали шалену *виручку* після свят!",
-    "*Бажаючих* поділитись на пам'ятник було багато.",
-    "Ми *внесли вклад* у розвиток мистецтва."
+    "Ми мали шалену *виручку* після свят!"
 ];
 
-let currentGame = "";
 let score = 0;
 let lives = 3;
-let tasks = [];
+let currentGame = "";
 
-function startGame(type) {
-    currentGame = type;
+function startGame(gameType) {
+    currentGame = gameType;
     score = 0;
     lives = 3;
-
-    document.getElementById("main-menu").style.display = "none";
-    document.getElementById("game-over").style.display = "none";
-    document.getElementById("game-screen").style.display = "block";
-
-    tasks = [...(type === "nagolosi" ? nagolosiData : leksychnaData)];
-    shuffle(tasks);
-
-    updateLives();
-    nextTask();
+    updateHUD();
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("game").style.display = "block";
+    loadQuestion();
 }
 
-function exitToMenu() {
-    document.getElementById("main-menu").style.display = "block";
-    document.getElementById("game-screen").style.display = "none";
-    document.getElementById("game-over").style.display = "none";
+function updateHUD() {
+    document.getElementById("score").innerText = "Очки: " + score;
+    document.getElementById("lives").innerText = "❤️".repeat(lives);
 }
 
-function updateLives() {
-    document.getElementById("lives").innerHTML = "❤️".repeat(lives);
-}
-
-function nextTask() {
-    if (tasks.length === 0) {
-        endGame();
-        return;
-    }
-
-    const task = tasks.pop();
-    const taskEl = document.getElementById("task");
-    const answersEl = document.getElementById("answers");
-
-    answersEl.innerHTML = "";
-    taskEl.innerHTML = "";
+function loadQuestion() {
+    const questionElem = document.getElementById("question");
+    const answersElem = document.getElementById("answers");
+    answersElem.innerHTML = "";
+    questionElem.innerHTML = "";
 
     if (currentGame === "nagolosi") {
-        let words = [...task];
-        shuffle(words);
-        words.forEach(w => {
-            const btn = document.createElement("div");
+        const pair = nagolosiWords[Math.floor(Math.random() * nagolosiWords.length)];
+        const correctWord = pair[0];
+        const shuffled = [...pair].sort(() => Math.random() - 0.5);
+
+        questionElem.innerText = "Оберіть правильне слово:";
+        shuffled.forEach(word => {
+            const btn = document.createElement("button");
             btn.className = "answer-btn";
-            btn.textContent = w;
-            btn.onclick = () => checkNagolosi(w, task[0]);
-            answersEl.appendChild(btn);
+            btn.innerText = word;
+            btn.onclick = () => checkNagolosi(word, correctWord, answersElem);
+            answersElem.appendChild(btn);
         });
-    } else {
-        let match = task.match(/\*(.*?)\*/);
-        let correct = match[1];
-        let sentence = task.replace(/\*/g, "");
+    }
 
-        taskEl.innerHTML = sentence.split(" ").map(word => {
-            return `<span class="answer-btn">${word}</span>`;
-        }).join(" ");
+    if (currentGame === "lexical") {
+        const sentence = lexicalSentences[Math.floor(Math.random() * lexicalSentences.length)];
+        const correctWords = (sentence.match(/\*(.*?)\*/g) || []).map(w => w.replace(/\*/g, ""));
+        const displayed = sentence.replace(/\*/g, "");
 
-        document.querySelectorAll("#task .answer-btn").forEach(btn => {
-            btn.onclick = () => checkLeks(btn.textContent, correct, btn);
+        questionElem.innerText = displayed;
+        const uniqueWords = [...new Set(correctWords)];
+        uniqueWords.forEach(word => {
+            const btn = document.createElement("button");
+            btn.className = "answer-btn";
+            btn.innerText = word;
+            btn.onclick = () => checkLexical(word, correctWords, answersElem);
+            answersElem.appendChild(btn);
         });
     }
 }
 
-function checkNagolosi(selected, correct) {
+function checkNagolosi(selected, correct, container) {
+    disableButtons(container);
     if (selected === correct) {
+        highlightCorrect(container, correct, false);
         score++;
-        document.getElementById("correct-sound").play();
+        updateHUD();
+        setTimeout(loadQuestion, 500);
     } else {
         lives--;
-        document.getElementById("wrong-sound").play();
+        updateHUD();
+        highlightCorrect(container, correct, true);
+        if (lives <= 0) {
+            setTimeout(endGame, 2000);
+        } else {
+            setTimeout(loadQuestion, 2000);
+        }
     }
-    updateLives();
-    if (lives <= 0) endGame();
-    else nextTask();
 }
 
-function checkLeks(selected, correct, element) {
-    element.classList.add("strike");
-    if (selected === correct) {
+function checkLexical(selected, correctWords, container) {
+    disableButtons(container);
+    if (correctWords.includes(selected)) {
+        highlightCorrect(container, correctWords, false);
         score++;
-        document.getElementById("correct-sound").play();
+        updateHUD();
+        setTimeout(loadQuestion, 500);
     } else {
         lives--;
-        document.getElementById("wrong-sound").play();
+        updateHUD();
+        highlightCorrect(container, correctWords, true);
+        if (lives <= 0) {
+            setTimeout(endGame, 2000);
+        } else {
+            setTimeout(loadQuestion, 2000);
+        }
     }
-    updateLives();
-    setTimeout(() => {
-        if (lives <= 0) endGame();
-        else nextTask();
-    }, 800);
+}
+
+function highlightCorrect(container, correct, blink) {
+    [...container.children].forEach(btn => {
+        if (Array.isArray(correct) ? correct.includes(btn.innerText) : btn.innerText === correct) {
+            btn.classList.add("correct");
+            if (blink) btn.classList.add("blink");
+        }
+    });
+}
+
+function disableButtons(container) {
+    [...container.children].forEach(btn => btn.disabled = true);
 }
 
 function endGame() {
-    document.getElementById("game-screen").style.display = "none";
-    document.getElementById("game-over").style.display = "block";
-    document.getElementById("final-score").textContent = score;
+    alert("Гру закінчено!");
+    goToMenu();
 }
 
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
+function goToMenu() {
+    document.getElementById("menu").style.display = "block";
+    document.getElementById("game").style.display = "none";
 }
