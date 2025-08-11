@@ -3,25 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Вибір гри</title>
+<title>Мовні ігри</title>
 <link rel="stylesheet" href="style.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
+
 <div id="menu">
-    <h1>Виберіть гру</h1>
-    <button id="accentGameBtn">Наголоси</button>
-    <button id="lexicalGameBtn">Лексична помилка</button>
+  <h1>Виберіть гру</h1>
+  <button id="btn-naholosy">Наголоси</button>
+  <button id="btn-leksychna">Лексична помилка</button>
 </div>
 
 <div id="game" style="display:none;">
-    <div id="score">Очки: 0</div>
-    <div id="lives"></div>
-    <div id="question"></div>
-    <div id="answers"></div>
-    <button id="menuBtn">В меню</button>
+  <div class="top-bar">
+    <span id="score">Очки: 0</span>
+    <span id="lives">❤️❤️❤️</span>
+    <button id="btn-menu">В меню</button>
+  </div>
+  <div id="question"></div>
+  <div id="answers"></div>
 </div>
 
 <script src="script.js"></script>

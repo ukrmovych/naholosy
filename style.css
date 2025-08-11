@@ -1,72 +1,56 @@
-@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
-
 body {
-    font-family: 'Comic Sans MS', 'Comic Neue', cursive;
-    text-align: center;
-    background-color: #1c1c1c;
-    color: #fff;
-    margin: 0;
-    padding: 0;
+  font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+  text-align: center;
+  background-color: #fff8f0;
+  margin: 0;
+  padding: 0;
+}
+
+#menu {
+  margin-top: 50px;
 }
 
 button {
-    font-family: 'Comic Sans MS', 'Comic Neue', cursive;
-    font-size: 1.2rem;
-    padding: 10px 20px;
-    margin: 5px;
-    border: none;
-    border-radius: 8px;
-    background-color: #FF7900;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.1s;
+  background-color: #FF7900;
+  border: none;
+  padding: 15px 30px;
+  margin: 10px;
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  color: white;
+  font-family: 'Comic Neue', 'Comic Sans MS', cursive;
 }
 
-button:hover {
-    background-color: #e56d00;
-    transform: scale(1.05);
+#btn-menu {
+  background-color: #ccc;
+  font-size: 14px;
+  padding: 5px 15px;
+}
+
+#question {
+  font-size: 24px;
+  margin: 20px 0;
+}
+
+#answers button {
+  display: inline-block;
+  margin: 5px;
 }
 
 .correct {
-    background-color: #28a745 !important; /* Яскраво-зелений */
-    color: white !important;
+  background-color: #4CAF50 !important;
+  color: white !important;
 }
 
 .blink {
-    animation: blink-animation 0.4s steps(2, start) 3;
+  animation: blink 0.5s step-start 0s infinite;
 }
 
-@keyframes blink-animation {
-    to {
-        visibility: hidden;
-    }
+@keyframes blink {
+  50% { opacity: 0; }
 }
 
-.menu-button {
-    font-size: 0.9rem;
-    padding: 5px 12px;
-    background-color: #444;
-    color: white;
-}
-
-.menu-button:hover {
-    background-color: #666;
-}
-
-.hidden {
-    display: none;
-}
-
-#lives {
-    font-size: 1.5rem;
-}
-
-@media (max-width: 600px) {
-    button {
-        font-size: 1rem;
-        padding: 8px 15px;
-    }
-    #lives {
-        font-size: 1.2rem;
-    }
+.strikethrough {
+  text-decoration: line-through;
 }
