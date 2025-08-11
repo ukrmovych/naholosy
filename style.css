@@ -1,15 +1,63 @@
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Comic Neue', 'Comic Sans MS';
   text-align: center;
-  margin: 20px;
+  background-color: #211a14;
+  margin: 0;
+  color: white;
+  padding: 0;
+}
+
+#menu {
+  margin-top: 50px;
+  color: white;
 }
 
 button {
-  padding: 10px 20px;
-  margin: 5px;
-  font-size: 16px;
+  background-color: #FF7900;
+  border: none;
+  padding: 15px 30px;
+  margin: 10px;
+  border-radius: 8px;
+  font-size: 18px;
   cursor: pointer;
+  color: white;
+  font-family: 'Comic Neue', 'Comic Sans MS';
 }
+
+#btn-menu {
+  background-color: #574435;
+  font-size: 14px;
+  padding: 5px 15px;
+}
+
+#question {
+  font-size: 24px;
+  margin: 20px 0;
+  color: white;
+}
+
+#answers button {
+  display: inline-block;
+  margin: 5px;
+}
+
+.correct {
+  background-color: #4CAF50 !important;
+  color: white !important;
+}
+
+.blink {
+  animation: blink 0.5s step-start 0s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.strikethrough {
+  text-decoration: line-through;
+}
+
 
 .correct {
   background-color: green;
@@ -27,3 +75,4 @@ button {
 @keyframes blink {
   50% { background-color: yellow; }
 }
+
