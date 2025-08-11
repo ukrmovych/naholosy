@@ -17,12 +17,11 @@ let lock = false;
 // Дані для наголосів
 const naholosyData = [
   { words: ["асиметрІя", "асимЕтрія"], correct: "асиметрІя" },
-
   // Перші два слова правильні
   { words: ["алфАвіт", "алфавІт", "Алфавіт"], correct: "алфАвіт", "алфавІт" },
   { words: ["веснЯний", "веснянИй", "вЕсняний"], correct: "веснЯний", "веснянИй" },
   { words: ["пОмилка", "помИлка", "помилкА"], correct: "пОмилка", "помИлка" },
-  { words: ["зАвжди", "завждИ"], correct: "зАвжди" }
+  { words: ["зАвжди", "завждИ"], correct: "зАвжди", "завждИ" }
 ];
 
 // Дані для лексичних помилок
@@ -130,6 +129,7 @@ function showMenu() {
 btnNaholosy.addEventListener("click", () => startGame("naholosy"));
 btnLeksychna.addEventListener("click", () => startGame("leksychna"));
 btnMenu.addEventListener("click", showMenu);
+
 
 
 
