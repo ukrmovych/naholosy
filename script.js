@@ -241,10 +241,6 @@ const naholosyData = [
   { words: ["зАвжди", "завждИ"], correct: "зАвжди" }
 ];
 
-  
-  { words: ["чарівнИй", "чарІвний"], correct: "чарівнИй" }
-];
-
 // Дані для лексичних помилок
 const leksychnaData = [
   "Сьогодні я *прийняв* участь у змаганнях.",
@@ -344,6 +340,7 @@ function showMenu() {
 btnNaholosy.addEventListener("click", () => startGame("naholosy"));
 btnLeksychna.addEventListener("click", () => startGame("leksychna"));
 btnMenu.addEventListener("click", showMenu);
+
 
 
 
