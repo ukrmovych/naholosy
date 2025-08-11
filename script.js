@@ -1,154 +1,148 @@
-const nagolosiData = [
-    ["павИч", "пАвич"],
-    ["партЕр", "пАртер"],
-    ["пЕкарський", "пекАрський"],
-    ["перЕкис", "пЕрекис"],
-    ["пІтний", "пітнИй"]
-];
+const games = {
+  nagolosi: {
+    title: "Наголоси",
+    data: [
+      { correct: "пітнИй", wrong: "пІтний" },
+      { correct: "павИч", wrong: "пАвич" },
+      { correct: "партЕр", wrong: "пАртер" },
+      { correct: "пЕкарський", wrong: "пекАрський" },
+      { correct: "перЕкис", wrong: "пЕрекис" },
+      { correct: "перелЯк", wrong: "перЕляк" },
+      { correct: "перЕпад", wrong: "перепАд" },
+      { correct: "перЕпис", wrong: "пЕрепис" },
+      { correct: "піалА", wrong: "піАла" },
+      { correct: "(дієприкметник) пІдданий", wrong: "піддАний" },
+      { correct: "(іменник, істота) піддАний", wrong: "пІдданий" },
+      { correct: "пІдлітковий", wrong: "підліткОвий" },
+      { correct: "пітнИй", wrong: "пІтний" },
+      { correct: "пОдруга", wrong: "подрУга" },
+      { correct: "пОзначка", wrong: "познАчка" },
+      { correct: "помІщик", wrong: "поміщИк" },
+      { correct: "помОвчати", wrong: "помовчАти" },
+      { correct: "понЯття", wrong: "поняттЯ" },
+      { correct: "порядкОвий", wrong: "порЯдковий" },
+      { correct: "посерЕдині", wrong: "посередИні" },
+      { correct: "прИморозок", wrong: "приморОзок" },
+      { correct: "прИчіп", wrong: "причІп" },
+      { correct: "прОділ", wrong: "продІл" },
+      { correct: "промІжок", wrong: "прОміжок" },
+      { correct: "псевдонІм", wrong: "псевдОнім" }
+    ],
+    infinite: true
+  },
+  leksychnaPomylka: {
+    title: "Лексична помилка",
+    data: [
+      { text: "Сьогодні я *прийняв* участь у змаганнях." },
+      { text: "Наш захід відвідали *багаточисельні* гості." },
+      { text: "Ми мали шалену *виручку* після свят!" },
+      { text: "*Бажаючих* поділитись на пам'ятник було багато." },
+      { text: "Ми *внесли вклад* у розвиток мистецтва." }
+    ]
+  }
+};
 
-const leksychnaData = [
-    "Сьогодні я *прийняв* участь у змаганнях.",
-    "Наш захід відвідали *багаточисельні* гості.",
-    "Ми мали шалену *виручку* після свят!",
-    "*Бажаючих* поділитись на пам'ятник було багато.",
-    "Ми *внесли вклад* у розвиток мистецтва."
-];
-
-const monkeyGifs = [
-    "https://media.giphy.com/media/13borq7Zo2kulO/giphy.gif",
-    "https://media.giphy.com/media/GeimqsH0TLDt4tScGw/giphy.gif",
-    "https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif",
-    "https://media.giphy.com/media/5xaOcLT6R2vWC5fKpYA/giphy.gif"
-];
-
-let currentGame = "";
+let currentGame = null;
+let currentIndex = 0;
 let score = 0;
 let lives = 3;
-let tasks = [];
+let waiting = false; // щоб заборонити багато натискань
 
-function startGame(type) {
-    currentGame = type;
-    score = 0;
-    lives = 3;
-
-    document.getElementById("main-menu").style.display = "none";
-    document.getElementById("game-over").style.display = "none";
-    document.getElementById("game-screen").style.display = "block";
-
-    tasks = [...(type === "nagolosi" ? nagolosiData : leksychnaData)];
-    shuffle(tasks);
-
-    updateLives();
-    showRandomMonkey();
-    nextTask();
-}
-
-function exitToMenu() {
-    document.getElementById("main-menu").style.display = "block";
-    document.getElementById("game-screen").style.display = "none";
-    document.getElementById("game-over").style.display = "none";
-    document.getElementById("monkey-container").innerHTML = "";
-}
-
-function updateLives() {
-    document.getElementById("lives").innerHTML = "❤️".repeat(lives);
-}
-
-function nextTask() {
-    if (tasks.length === 0) {
-        endGame();
-        return;
-    }
-
-    const task = tasks.pop();
-    const taskEl = document.getElementById("task");
-    const answersEl = document.getElementById("answers");
-
-    answersEl.innerHTML = "";
-    taskEl.innerHTML = "";
-
-    if (currentGame === "nagolosi") {
-        let [correct, wrong] = task;
-        let words = [correct, wrong];
-        shuffle(words);
-        words.forEach(w => {
-            const btn = document.createElement("div");
-            btn.className = "answer-btn";
-            btn.textContent = w;
-            btn.onclick = () => checkNagolosi(w, correct, btn, answersEl);
-            answersEl.appendChild(btn);
-        });
-    } else {
-        let match = task.match(/\*(.*?)\*/);
-        let correct = match[1];
-        let sentence = task.replace(/\*/g, "");
-
-        taskEl.innerHTML = sentence.split(" ").map(word => {
-            return `<span class="answer-btn">${word}</span>`;
-        }).join(" ");
-
-        document.querySelectorAll("#task .answer-btn").forEach(btn => {
-            btn.onclick = () => checkLeks(btn.textContent, correct, btn, taskEl);
-        });
-    }
-}
-
-function checkNagolosi(selected, correct, btn, container) {
-    if (selected === correct) {
-        btn.classList.add("correct");
-        document.getElementById("correct-sound").play();
-        score++;
-        setTimeout(nextTask, 500);
-    } else {
-        lives--;
-        document.getElementById("wrong-sound").play();
-        [...container.children].forEach(b => {
-            if (b.textContent === correct) {
-                b.classList.add("correct", "blink");
-            }
-        });
-        updateLives();
-        if (lives <= 0) endGame();
-        else setTimeout(nextTask, 2000);
-    }
-}
-
-function checkLeks(selected, correct, clickedBtn, container) {
-    if (selected === correct) {
-        clickedBtn.classList.add("correct", "strike");
-        document.getElementById("correct-sound").play();
-        score++;
-        setTimeout(nextTask, 800);
-    } else {
-        lives--;
-        document.getElementById("wrong-sound").play();
-        container.querySelectorAll(".answer-btn").forEach(b => {
-            if (b.textContent === correct) {
-                b.classList.add("correct", "strike", "blink");
-            }
-        });
-        updateLives();
-        if (lives <= 0) endGame();
-        else setTimeout(nextTask, 2000);
-    }
-}
-
-function endGame() {
-    document.getElementById("game-screen").style.display = "none";
-    document.getElementById("game-over").style.display = "block";
-    document.getElementById("final-score").textContent = score;
-}
-
+// --- Допоміжні функції ---
 function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
+  let arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
-function showRandomMonkey() {
-    const img = document.createElement("img");
-    img.src = monkeyGifs[Math.floor(Math.random() * monkeyGifs.length)];
-    document.getElementById("monkey-container").innerHTML = "";
-    document.getElementById("monkey-container").appendChild(img);
+// --- ЗАГАЛЬНИЙ ІНТЕРФЕЙС ---
+
+const container = document.getElementById("container");
+const titleElem = document.getElementById("gameTitle");
+const wordButtonsDiv = document.getElementById("wordButtons");
+const scoreElem = document.getElementById("score");
+const livesElem = document.getElementById("lives");
+const btnMenu = document.getElementById("btnMenu");
+
+btnMenu.style.display = "none";
+btnMenu.addEventListener("click", () => {
+  showMainMenu();
+});
+
+function updateScoreLives() {
+  scoreElem.textContent = `Очки: ${score}`;
+  livesElem.textContent = `❤️ `.repeat(lives);
 }
+
+function disableButtons(disabled) {
+  const btns = wordButtonsDiv.querySelectorAll("button");
+  btns.forEach(b => (b.disabled = disabled));
+}
+
+// --- ГОЛОВНЕ МЕНЮ ---
+
+function showMainMenu() {
+  waiting = false;
+  currentGame = null;
+  currentIndex = 0;
+  score = 0;
+  lives = 3;
+  updateScoreLives();
+  btnMenu.style.display = "none";
+  titleElem.textContent = "Виберіть гру";
+  wordButtonsDiv.innerHTML = "";
+
+  ["nagolosi", "leksychnaPomylka"].forEach(gameKey => {
+    const btn = document.createElement("button");
+    btn.textContent = games[gameKey].title;
+    btn.style.fontFamily = "'Comic Sans MS', cursive, sans-serif";
+    btn.addEventListener("click", () => {
+      startGame(gameKey);
+    });
+    wordButtonsDiv.appendChild(btn);
+  });
+}
+
+// --- ГРА: НАГОЛОСИ ---
+
+function startNagolosi() {
+  currentIndex = 0;
+  score = 0;
+  lives = 3;
+  updateScoreLives();
+  btnMenu.style.display = "inline-block";
+  titleElem.textContent = games.nagolosi.title;
+  nextNagolosiTask();
+}
+
+function nextNagolosiTask() {
+  waiting = false;
+  wordButtonsDiv.innerHTML = "";
+  updateScoreLives();
+
+  if (lives === 0) {
+    alert(`Гру завершено! Ваш рахунок: ${score}`);
+    showMainMenu();
+    return;
+  }
+
+  // Вибираємо наступне слово випадково (infinite)
+  const idx = Math.floor(Math.random() * games.nagolosi.data.length);
+  currentIndex = idx;
+  const pair = games.nagolosi.data[idx];
+
+  // Перемішуємо правильне і неправильне слово
+  const options = shuffle([pair.correct, pair.wrong]);
+
+  options.forEach(word => {
+    const btn = document.createElement("button");
+    btn.textContent = word;
+    btn.addEventListener("click", () => nagolosiAnswer(word, pair.correct, btn));
+    wordButtonsDiv.appendChild(btn);
+  });
+}
+
+// --- Обробка відповіді в наголос

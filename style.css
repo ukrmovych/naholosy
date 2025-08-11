@@ -1,96 +1,111 @@
 body {
-    font-family: 'Comic Sans MS', cursive;
-    background-color: #000;
-    color: #FF7900;
-    text-align: center;
-    margin: 0;
-    padding: 0;
-}
-
-#game-container {
-    max-width: 500px;
-    margin: auto;
-    padding: 20px;
-}
-
-.menu-btn {
-    background-color: #FF7900;
-    color: #000;
-    border: none;
-    padding: 12px 20px;
-    margin: 10px;
-    border-radius: 10px;
-    font-size: 20px;
-    font-family: 'Comic Sans MS', cursive;
-    cursor: pointer;
-}
-.menu-btn:hover {
-    background-color: #ff9a33;
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    background-color: #222222;
+    color: #fff;
+    margin: 0; padding: 0;
+    display: flex; flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
 }
 
 button {
-    font-family: 'Comic Sans MS', cursive;
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    font-size: 1.3rem;
+    margin: 8px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background-color: #ff7900;
+    color: black;
+    transition: background-color 0.3s ease;
+    user-select: none;
 }
 
-#exit-btn {
-    background-color: #333;
-    color: #FF7900;
-    font-size: 14px;
-    padding: 6px 12px;
-    border-radius: 6px;
+button:hover:enabled {
+    background-color: #e06b00;
 }
 
-#top-bar {
+button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.container {
+    max-width: 480px;
+    width: 95vw;
+    padding: 20px;
+}
+
+#gameTitle {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#wordButtons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.scoreLives {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    margin-bottom: 20px;
 }
 
-#lives {
-    font-size: 22px;
+.lives {
+    font-size: 1.5rem;
+    color: #ff3300;
 }
 
-#task {
-    margin: 20px 0;
-    font-size: 20px;
+.score {
+    font-size: 1.5rem;
+    color: #ff7900;
 }
 
-.answer-btn {
-    display: inline-block;
-    background-color: #222;
-    color: #FF7900;
-    padding: 10px 15px;
-    margin: 8px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.answer-btn:hover {
-    background-color: #333;
-}
-
-.strike {
-    text-decoration: line-through;
-}
-
+/* Зелений колір кнопок на правильну відповідь */
 .correct {
-    background-color: #32CD32 !important;
+    background-color: #00cc66 !important;
     color: white !important;
 }
 
+/* Блимання зеленим */
+@keyframes blinkGreen {
+    0%, 100% { background-color: #00cc66; }
+    50% { background-color: #66ffaa; }
+}
+
 .blink {
-    animation: blink 0.5s alternate 4;
+    animation: blinkGreen 1s ease-in-out 2;
 }
 
-@keyframes blink {
-    from { opacity: 1; }
-    to { opacity: 0.3; }
+/* Менша менш помітна кнопка "В меню" */
+#btnMenu {
+    font-size: 1rem;
+    background-color: #444444;
+    color: #ccc;
+    padding: 8px 14px;
+    border-radius: 6px;
+    margin-top: 10px;
+    align-self: center;
 }
 
-#monkey-container {
-    margin-top: 20px;
+#btnMenu:hover {
+    background-color: #555555;
+    color: #eee;
 }
-#monkey-container img {
-    max-width: 100%;
-    border-radius: 10px;
+
+/* Для адаптивності на мобільних */
+@media (max-width: 480px) {
+    button {
+        font-size: 1.1rem;
+        padding: 10px 16px;
+    }
+    #gameTitle {
+        font-size: 1.6rem;
+    }
 }

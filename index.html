@@ -1,45 +1,22 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мовні ігри</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Гра про наголоси і лексичні помилки</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div id="game-container">
-        <!-- Головне меню -->
-        <div id="main-menu">
-            <h1>🎯 Мовні ігри</h1>
-            <button class="menu-btn" onclick="startGame('nagolosi')">Наголоси</button>
-            <button class="menu-btn" onclick="startGame('leksychna')">Лексична помилка</button>
-        </div>
-
-        <!-- Поле гри -->
-        <div id="game-screen" style="display:none;">
-            <div id="top-bar">
-                <span id="lives"></span>
-                <button id="exit-btn" onclick="exitToMenu()">В меню</button>
-            </div>
-            <div id="task"></div>
-            <div id="answers"></div>
-        </div>
-
-        <!-- Кінець гри -->
-        <div id="game-over" style="display:none;">
-            <h2>Гру завершено!</h2>
-            <p>Ваш рахунок: <span id="final-score"></span></p>
-            <button onclick="exitToMenu()">В меню</button>
-        </div>
-
-        <!-- GIF з мавпою -->
-        <div id="monkey-container"></div>
+  <div class="container" id="container">
+    <h1 id="gameTitle">Виберіть гру</h1>
+    <div id="scoreLives" class="scoreLives">
+      <div id="score">Очки: 0</div>
+      <div id="lives">❤️❤️❤️</div>
     </div>
+    <div id="wordButtons"></div>
+    <button id="btnMenu">В меню</button>
+  </div>
 
-    <!-- Звуки -->
-    <audio id="correct-sound" src="data:audio/mp3;base64,//uQZ..."></audio>
-    <audio id="wrong-sound" src="data:audio/mp3;base64,//uQZ..."></audio>
-
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
