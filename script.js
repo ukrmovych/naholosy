@@ -21,7 +21,8 @@ const naholosyData = [
   { words: ["визвОльний", "вИзвольний"], correct: "визвОльний" },
   { words: ["кОсий", "косИй"], correct: "кОсий" },
   { words: ["черговИй", "чергОвий"], correct: "черговИй" },
-  { words: ["чарівнИй", "чарІвний"], correct: "чарівнИй" };
+  { words: ["чарівнИй", "чарІвний"], correct: "чарівнИй" }
+];
 
 // Дані для лексичних помилок
 const leksychnaData = [
@@ -122,4 +123,5 @@ function showMenu() {
 btnNaholosy.addEventListener("click", () => startGame("naholosy"));
 btnLeksychna.addEventListener("click", () => startGame("leksychna"));
 btnMenu.addEventListener("click", showMenu);
+
 
