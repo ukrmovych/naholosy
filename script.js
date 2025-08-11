@@ -14,6 +14,10 @@ let currentGame = "";
 let currentQuestion = null;
 let lock = false;
 
+// Щоб відслідковувати використані питання в поточній грі:
+let usedNaholosyIndices = [];
+let usedLeksychnaIndices = [];
+
 // Дані для наголосів
 const naholosyData = [
   { words: ["асиметрІя", "асимЕтрія"], correct: "асиметрІя" },
@@ -36,13 +40,28 @@ const leksychnaData = [
   "Ми *внесли* *вклад* у розвиток мистецтва."
 ];
 
+// Функція для перемішування масиву (Fisher-Yates shuffle)
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 function startGame(gameType) {
   currentGame = gameType;
   score = 0;
   lives = 3;
+  lock = false;
   updateUI();
   menu.style.display = "none";
   game.style.display = "block";
+
+  // Очищуємо історію використаних питань при початку нової гри
+  usedNaholosyIndices = [];
+  usedLeksychnaIndices = [];
+
   nextQuestion();
 }
 
@@ -63,16 +82,34 @@ function loseLife() {
 function nextQuestion() {
   lock = false;
   answersEl.innerHTML = "";
+
   if (currentGame === "naholosy") {
-    currentQuestion = naholosyData[Math.floor(Math.random() * naholosyData.length)];
+    // Вибираємо індекс випадкового питання, якого ще не було
+    if (usedNaholosyIndices.length === naholosyData.length) {
+      // Всі питання використані — кінець гри
+      alert(`Ви пройшли всі наголоси! Ваш рахунок: ${score}`);
+      showMenu();
+      return;
+    }
+    let idx;
+    do {
+      idx = Math.floor(Math.random() * naholosyData.length);
+    } while (usedNaholosyIndices.includes(idx));
+    usedNaholosyIndices.push(idx);
+
+    currentQuestion = naholosyData[idx];
     questionEl.textContent = "Обери правильний наголос";
-    currentQuestion.words.forEach(word => {
+
+    // Перемішуємо кнопки перед додаванням
+    const shuffledWords = shuffleArray([...currentQuestion.words]);
+
+    shuffledWords.forEach(word => {
       const btn = document.createElement("button");
       btn.textContent = word;
       btn.onclick = () => {
         if (lock) return;
         lock = true;
-        // Перевірка правильності відповіді (якщо correct - масив або рядок)
+
         let isCorrect = Array.isArray(currentQuestion.correct)
           ? currentQuestion.correct.includes(word)
           : word === currentQuestion.correct;
@@ -83,7 +120,8 @@ function nextQuestion() {
           updateUI();
           setTimeout(nextQuestion, 500);
         } else {
-          const correctBtn = Array.from(answersEl.children).find(b => 
+          // Підсвічуємо правильну відповідь
+          const correctBtn = Array.from(answersEl.children).find(b =>
             Array.isArray(currentQuestion.correct)
               ? currentQuestion.correct.includes(b.textContent)
               : b.textContent === currentQuestion.correct
@@ -97,8 +135,20 @@ function nextQuestion() {
       };
       answersEl.appendChild(btn);
     });
+
   } else if (currentGame === "leksychna") {
-    const rawSentence = leksychnaData[Math.floor(Math.random() * leksychnaData.length)];
+    if (usedLeksychnaIndices.length === leksychnaData.length) {
+      alert(`Ви пройшли всі лексичні помилки! Ваш рахунок: ${score}`);
+      showMenu();
+      return;
+    }
+    let idx;
+    do {
+      idx = Math.floor(Math.random() * leksychnaData.length);
+    } while (usedLeksychnaIndices.includes(idx));
+    usedLeksychnaIndices.push(idx);
+
+    const rawSentence = leksychnaData[idx];
     const correctWords = rawSentence.match(/\*(.*?)\*/g).map(w => w.replace(/\*/g, ""));
 
     // Відображаємо речення без *
@@ -106,20 +156,16 @@ function nextQuestion() {
 
     questionEl.textContent = "";
 
-    displaySentence.split(" ").forEach(word => {
+    // Створюємо кнопки з словами
+    const buttons = displaySentence.split(" ").map(word => {
       const btn = document.createElement("button");
       btn.textContent = word;
       btn.onclick = () => {
         if (lock) return;
         lock = true;
 
-        // Очищаємо слово від пунктуації для перевірки
         const cleanWord = word.replace(/^[.,!?:;"'()]+|[.,!?:;"'()]+$/g, "");
-
-        // Перевірка, чи правильне слово
-        let isCorrect = correctWords.some(correctWord => {
-          return correctWord === cleanWord;
-        });
+        let isCorrect = correctWords.some(correctWord => correctWord === cleanWord);
 
         if (isCorrect) {
           btn.classList.add("correct", "strikethrough");
@@ -127,7 +173,7 @@ function nextQuestion() {
           updateUI();
           setTimeout(nextQuestion, 500);
         } else {
-          // Закреслити і підсвітити правильні слова
+          // Підсвічуємо правильні слова
           Array.from(answersEl.children).forEach(b => {
             const bClean = b.textContent.replace(/^[.,!?:;"'()]+|[.,!?:;"'()]+$/g, "");
             if (correctWords.includes(bClean)) {
@@ -138,8 +184,11 @@ function nextQuestion() {
           setTimeout(nextQuestion, 2000);
         }
       };
-      answersEl.appendChild(btn);
+      return btn;
     });
+
+    // Перемішуємо кнопки і додаємо в answersEl
+    shuffleArray(buttons).forEach(btn => answersEl.appendChild(btn));
   }
 }
 
@@ -151,5 +200,3 @@ function showMenu() {
 btnNaholosy.addEventListener("click", () => startGame("naholosy"));
 btnLeksychna.addEventListener("click", () => startGame("leksychna"));
 btnMenu.addEventListener("click", showMenu);
-
-
