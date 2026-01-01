@@ -67,7 +67,6 @@ const naholosyData = [
   { words: ["бурштинОвий", "бурштИновий", "бурштиновИй"], correct: "бурштинОвий" },
   { words: ["бюлетЕнь", "бЮлетень"], correct: "бюлетЕнь" },
   { words: ["вантажІвка", "вантАжівка"], correct: "вантажІвка" },
-  { words: ["вИгода", "вигОда"], correct: "вИгода" },
   { words: ["вИгода (користь)", "вигОда (користь)"], correct: "вИгода (користь)" },
  { words: ["вигОда (зручність)", "вИгода (зручність)"], correct: "вигОда (зручність)" },
   { words: ["вимОга", "вИмога"], correct: "вимОга" },
@@ -213,7 +212,7 @@ const naholosyData = [
   { words: ["фОльга", "фольгА"], correct: "фОльга" },
   { words: ["фОрзац", "форзАц"], correct: "фОрзац" },
   { words: ["хАос (у міфології: стихія)", "хаОс (у міфології: стихія)"], correct: "хАос (у міфології: стихія)" },
-  { words: ["хаОс (безлад)", "хАос (безлад)"], correct: "хаОс" },
+  { words: ["хаОс (безлад)", "хАос (безлад)"], correct: "хаОс (безлад)" },
   { words: ["цАрина", "царинА", "царИна"], correct: "цАрина" },
   { words: ["цемЕнт", "цЕмент"], correct: "цемЕнт" },
   { words: ["цЕнтнер", "центнЕр"], correct: "цЕнтнер" },
@@ -346,6 +345,7 @@ function nextQuestion() {
     });
 
   } else if (currentGame === "leksychna") {
+    questionEl.textContent = "Покажи, де помилка";
     const rawSentence = currentQuestion;
     const correctWords = rawSentence.match(/\*(.*?)\*/g).map(w => w.replace(/\*/g, ""));
     const displaySentence = rawSentence.replace(/\*/g, "");
