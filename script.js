@@ -302,9 +302,12 @@ function nextQuestion() {
   const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
   currentQuestion = remainingQuestions.splice(randomIndex, 1)[0];
 
-  if (currentGame === "naholosy") {
+ if (currentGame === "naholosy") {
     questionEl.textContent = "Обери правильний наголос";
 
+  if (currentGame === "leksychna") {
+    questionEl.textContent = "Покажи, де помилка";
+    }
     const shuffledWords = [...currentQuestion.words];
     shuffleArray(shuffledWords);
 
