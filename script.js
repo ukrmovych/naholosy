@@ -306,7 +306,7 @@ function nextQuestion() {
   currentQuestion = remainingQuestions.splice(randomIndex, 1)[0];
 
  if (currentGame === "leksychna") {
-    questionEl.textContent = "Покажи, де помилка";
+    questionEl.textContent = "незабаром тут з'явиться кайфужний тренажер, не пропусти! 😊😊";
   }
 
  if (currentGame === "naholosy") {
