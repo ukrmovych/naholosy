@@ -75,3 +75,12 @@ button {
 @keyframes blink {
   50% { background-color: yellow; }
 }
+
+.brand {
+  margin-top: 120px;          /* опускає напис вниз */
+  color: #574435;             /* твій потрібний колір */
+  text-align: center;
+  font-family: 'Comic Neue', 'Comic Sans MS';
+  letter-spacing: 0.5px;      /* робить напис легшим */
+  opacity: 0.85;              /* менш нав'язливий, але читабельний */
+}
