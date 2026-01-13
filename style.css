@@ -1,5 +1,5 @@
 body {
-  font-family:'Pangolin';
+  font-family:'Shantell Sans';
   text-align: center;
   background-color: #211a14;
   margin: 0;
@@ -23,7 +23,7 @@ button {
   font-size: 18px;
   cursor: pointer;
   color: white;
-  font-family: inherit;
+  font-family: 'Playpen Sans';
 }
 
 
@@ -83,7 +83,7 @@ button {
   margin-top: 120px;          /* опускає напис вниз */
   color: #574435;             /* твій потрібний колір */
   text-align: center;
-  font-family: 'Pangolin';
+  font-family: 'Shantell Sans';
   letter-spacing: 0.5px;      /* робить напис легшим */
   opacity: 0.85;              /* менш нав'язливий, але читабельний */
 }
