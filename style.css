@@ -7,6 +7,8 @@ body {
   padding: 0;
 }
 
+
+
 #menu {
   margin-top: 50px;
   color: white;
@@ -22,6 +24,10 @@ button {
   cursor: pointer;
   color: white;
   font-family: 'Comic Neue', 'Comic Sans MS';
+}
+
+button {
+  font-family: inherit;
 }
 
 #btn-menu {
