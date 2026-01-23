@@ -274,6 +274,10 @@ function startGame(gameType) {
   score = 0;
   lives = 3;
   updateUI();
+gtag('event', 'game_start', {
+  game_type: gameType
+});
+
   remainingQuestions = gameType === "naholosy" ? [...naholosyData] : [...leksychnaData];
   menu.style.display = "none";
   game.style.display = "block";
@@ -290,6 +294,11 @@ function loseLife() {
   updateUI();
   if (lives <= 0) {
     alert(`Гру закінчено! Твій рахунок: ${score}`);
+gtag('event', 'game_over', {
+  game_type: currentGame,
+  final_score: score
+});
+
     showMenu();
   }
 }
@@ -328,6 +337,12 @@ function nextQuestion() {
         const isCorrect = correctArray.includes(word);
 
         if (isCorrect) {
+gtag('event', 'answer', {
+  game_type: currentGame,
+  result: 'correct',
+  score: score + 1
+});
+
           // Підсвітити всі правильні варіанти
           Array.from(answersEl.children).forEach(b => {
             if (correctArray.includes(b.textContent)) {
@@ -338,6 +353,12 @@ function nextQuestion() {
           updateUI();
           setTimeout(nextQuestion, 500);
         } else {
+gtag('event', 'answer', {
+  game_type: currentGame,
+  result: 'wrong',
+  score: score
+});
+
           // Підсвітити всі правильні варіанти як правильні та блимаючі
           Array.from(answersEl.children).forEach(b => {
             if (correctArray.includes(b.textContent)) {
