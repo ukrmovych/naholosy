@@ -255,8 +255,14 @@ const naholosyData = [
 
 // Дані для лексичних помилок
 const leksychnaData = [
+  // Дані для лексичних помилок
+const leksychnaData = [
   "незабаром тут з'явиться *кайфужний* тренажер, не пропусти! 😊😊",
   "незабаром тут з'явиться *кайфужний* тренажер, не пропусти! 😊😊",
+
+];
+
+
 
 ];
 
@@ -385,7 +391,8 @@ gtag('event', 'answer', {
     // Тут без перемішування — зберігаємо порядок слів у реченні
     displaySentence.split(" ").forEach(word => {
       const btn = document.createElement("button");
-      btn.textContent = word;
+btn.textContent = word;
+btn.classList.add("word-btn");
       btn.onclick = () => {
         if (lock) return;
         lock = true;

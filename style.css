@@ -87,3 +87,12 @@ button {
   letter-spacing: 0.5px;      /* робить напис легшим */
   opacity: 0.85;              /* менш нав'язливий, але читабельний */
 }
+
+/* Кнопки слів у лексичній помилці */
+.word-btn {
+  padding: 4px 6px;   /* мінімальний простір */
+  margin: 3px 2px;
+  font-size: 16px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
