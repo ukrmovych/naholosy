@@ -260,10 +260,6 @@ const leksychnaData = [
 
 ];
 
-
-
-];
-
 // Питання, що залишились у поточній грі
 let remainingQuestions = [];
 
@@ -389,8 +385,7 @@ gtag('event', 'answer', {
     // Тут без перемішування — зберігаємо порядок слів у реченні
     displaySentence.split(" ").forEach(word => {
       const btn = document.createElement("button");
-btn.textContent = word;
-btn.classList.add("word-btn");
+      btn.textContent = word;
       btn.onclick = () => {
         if (lock) return;
         lock = true;
