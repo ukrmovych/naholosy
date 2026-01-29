@@ -1,6 +1,6 @@
 function getDelay(isCorrect) {
   if (currentGame === "leksychna") {
-    return isCorrect ? 2000 : 3000;
+    return isCorrect ? 1000 : 3000;
   }
   // Наголоси — без змін
   return isCorrect ? 500 : 2000;
