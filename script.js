@@ -394,7 +394,12 @@ btn.classList.add("word-btn");
         const isCorrect = correctWords.includes(cleanWord);
 
         if (isCorrect) {
-          btn.classList.add("correct", "strikethrough");
+   Array.from(answersEl.children).forEach(b => {
+  const bClean = b.textContent.replace(/^[.,!?:;"'()]+|[.,!?:;"'()]+$/g, "");
+  if (correctWords.includes(bClean)) {
+    b.classList.add("correct", "strikethrough");
+  }
+});
           score++;
           updateUI();
           setTimeout(nextQuestion, 500);
