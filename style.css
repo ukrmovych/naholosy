@@ -91,7 +91,7 @@ button {
 /* Кнопки слів у лексичній помилці */
 .word-btn {
   padding: 10px 6px;   /* мінімальний простір */
-  margin: 3px 2px;
+  margin: 10px 2px;
   font-size: 18px;
   line-height: 1.2;
   white-space: nowrap;
