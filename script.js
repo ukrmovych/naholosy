@@ -380,7 +380,6 @@ gtag('event', 'answer', {
     const correctWords = rawSentence.match(/\*(.*?)\*/g).map(w => w.replace(/\*/g, ""));
     const displaySentence = rawSentence.replace(/\*/g, "");
 
-    questionEl.textContent = "";
 
     // Тут без перемішування — зберігаємо порядок слів у реченні
     displaySentence.split(" ").forEach(word => {
