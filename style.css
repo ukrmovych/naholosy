@@ -90,8 +90,8 @@ button {
 
 /* Кнопки слів у лексичній помилці */
 .word-btn {
-  padding: 10px 6px;   /* мінімальний простір */
-  margin: 10px 2px;
+  padding: 10px 10px;   
+  margin: 5px 1px;
   font-size: 18px;
   line-height: 1.2;
   white-space: nowrap;
