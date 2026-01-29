@@ -1,3 +1,11 @@
+function getDelay(isCorrect) {
+  if (currentGame === "leksychna") {
+    return isCorrect ? 2000 : 3000;
+  }
+  // Наголоси — без змін
+  return isCorrect ? 500 : 2000;
+}
+
 const btnNaholosy = document.getElementById("btn-naholosy");
 const btnLeksychna = document.getElementById("btn-leksychna");
 const btnMenu = document.getElementById("btn-menu");
@@ -410,7 +418,7 @@ btn.classList.add("word-btn");
 });
           score++;
           updateUI();
-          setTimeout(nextQuestion, 500);
+          setTimeout(nextQuestion, getDelay(true));
         } else {
           Array.from(answersEl.children).forEach(b => {
             const bClean = b.textContent.replace(/^[.,!?:;"'()]+|[.,!?:;"'()]+$/g, "");
@@ -419,7 +427,7 @@ btn.classList.add("word-btn");
             }
           });
           loseLife();
-          setTimeout(nextQuestion, 2000);
+          setTimeout(nextQuestion, getDelay(false));
         }
       };
       answersEl.appendChild(btn);
