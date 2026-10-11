@@ -45,25 +45,8 @@ button {
 }
 
 .correct {
-  background-color: #4CAF50 !important;
-  color: white !important;
-}
-
-.blink {
-  animation: blink 0.5s step-start 0s infinite;
-}
-
-@keyframes blink {
-  50% { opacity: 0; }
-}
-
-.strikethrough {
-  text-decoration: line-through;
-}
-
-
-.correct {
-  background-color: green;
+  /* без !important — інакше анімація .blink не може змінити фон */
+  background-color: #4CAF50;
   color: white;
 }
 
@@ -71,12 +54,12 @@ button {
   animation: blink 0.5s linear infinite;
 }
 
-.strikethrough {
-  text-decoration: line-through;
-}
-
 @keyframes blink {
   50% { background-color: yellow; }
+}
+
+.strikethrough {
+  text-decoration: line-through;
 }
 
 .brand {
