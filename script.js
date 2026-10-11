@@ -1,27 +1,3 @@
-function getDelay(isCorrect) {
-  if (currentGame === "leksychna") {
-    return isCorrect ? 1000 : 3000;
-  }
-  // Наголоси
-  return isCorrect ? 500 : 2000;
-}
-
-const btnNaholosy = document.getElementById("btn-naholosy");
-const btnLeksychna = document.getElementById("btn-leksychna");
-const btnMenu = document.getElementById("btn-menu");
-const menu = document.getElementById("menu");
-const game = document.getElementById("game");
-const scoreEl = document.getElementById("score");
-const livesEl = document.getElementById("lives");
-const questionEl = document.getElementById("question");
-const answersEl = document.getElementById("answers");
-
-let score = 0;
-let lives = 3;
-let currentGame = "";
-let currentQuestion = null;
-let lock = false;
-
 // Дані для наголосів (скорочений варіант)
 const naholosyData = [
   { words: ["асиметрІя", "асимЕтрія"], correct: "асиметрІя" },
@@ -1796,16 +1772,72 @@ const leksychnaData = [
 "Дипломат відіграв ключову роль у складних перемовинах, завдяки чому сторонам вдалося досягти компромісу вже на третьому раунді. *✅-помилок-немає-✅*"
 ];
 
-// Питання, що залишились у поточній грі
-let remainingQuestions = [];
+// ================== Логіка гри ==================
 
-// Таймер переходу до наступного питання (щоб скасовувати його при виході в меню)
+const OK_TOKEN = "✅-помилок-немає-✅";
+const MAX_LIVES = 3;
+const TOTAL_WORDS = naholosyData.length;
+
+// Затримки перед наступним питанням: [правильно, помилка]
+const DELAYS = {
+  naholosy: [600, 2000],
+  leksychna: [1000, 3000]
+};
+
+const PRAISE = ["Правильно!", "Так тримати!", "Супер!", "Чудово!", "Влучно!", "Є!"];
+
+const $ = id => document.getElementById(id);
+const screens = { menu: $("menu"), game: $("game"), over: $("over"), leaders: $("leaders") };
+const scoreEl = $("score");
+const livesEl = $("lives");
+const progressEl = $("progress");
+const progressFill = $("progress-fill");
+const questionEl = $("question");
+const sentenceEl = $("sentence");
+const answersEl = $("answers");
+const feedbackEl = $("feedback");
+const hintEl = $("hint");
+
+let score = 0;
+let lives = MAX_LIVES;
+let streak = 0;
+let mistakes = [];
+let currentGame = "";
+let currentQuestion = null;
+let lock = false;
+let remainingQuestions = [];
 let nextTimer = null;
 
-function scheduleNextQuestion(isCorrect) {
-  clearTimeout(nextTimer);
-  nextTimer = setTimeout(nextQuestion, getDelay(isCorrect));
+// ---------- Локальне сховище (може бути недоступне) ----------
+
+function storageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
 }
+
+function storageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    // нічого страшного — просто не збережеться
+  }
+}
+
+function getBest(game) {
+  return Number(storageGet(`best_${game}`)) || 0;
+}
+
+function renderBestScores() {
+  document.querySelectorAll("[data-best]").forEach(el => {
+    const best = getBest(el.dataset.best);
+    el.textContent = best > 0 ? `Рекорд: ${best}` : "";
+  });
+}
+
+// ---------- Допоміжне ----------
 
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
@@ -1814,47 +1846,150 @@ function shuffleArray(array) {
   }
 }
 
+function showScreen(name) {
+  $("confetti").innerHTML = "";
+  Object.entries(screens).forEach(([key, el]) => {
+    el.hidden = key !== name;
+  });
+  window.scrollTo(0, 0);
+}
+
+function schedule(fn, delay) {
+  clearTimeout(nextTimer);
+  nextTimer = setTimeout(fn, delay);
+}
+
+function restartAnimation(el, className) {
+  el.classList.remove(className);
+  void el.offsetWidth;
+  el.classList.add(className);
+}
+
+function updateUI() {
+  if (currentGame === "naholosy") {
+    scoreEl.textContent = score >= TOTAL_WORDS ? `${score} 🏆` : `${score}/${TOTAL_WORDS}`;
+    progressEl.hidden = false;
+    progressFill.style.width = `${Math.min(score / TOTAL_WORDS, 1) * 100}%`;
+    progressEl.classList.toggle("done", score >= TOTAL_WORDS);
+  } else {
+    scoreEl.textContent = score;
+    progressEl.hidden = true;
+  }
+
+  livesEl.innerHTML = "";
+  for (let i = 0; i < MAX_LIVES; i++) {
+    const heart = document.createElement("span");
+    heart.className = "heart" + (i < lives ? "" : " lost");
+    heart.textContent = "❤️";
+    livesEl.appendChild(heart);
+  }
+  livesEl.setAttribute("aria-label", `Життя: ${lives} з ${MAX_LIVES}`);
+}
+
+function setFeedback(text, kind) {
+  feedbackEl.textContent = text;
+  feedbackEl.className = "feedback" + (kind ? ` ${kind}` : "");
+}
+
+// Слово з великою літерою-наголосом -> елементи з підсвіченою літерою.
+// «вИгода (користь)» -> «вИгода» + підпис «користь»
+function renderStressWord(container, word) {
+  const match = word.match(/^(.*?)\s*\((.+)\)\s*$/);
+  const main = match ? match[1] : word;
+  const note = match ? match[2] : "";
+
+  const wordEl = document.createElement("span");
+  for (const ch of main) {
+    if (ch !== ch.toLowerCase()) {
+      const s = document.createElement("span");
+      s.className = "stress";
+      s.textContent = ch;
+      wordEl.appendChild(s);
+    } else {
+      wordEl.appendChild(document.createTextNode(ch));
+    }
+  }
+  container.appendChild(wordEl);
+
+  if (note) {
+    const noteEl = document.createElement("span");
+    noteEl.className = "note";
+    noteEl.textContent = note;
+    container.appendChild(noteEl);
+  }
+}
+
+// ---------- Хід гри ----------
+
 function startGame(gameType) {
   clearTimeout(nextTimer);
   currentGame = gameType;
   score = 0;
-  lives = 3;
+  lives = MAX_LIVES;
+  streak = 0;
+  mistakes = [];
   updateUI();
   gtag('event', 'game_start', {
     game_type: gameType
   });
 
   remainingQuestions = gameType === "naholosy" ? [...naholosyData] : [...leksychnaData];
-  menu.style.display = "none";
-  game.style.display = "block";
+  showScreen("game");
+  hintEl.textContent = gameType === "naholosy" ? "Підказка: можна відповідати клавішами 1, 2, 3" : "";
   nextQuestion();
 }
 
-function updateUI() {
-  scoreEl.textContent = `Очки: ${score}`;
-  livesEl.textContent = "❤️".repeat(lives);
+function showMenu() {
+  clearTimeout(nextTimer);
+  $("celebrate").hidden = true;
+  renderBestScores();
+  showScreen("menu");
 }
 
-// Повертає true, якщо гра закінчилася
-function loseLife() {
-  lives--;
-  updateUI();
-  if (lives <= 0) {
-    alert(`Гру закінчено! Твій рахунок: ${score}`);
-    gtag('event', 'game_over', {
-      game_type: currentGame,
-      final_score: score
-    });
+function handleAnswer(isCorrect, highlight, mistake) {
+  if (lock) return;
+  lock = true;
 
-    showMenu();
-    return true;
+  gtag('event', 'answer', {
+    game_type: currentGame,
+    result: isCorrect ? 'correct' : 'wrong',
+    score: isCorrect ? score + 1 : score
+  });
+
+  highlight();
+
+  const [okDelay, badDelay] = DELAYS[currentGame];
+
+  if (isCorrect) {
+    score++;
+    streak++;
+    updateUI();
+    restartAnimation(scoreEl, "bump");
+    const praise = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+    setFeedback(streak >= 3 ? `${praise} 🔥 ${streak} поспіль` : praise, "good");
+
+    if (currentGame === "naholosy" && score === TOTAL_WORDS) {
+      schedule(celebrate, okDelay);
+    } else {
+      schedule(nextQuestion, okDelay);
+    }
+    return;
   }
-  return false;
+
+  streak = 0;
+  lives--;
+  mistakes.push(mistake);
+  updateUI();
+  restartAnimation(livesEl, "hit");
+  setFeedback(lives > 0 ? "Ой, не так. Запам'ятай правильний варіант 👆" : "Це було останнє життя", "bad");
+  schedule(lives > 0 ? nextQuestion : gameOver, badDelay);
 }
 
 function nextQuestion() {
   lock = false;
   answersEl.innerHTML = "";
+  sentenceEl.innerHTML = "";
+  setFeedback("");
 
   if (remainingQuestions.length === 0) {
     remainingQuestions = currentGame === "naholosy" ? [...naholosyData] : [...leksychnaData];
@@ -1864,98 +1999,341 @@ function nextQuestion() {
   currentQuestion = remainingQuestions.splice(randomIndex, 1)[0];
 
   if (currentGame === "naholosy") {
-    questionEl.textContent = "Обери правильний наголос";
-
-    const shuffledWords = [...currentQuestion.words];
-    shuffleArray(shuffledWords);
-
-    shuffledWords.forEach(word => {
-      const btn = document.createElement("button");
-      btn.textContent = word;
-      btn.onclick = () => {
-        if (lock) return;
-        lock = true;
-
-        const correctArray = Array.isArray(currentQuestion.correct)
-          ? currentQuestion.correct
-          : [currentQuestion.correct];
-        const isCorrect = correctArray.includes(word);
-
-        gtag('event', 'answer', {
-          game_type: currentGame,
-          result: isCorrect ? 'correct' : 'wrong',
-          score: isCorrect ? score + 1 : score
-        });
-
-        // Підсвітити всі правильні варіанти (при помилці — ще й блимаючими)
-        Array.from(answersEl.children).forEach(b => {
-          if (correctArray.includes(b.textContent)) {
-            b.classList.add("correct");
-            if (!isCorrect) b.classList.add("blink");
-          }
-        });
-
-        if (isCorrect) {
-          score++;
-          updateUI();
-        } else if (loseLife()) {
-          return;
-        }
-        scheduleNextQuestion(isCorrect);
-      };
-      answersEl.appendChild(btn);
-    });
-
+    renderNaholosy();
   } else if (currentGame === "leksychna") {
-    questionEl.textContent = "Чи є лексична помилка? Де саме? 👀";
-
-    // Слово правильне, якщо в реченні воно позначене зірочками (*слово*).
-    // Так працюють і слова з дефісом (*мас*-*медіа*), і слова біля лапок («*Хватить*).
-    // Тут без перемішування — зберігаємо порядок слів у реченні
-    currentQuestion.split(" ").filter(token => token !== "").forEach(token => {
-      const btn = document.createElement("button");
-      btn.textContent = token.replace(/\*/g, "");
-      btn.classList.add("word-btn");
-      if (token.includes("*")) btn.dataset.correct = "1";
-
-      btn.onclick = () => {
-        if (lock) return;
-        lock = true;
-
-        const isCorrect = btn.dataset.correct === "1";
-
-        gtag('event', 'answer', {
-          game_type: currentGame,
-          result: isCorrect ? 'correct' : 'wrong',
-          score: isCorrect ? score + 1 : score
-        });
-
-        Array.from(answersEl.children).forEach(b => {
-          if (b.dataset.correct === "1") {
-            b.classList.add("correct", "strikethrough");
-            if (!isCorrect) b.classList.add("blink");
-          }
-        });
-
-        if (isCorrect) {
-          score++;
-          updateUI();
-        } else if (loseLife()) {
-          return;
-        }
-        scheduleNextQuestion(isCorrect);
-      };
-      answersEl.appendChild(btn);
-    });
+    renderLeksychna();
   }
 }
 
-function showMenu() {
-  clearTimeout(nextTimer);
-  game.style.display = "none";
-  menu.style.display = "block";
+function renderNaholosy() {
+  questionEl.textContent = "Обери правильний наголос";
+  sentenceEl.hidden = true;
+
+  const correctArray = Array.isArray(currentQuestion.correct)
+    ? currentQuestion.correct
+    : [currentQuestion.correct];
+
+  const shuffledWords = [...currentQuestion.words];
+  shuffleArray(shuffledWords);
+
+  shuffledWords.forEach(word => {
+    const btn = document.createElement("button");
+    btn.className = "answer";
+    btn.dataset.word = word;
+    renderStressWord(btn, word);
+
+    btn.onclick = () => {
+      const isCorrect = correctArray.includes(word);
+      handleAnswer(isCorrect, () => {
+        Array.from(answersEl.children).forEach(b => {
+          if (correctArray.includes(b.dataset.word)) {
+            b.classList.add("correct");
+            if (!isCorrect) b.classList.add("blink");
+          } else if (b !== btn) {
+            b.classList.add("dim");
+          }
+        });
+        if (!isCorrect) btn.classList.add("wrong");
+      }, { chosen: word, correct: correctArray });
+    };
+    answersEl.appendChild(btn);
+  });
 }
 
-btnNaholosy.addEventListener("click", () => startGame("naholosy"));
-btnLeksychna.addEventListener("click", () => startGame("leksychna"));
-btnMenu.addEventListener("click", showMenu);
+function renderLeksychna() {
+  questionEl.textContent = "Чи є лексична помилка? Де саме? 👀";
+  sentenceEl.hidden = false;
+
+  // Слово правильне, якщо в реченні воно позначене зірочками (*слово*).
+  // Так працюють і слова з дефісом (*мас*-*медіа*), і слова біля лапок («*Хватить*).
+  // Тут без перемішування — зберігаємо порядок слів у реченні
+  const sentence = currentQuestion;
+  const buttons = [];
+
+  sentence.split(" ").filter(token => token !== "").forEach(token => {
+    const isMarked = token.includes("*");
+    const text = token.replace(/\*/g, "");
+    const btn = document.createElement("button");
+
+    if (text.includes(OK_TOKEN)) {
+      // Кнопка «помилок немає» — окремо під реченням
+      btn.className = "ok-btn";
+      btn.textContent = "✅ Помилок немає";
+      answersEl.appendChild(btn);
+    } else {
+      btn.className = "chip";
+      btn.textContent = text;
+      sentenceEl.appendChild(btn);
+      sentenceEl.appendChild(document.createTextNode(" "));
+    }
+
+    if (isMarked) btn.dataset.correct = "1";
+    buttons.push(btn);
+
+    btn.onclick = () => {
+      handleAnswer(isMarked, () => {
+        buttons.forEach(b => {
+          if (b.dataset.correct === "1") {
+            b.classList.add("correct");
+            if (b.classList.contains("chip")) b.classList.add("strikethrough");
+            if (!isMarked) b.classList.add("blink");
+          }
+        });
+        if (!isMarked) btn.classList.add("wrong");
+      }, { sentence });
+    };
+  });
+}
+
+// ---------- Святкування ----------
+
+function celebrate() {
+  gtag('event', 'all_words_done', {
+    game_type: currentGame
+  });
+  $("celebrate-text").textContent =
+    `${TOTAL_WORDS} правильних відповідей — це всі слова зі списку! Можна грати далі й ставити рекорд.`;
+  $("celebrate").hidden = false;
+  launchConfetti();
+}
+
+function launchConfetti() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const box = $("confetti");
+  const colors = ["#FF7900", "#4CAF50", "#ffffff", "#e6c200", "#d96700"];
+  for (let i = 0; i < 120; i++) {
+    const piece = document.createElement("i");
+    piece.style.left = `${Math.random() * 100}%`;
+    piece.style.background = colors[i % colors.length];
+    piece.style.animationDuration = `${2.5 + Math.random() * 2}s`;
+    piece.style.animationDelay = `${Math.random() * 0.8}s`;
+    piece.style.setProperty("--dx", `${(Math.random() - 0.5) * 200}px`);
+    piece.style.setProperty("--rot", `${Math.random() * 720 - 360}deg`);
+    box.appendChild(piece);
+  }
+  setTimeout(() => { box.innerHTML = ""; }, 5500);
+}
+
+// ---------- Кінець гри ----------
+
+function gameOver() {
+  gtag('event', 'game_over', {
+    game_type: currentGame,
+    final_score: score
+  });
+
+  const best = getBest(currentGame);
+  const isRecord = score > best;
+  if (isRecord) storageSet(`best_${currentGame}`, String(score));
+
+  $("over-score").textContent = currentGame === "naholosy" ? `${score}/${TOTAL_WORDS}` : score;
+  $("over-best").textContent = isRecord && score > 0
+    ? "🎉 Новий рекорд!"
+    : `Рекорд: ${Math.max(best, score)}`;
+
+  renderMistakes();
+  prepareSubmitForm();
+  showScreen("over");
+}
+
+function renderMistakes() {
+  const list = $("mistakes-list");
+  list.innerHTML = "";
+  $("mistakes").hidden = mistakes.length === 0;
+
+  mistakes.forEach(m => {
+    const li = document.createElement("li");
+
+    if (m.sentence) {
+      // Лексична помилка: речення з підсвіченими словами-помилками
+      const p = document.createElement("span");
+      p.className = "sentence-mistake";
+      m.sentence.split(" ").filter(t => t !== "").forEach(token => {
+        const text = token.replace(/\*/g, "");
+        const isOk = text.includes(OK_TOKEN);
+        const node = token.includes("*") ? document.createElement("mark") : document.createElement("span");
+        node.textContent = isOk ? (token.includes("*") ? "✅ помилок немає" : "") : text;
+        p.appendChild(node);
+        p.appendChild(document.createTextNode(" "));
+      });
+      li.appendChild(p);
+    } else {
+      // Наголоси: обране слово -> правильне
+      const was = document.createElement("span");
+      was.className = "was";
+      was.textContent = m.chosen.replace(/\s*\(.*\)\s*$/, "");
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      arrow.textContent = "→";
+      const right = document.createElement("span");
+      right.className = "right";
+      m.correct.forEach((word, i) => {
+        if (i > 0) right.appendChild(document.createTextNode(" / "));
+        renderStressWord(right, word);
+      });
+      li.append(was, arrow, right);
+    }
+    list.appendChild(li);
+  });
+}
+
+// ---------- Турнірна таблиця ----------
+
+const LB = window.LEADERBOARD_CONFIG || {};
+const leaderboardEnabled = Boolean(LB.url && LB.anonKey);
+let leadersGame = "naholosy";
+
+// Простий фільтр: остаточно прибирає небажані імена модератор у Supabase
+const BAD_WORDS = [
+  "хуй", "хуя", "хує", "хуї", "хуе", "хуи", "пизд", "пізд", "бляд", "блят", "бля",
+  "ебат", "ебан", "ебал", "єбат", "єбан", "єбал", "йобан", "їбат", "ебу", "єбу",
+  "сука", "сучк", "мудак", "мудил", "гандон", "гондон", "шлюх", "курв", "підар",
+  "пидар", "підор", "пидор", "педик", "залуп", "дроч", "срак",
+  "fuck", "shit", "bitch", "dick", "cunt", "porn", "sex", "секс", "порн", "казино", "casino"
+];
+
+function normalizeName(name) {
+  return name.trim().replace(/\s+/g, " ");
+}
+
+function checkName(name) {
+  if (name.length < 2) return "Ім'я має бути хоча б з 2 літер";
+  if (name.length > 20) return "Ім'я задовге (до 20 символів)";
+  const lower = name.toLowerCase();
+  if (/https?:|www\.|\.(com|net|org|ua|ru|io|me|site|online|shop)\b|t\.me|@|\d{4,}/.test(lower)) {
+    return "Посилання й реклама в імені заборонені";
+  }
+  const compact = lower.replace(/[^a-zа-яіїєґё]/g, "");
+  if (BAD_WORDS.some(w => compact.includes(w))) {
+    return "Обери, будь ласка, інше ім'я 🙂";
+  }
+  return "";
+}
+
+async function lbRequest(path, options = {}) {
+  const res = await fetch(`${LB.url}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: LB.anonKey,
+      Authorization: `Bearer ${LB.anonKey}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.status === 204 || res.status === 201 ? null : res.json();
+}
+
+function prepareSubmitForm() {
+  const form = $("submit-form");
+  form.hidden = !leaderboardEnabled || score <= 0;
+  form.querySelector("button").disabled = false;
+  $("player-name").disabled = false;
+  $("player-name").value = storageGet("player_name") || "";
+  setSubmitStatus("");
+}
+
+function setSubmitStatus(text, kind) {
+  const el = $("submit-status");
+  el.textContent = text;
+  el.className = "submit-status" + (kind ? ` ${kind}` : "");
+}
+
+$("submit-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = normalizeName($("player-name").value);
+  const problem = checkName(name);
+  if (problem) {
+    setSubmitStatus(problem, "bad");
+    return;
+  }
+
+  const button = e.target.querySelector("button");
+  button.disabled = true;
+  setSubmitStatus("Зберігаю…");
+
+  try {
+    await lbRequest("scores", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ name, game: currentGame, score })
+    });
+    storageSet("player_name", name);
+    $("player-name").disabled = true;
+    setSubmitStatus("Готово! Ти в таблиці 🏆", "good");
+    gtag('event', 'leaderboard_submit', { game_type: currentGame, score });
+  } catch (err) {
+    button.disabled = false;
+    setSubmitStatus("Не вдалося зберегти. Спробуй ще раз", "bad");
+  }
+});
+
+async function showLeaders(game) {
+  leadersGame = game;
+  document.querySelectorAll(".tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.game === game);
+  });
+  showScreen("leaders");
+
+  const list = $("leaders-list");
+  const status = $("leaders-status");
+  list.innerHTML = "";
+
+  if (!leaderboardEnabled) {
+    status.textContent = "Таблиця скоро запрацює 🙂";
+    return;
+  }
+
+  status.textContent = "Завантажую…";
+  try {
+    const rows = await lbRequest(
+      `scores?select=name,score&game=eq.${game}&order=score.desc,created_at.asc&limit=50`
+    );
+    if (leadersGame !== game) return;
+    const myName = storageGet("player_name");
+    list.innerHTML = "";
+    rows.forEach(row => {
+      const li = document.createElement("li");
+      if (myName && row.name === myName) li.classList.add("me");
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = row.name;
+      const points = document.createElement("span");
+      points.className = "points";
+      points.textContent = row.score;
+      li.append(name, points);
+      list.appendChild(li);
+    });
+    status.textContent = rows.length ? "" : "Тут поки порожньо — стань першим!";
+  } catch (err) {
+    if (leadersGame === game) status.textContent = "Не вдалося завантажити таблицю";
+  }
+}
+
+// ---------- Події ----------
+
+$("btn-naholosy").addEventListener("click", () => startGame("naholosy"));
+$("btn-leksychna").addEventListener("click", () => startGame("leksychna"));
+$("btn-leaders").addEventListener("click", () => showLeaders("naholosy"));
+$("btn-menu").addEventListener("click", showMenu);
+$("btn-leaders-back").addEventListener("click", showMenu);
+$("btn-again").addEventListener("click", () => startGame(currentGame));
+$("btn-over-menu").addEventListener("click", showMenu);
+$("btn-continue").addEventListener("click", () => {
+  $("celebrate").hidden = true;
+  nextQuestion();
+});
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => showLeaders(tab.dataset.game));
+});
+
+// Клавіші 1–4 для вибору варіанта в «Наголосах»
+document.addEventListener("keydown", e => {
+  if (screens.game.hidden || currentGame !== "naholosy" || !$("celebrate").hidden) return;
+  if (e.target.tagName === "INPUT") return;
+  const btn = answersEl.children[Number(e.key) - 1];
+  if (btn) btn.click();
+});
+
+renderBestScores();
