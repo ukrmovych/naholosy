@@ -483,14 +483,77 @@ button:focus-visible {
   background: var(--brown);
 }
 
-/* ---------- Підпис ---------- */
+/* ---------- Логотип і підпис ---------- */
+
+.menu-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.menu-logo img {
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 6px 14px rgba(255, 121, 0, 0.35));
+}
+
+.handle {
+  color: var(--orange);
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+
+/* Плашка з логотипом у картці гри — щоб її було видно на скриншотах */
+.brand-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: -6px 0 14px;
+  color: var(--orange);
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+.brand-tag img {
+  width: 28px;
+  height: 28px;
+}
+
+.brand-tag-bottom {
+  margin: 18px 0 0;
+}
+
+.over-logo {
+  width: 80px;
+  height: 80px;
+  filter: drop-shadow(0 6px 14px rgba(255, 121, 0, 0.35));
+}
 
 .brand {
-  margin-top: 32px;
-  color: var(--brown);
-  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 6px 16px 6px 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 400;
   letter-spacing: 0.5px;
-  opacity: 0.9;
+}
+
+.brand img {
+  width: 36px;
+  height: 36px;
+}
+
+.brand b {
+  color: var(--orange);
 }
 
 /* ---------- Анімації ---------- */

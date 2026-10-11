@@ -16,13 +16,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#211a14">
 <title>Мовні ігри</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=20261011">
+<link rel="stylesheet" href="style.css?v=20261011b">
 </head>
 <body>
 
   <!-- Меню -->
   <main id="menu" class="screen">
+    <div class="menu-logo">
+      <img src="logo.png" alt="Логотип ukr_movych" width="96" height="96">
+      <span class="handle">@ukr_movych</span>
+    </div>
     <h1 class="title">Що качатимемо?</h1>
 
     <div class="mode-list">
@@ -67,6 +73,7 @@
     </div>
 
     <section class="card">
+      <div class="brand-tag"><img src="logo.png" alt="" width="28" height="28"><span>@ukr_movych</span></div>
       <p id="question" class="question"></p>
       <div id="sentence" class="sentence" hidden></div>
       <div id="answers" class="answers"></div>
@@ -79,7 +86,7 @@
   <!-- Кінець гри -->
   <main id="over" class="screen" hidden>
     <section class="card over-card">
-      <div class="over-emoji" aria-hidden="true">🏁</div>
+      <img class="over-logo" src="logo.png" alt="Логотип ukr_movych" width="80" height="80">
       <h2>Гру закінчено!</h2>
       <p class="over-score"><span id="over-score">0</span></p>
       <p id="over-best" class="over-best"></p>
@@ -130,14 +137,18 @@
       <h2>Неймовірно!</h2>
       <p id="celebrate-text"></p>
       <button id="btn-continue" class="btn-primary">Грати далі</button>
+      <div class="brand-tag brand-tag-bottom"><img src="logo.png" alt="" width="28" height="28"><span>@ukr_movych</span></div>
     </div>
   </div>
   <div id="confetti" class="confetti" aria-hidden="true"></div>
 
-  <footer class="brand">by @ukr_movych</footer>
+  <footer class="brand">
+    <img src="logo.png" alt="" width="36" height="36">
+    <span>by <b>@ukr_movych</b></span>
+  </footer>
 
-  <script src="leaderboard-config.js?v=20261011"></script>
-  <script src="script.js?v=20261011"></script>
+  <script src="leaderboard-config.js?v=20261011b"></script>
+  <script src="script.js?v=20261011b"></script>
 
 </body>
 </html>
