@@ -1020,34 +1020,157 @@ function finishTrainingRound() {
   showScreen("trainOver");
 }
 
-// ---------- Дуель на одному екрані ----------
+// ---------- Дуель на одному екрані (2–4 гравці) ----------
 
 const DUEL_TARGET = 10;
+const TG_LINK = "https://t.me/+GkBggS477tlmODQy";
+
+const DUEL_PLAYERS = [
+  { name: "Гравець 1", color: "#FF7900", keys: ["1", "2", "3"] },
+  { name: "Гравець 2", color: "#2fb8a6", keys: ["8", "9", "0"] },
+  { name: "Гравець 3", color: "#a77bf3", keys: ["q", "w", "e"] },
+  { name: "Гравець 4", color: "#4c9bff", keys: ["i", "o", "p"] }
+];
+
+// Налаштування дуелі запам'ятовуються
+const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+const duelSetup = {
+  n: [2, 3, 4].includes(Number(storageGet("duel_n"))) ? Number(storageGet("duel_n")) : 2,
+  layout: ["table", "wall"].includes(storageGet("duel_layout"))
+    ? storageGet("duel_layout")
+    : (coarsePointer ? "table" : "wall")
+};
 let duel = null;
 
-function duelHalf(player) {
-  return document.querySelector(`.duel-half[data-player="${player}"]`);
+// «На столі» можна лише для 2 (навпроти) і 4 (2 на 2)
+function duelLayoutAllowed(n, layout) {
+  return layout === "wall" || n === 2 || n === 4;
+}
+
+function renderDuelSetup() {
+  if (!duelLayoutAllowed(duelSetup.n, duelSetup.layout)) duelSetup.layout = "wall";
+
+  document.querySelectorAll("#duel-players button").forEach(b => {
+    const on = Number(b.dataset.n) === duelSetup.n;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-checked", on);
+  });
+  document.querySelectorAll("#duel-layout button").forEach(b => {
+    const on = b.dataset.layout === duelSetup.layout;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-checked", on);
+    b.disabled = !duelLayoutAllowed(duelSetup.n, b.dataset.layout);
+  });
+
+  const { n, layout } = duelSetup;
+  $("duel-hint").textContent = layout === "wall"
+    ? `${n} колонки поруч, усі прямо — для дошки чи великої сенсорної панелі.`
+    : n === 2
+      ? "Телефон чи планшет лежить між гравцями: верхня половина перевернута."
+      : "Режим «2 на 2»: планшет посередині, верхні дві частини перевернуті.";
+
+  // Мініатюра поділу екрана
+  const preview = $("duel-preview");
+  preview.className = `duel-preview ${layoutClass(n, layout)}`;
+  preview.innerHTML = "";
+  for (let i = 0; i < n; i++) {
+    const cell = document.createElement("span");
+    cell.className = "pv-cell" + (isMirrored(i, n, layout) ? " flipped" : "");
+    cell.style.setProperty("--pc", DUEL_PLAYERS[i].color);
+    cell.style.gridArea = `p${i}`;
+    cell.textContent = i + 1;
+    preview.appendChild(cell);
+  }
+  const bar = document.createElement("span");
+  bar.className = "pv-bar";
+  bar.style.gridArea = "bar";
+  preview.appendChild(bar);
+}
+
+function layoutClass(n, layout) {
+  return `layout-${layout} n-${n}`;
+}
+
+// Хто сидить навпроти й бачить перевернутий екран
+function isMirrored(i, n, layout) {
+  if (layout !== "table") return false;
+  return n === 2 ? i === 1 : i >= 2;
+}
+
+function showKeyHints() {
+  return duelSetup.layout === "wall" && window.matchMedia("(hover: hover)").matches;
 }
 
 function startDuel() {
   clearTimeout(nextTimer);
   training = null;
-  duel = { scores: [0, 0], queue: [], locked: [false, false], resolved: false, question: null };
-  gtag('event', 'duel_start', { game_type: "naholosy" });
-  $("duel-end").hidden = true;
+  const { n, layout } = duelSetup;
+  duel = {
+    n,
+    layout,
+    scores: new Array(n).fill(0),
+    locked: new Array(n).fill(false),
+    queue: [],
+    resolved: false,
+    question: null,
+    over: false
+  };
+  gtag('event', 'duel_start', { game_type: "naholosy", players: n, layout });
+  buildDuelBoard();
   showScreen("duel");
-  updateDuelScores();
   nextDuelRound();
 }
 
-function updateDuelScores() {
-  [0, 1].forEach(p => {
-    duelHalf(p).querySelector(".duel-score").textContent = duel.scores[p];
-  });
+function buildDuelBoard() {
+  const board = $("duel-board");
+  board.className = `duel-board ${layoutClass(duel.n, duel.layout)}`;
+  board.innerHTML = "";
+
+  for (let i = 0; i < duel.n; i++) {
+    const pl = DUEL_PLAYERS[i];
+    const pane = document.createElement("section");
+    pane.className = "duel-pane" + (isMirrored(i, duel.n, duel.layout) ? " flipped" : "");
+    pane.dataset.player = i;
+    pane.style.gridArea = `p${i}`;
+    pane.style.setProperty("--pc", pl.color);
+    pane.innerHTML = `
+      <div class="duel-head">
+        <span class="duel-name"></span>
+        <span class="duel-score">0</span>
+      </div>
+      <div class="duel-answers"></div>
+      <p class="duel-status"></p>`;
+    pane.querySelector(".duel-name").textContent = pl.name;
+    board.appendChild(pane);
+  }
+
+  const bar = document.createElement("div");
+  bar.className = "duel-bar";
+  bar.style.gridArea = "bar";
+  bar.innerHTML = `
+    <button class="icon-btn duel-exit" aria-label="Вийти з дуелі">✕</button>
+    <a class="duel-brand" href="${TG_LINK}" target="_blank" rel="noopener" data-tg-link>
+      <img src="logo.png" alt="" width="26" height="26">@ukr_movych
+    </a>
+    <span class="duel-goal">до ${DUEL_TARGET}</span>
+    <button class="btn-primary btn-small duel-again" hidden>Ще раз</button>`;
+  bar.querySelector(".duel-exit").addEventListener("click", exitDuel);
+  bar.querySelector(".duel-again").addEventListener("click", startDuel);
+  board.appendChild(bar);
 }
 
-function setDuelStatus(player, text, kind) {
-  const el = duelHalf(player).querySelector(".duel-status");
+function duelPane(i) {
+  return document.querySelector(`.duel-pane[data-player="${i}"]`);
+}
+
+function updateDuelScores() {
+  for (let i = 0; i < duel.n; i++) {
+    duelPane(i).querySelector(".duel-score").textContent = duel.scores[i];
+  }
+}
+
+function setDuelStatus(i, text, kind) {
+  const el = duelPane(i).querySelector(".duel-status");
   el.textContent = text;
   el.className = "duel-status" + (kind ? ` ${kind}` : "");
 }
@@ -1058,30 +1181,38 @@ function nextDuelRound() {
     shuffleArray(duel.queue);
   }
   duel.question = duel.queue.shift();
-  duel.locked = [false, false];
+  duel.locked.fill(false);
   duel.resolved = false;
 
   const words = [...duel.question.words];
   shuffleArray(words);
+  const keys = showKeyHints();
 
-  [0, 1].forEach(p => {
-    const box = duelHalf(p).querySelector(".duel-answers");
+  for (let i = 0; i < duel.n; i++) {
+    const pane = duelPane(i);
+    pane.classList.remove("won-round", "lost-round", "winner", "loser");
+    const box = pane.querySelector(".duel-answers");
     box.innerHTML = "";
-    setDuelStatus(p, "Хто швидше?");
-    duelHalf(p).classList.remove("won-round", "lost-round");
-    words.forEach(word => {
+    setDuelStatus(i, "Хто швидше?");
+    words.forEach((word, k) => {
       const btn = document.createElement("button");
       btn.className = "answer duel-answer";
       btn.dataset.word = word;
       renderStressWord(btn, word);
-      // pointerdown — щоб обидва гравці могли тиснути одночасно і без затримки
+      if (keys) {
+        const key = document.createElement("kbd");
+        key.textContent = DUEL_PLAYERS[i].keys[k].toUpperCase();
+        btn.appendChild(key);
+      }
+      // pointerdown — щоб усі гравці могли тиснути одночасно і без затримки
       btn.addEventListener("pointerdown", e => {
         e.preventDefault();
-        duelTap(p, word, btn);
+        duelTap(i, word, btn);
       });
       box.appendChild(btn);
     });
-  });
+  }
+  updateDuelScores();
 }
 
 function duelCorrectWords() {
@@ -1100,50 +1231,53 @@ function revealDuelAnswer(blink) {
   });
 }
 
-function duelTap(player, word, btn) {
-  if (!duel || duel.resolved || duel.locked[player]) return;
-  const other = 1 - player;
+function duelTap(i, word, btn) {
+  if (!duel || duel.over || duel.resolved || duel.locked[i]) return;
 
   if (duelCorrectWords().includes(word)) {
     duel.resolved = true;
-    duel.scores[player]++;
+    duel.scores[i]++;
     updateDuelScores();
     revealDuelAnswer(false);
-    duelHalf(player).classList.add("won-round");
-    setDuelStatus(player, "+1 — швидше за всіх! ⚡", "good");
-    setDuelStatus(other, "Суперник був швидшим", "");
-
-    if (duel.scores[player] >= DUEL_TARGET) {
-      schedule(() => finishDuel(player), 1200);
+    duelPane(i).classList.add("won-round");
+    for (let j = 0; j < duel.n; j++) {
+      if (j === i) setDuelStatus(j, "+1 — швидше за всіх! ⚡", "good");
+      else setDuelStatus(j, `Швидше був ${DUEL_PLAYERS[i].name.toLowerCase()}`);
+    }
+    if (duel.scores[i] >= DUEL_TARGET) {
+      duel.over = true;
+      schedule(() => finishDuel(i), 1200);
     } else {
       schedule(nextDuelRound, 1200);
     }
     return;
   }
 
-  // Помилка: цей гравець пропускає раунд
-  duel.locked[player] = true;
+  // Помилка: цей гравець пропускає слово
+  duel.locked[i] = true;
   btn.classList.add("wrong");
-  duelHalf(player).classList.add("lost-round");
-  setDuelStatus(player, "Помилка — чекай наступне слово", "bad");
+  duelPane(i).classList.add("lost-round");
+  setDuelStatus(i, "Помилка — чекай наступне слово", "bad");
 
-  if (duel.locked[other]) {
+  if (duel.locked.every(Boolean)) {
     duel.resolved = true;
     revealDuelAnswer(true);
-    setDuelStatus(player, "Обидва помилились 🙈", "bad");
-    setDuelStatus(other, "Обидва помилились 🙈", "bad");
+    for (let j = 0; j < duel.n; j++) setDuelStatus(j, "Ніхто не вгадав 🙈", "bad");
     schedule(nextDuelRound, 2000);
   }
 }
 
 function finishDuel(winner) {
-  gtag('event', 'duel_end', { game_type: "naholosy", score: `${duel.scores[0]}:${duel.scores[1]}` });
-  [0, 1].forEach(p => {
-    duelHalf(p).querySelector(".duel-answers").innerHTML = "";
-    duelHalf(p).classList.remove("won-round", "lost-round");
-    setDuelStatus(p, p === winner ? "🏆 Перемога!" : "Наступного разу пощастить 💪", p === winner ? "good win" : "lose");
-  });
-  $("duel-end").hidden = false;
+  gtag('event', 'duel_end', { game_type: "naholosy", players: duel.n, layout: duel.layout, score: duel.scores.join(":") });
+  for (let i = 0; i < duel.n; i++) {
+    const pane = duelPane(i);
+    pane.querySelector(".duel-answers").innerHTML = "";
+    pane.classList.remove("won-round", "lost-round");
+    pane.classList.add(i === winner ? "winner" : "loser");
+    setDuelStatus(i, i === winner ? "🏆 Перемога!" : "Наступного разу пощастить 💪", i === winner ? "good win" : "lose");
+  }
+  document.querySelector(".duel-again").hidden = false;
+  document.querySelector(".duel-goal").hidden = true;
   launchConfetti();
 }
 
@@ -1152,6 +1286,34 @@ function exitDuel() {
   duel = null;
   showModes();
 }
+
+// Клавіатура: у кожного гравця свої три клавіші (видно на кнопках)
+document.addEventListener("keydown", e => {
+  if (!duel || screens.duel.hidden || e.repeat) return;
+  const key = e.key.toLowerCase();
+  for (let i = 0; i < duel.n; i++) {
+    const k = DUEL_PLAYERS[i].keys.indexOf(key);
+    if (k === -1) continue;
+    const btn = duelPane(i).querySelectorAll(".duel-answer")[k];
+    if (btn) duelTap(i, btn.dataset.word, btn);
+  }
+});
+
+document.querySelectorAll("#duel-players button").forEach(b => {
+  b.addEventListener("click", () => {
+    duelSetup.n = Number(b.dataset.n);
+    storageSet("duel_n", String(duelSetup.n));
+    renderDuelSetup();
+  });
+});
+document.querySelectorAll("#duel-layout button").forEach(b => {
+  b.addEventListener("click", () => {
+    duelSetup.layout = b.dataset.layout;
+    storageSet("duel_layout", duelSetup.layout);
+    renderDuelSetup();
+  });
+});
+renderDuelSetup();
 
 // ---------- Турнірна таблиця ----------
 
@@ -1299,8 +1461,6 @@ $("btn-menu").addEventListener("click", () => {
 });
 $("btn-modes-back").addEventListener("click", showMenu);
 $("btn-duel").addEventListener("click", startDuel);
-$("btn-duel-exit").addEventListener("click", exitDuel);
-$("btn-duel-again").addEventListener("click", startDuel);
 $("btn-marathon").addEventListener("click", () => startGame("naholosy"));
 $("btn-fix-mistakes").addEventListener("click", startMistakesRound);
 $("btn-train-next").addEventListener("click", () => startTraining(training.groupIndex + 1));
@@ -1328,15 +1488,15 @@ document.addEventListener("keydown", e => {
 renderMenu();
 
 // Посилання @ukr_movych: у Telegram відкриваємо через Telegram, на сайті — у новій вкладці
-document.querySelectorAll("[data-tg-link]").forEach(link => {
-  link.addEventListener("click", e => {
-    gtag('event', 'brand_click', { place: link.className });
-    const tg = window.Telegram && window.Telegram.WebApp;
-    if (tg && tg.initData && typeof tg.openTelegramLink === "function") {
-      e.preventDefault();
-      tg.openTelegramLink(link.href);
-    }
-  });
+document.addEventListener("click", e => {
+  const link = e.target instanceof Element && e.target.closest("[data-tg-link]");
+  if (!link) return;
+  gtag('event', 'brand_click', { place: link.className });
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg && tg.initData && typeof tg.openTelegramLink === "function") {
+    e.preventDefault();
+    tg.openTelegramLink(link.href);
+  }
 });
 
 // ---------- Заборона копіювання ----------

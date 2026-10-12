@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261012l">
+<link rel="stylesheet" href="style.css?v=20261012m">
 </head>
 <body>
 
@@ -114,40 +114,39 @@
         <span class="mode-num">3</span>
         <span class="mode-head-text">
           <span class="mode-title">⚔️ Дуель</span>
-          <span class="mode-desc">Один телефон чи планшет, двоє гравців з різних боків. Хто перший натисне правильний наголос — отримує бал. Граємо до 10.</span>
+          <span class="mode-desc">Один екран, 2–4 гравці. Хто перший натисне правильний наголос — отримує бал. Граємо до 10.</span>
         </span>
       </div>
+
+      <div class="duel-setup">
+        <div class="setup-controls">
+          <div class="setup-row">
+            <span class="setup-label">Гравців</span>
+            <div id="duel-players" class="seg" role="radiogroup" aria-label="Кількість гравців">
+              <button data-n="2" role="radio">2</button>
+              <button data-n="3" role="radio">3</button>
+              <button data-n="4" role="radio">4</button>
+            </div>
+          </div>
+          <div class="setup-row">
+            <span class="setup-label">Екран</span>
+            <div id="duel-layout" class="seg" role="radiogroup" aria-label="Як лежить екран">
+              <button data-layout="table" role="radio">📱 На столі</button>
+              <button data-layout="wall" role="radio">🖥 На стіні</button>
+            </div>
+          </div>
+          <p id="duel-hint" class="setup-hint"></p>
+        </div>
+        <div id="duel-preview" class="duel-preview" aria-hidden="true"></div>
+      </div>
+
       <button id="btn-duel" class="btn-primary">Почати дуель</button>
     </section>
   </main>
 
-  <!-- Дуель: екран ділиться навпіл, верхня половина перевернута -->
+  <!-- Дуель: поле малює script.js (2–4 гравці, на столі або на стіні) -->
   <main id="duel" class="duel" hidden>
-    <section class="duel-half duel-top" data-player="1">
-      <div class="duel-head">
-        <span class="duel-name">Гравець 2</span>
-        <span class="duel-score">0</span>
-      </div>
-      <div class="duel-answers"></div>
-      <p class="duel-status"></p>
-    </section>
-
-    <div class="duel-mid">
-      <button id="btn-duel-exit" class="icon-btn duel-exit" aria-label="Вийти з дуелі">✕</button>
-      <a class="duel-brand" href="https://t.me/+GkBggS477tlmODQy" target="_blank" rel="noopener" data-tg-link><img src="logo.png" alt="" width="26" height="26">@ukr_movych</a>
-      <div id="duel-end" class="duel-end" hidden>
-        <button id="btn-duel-again" class="btn-primary btn-small">Ще раз</button>
-      </div>
-    </div>
-
-    <section class="duel-half duel-bottom" data-player="0">
-      <div class="duel-head">
-        <span class="duel-name">Гравець 1</span>
-        <span class="duel-score">0</span>
-      </div>
-      <div class="duel-answers"></div>
-      <p class="duel-status"></p>
-    </section>
+    <div id="duel-board" class="duel-board"></div>
   </main>
 
   <!-- Результат тренування -->
@@ -249,8 +248,8 @@
     </a>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261012l"></script>
-  <script src="script.js?v=20261012l"></script>
+  <script src="leaderboard-config.js?v=20261012m"></script>
+  <script src="script.js?v=20261012m"></script>
 
 </body>
 </html>
