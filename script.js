@@ -265,7 +265,10 @@ const GAMES = [
 ];
 
 const $ = id => document.getElementById(id);
-const screens = { menu: $("menu"), game: $("game"), over: $("over"), leaders: $("leaders") };
+const screens = {
+  menu: $("menu"), modes: $("modes"), game: $("game"), over: $("over"),
+  trainOver: $("train-over"), leaders: $("leaders")
+};
 const scoreEl = $("score");
 const livesEl = $("lives");
 const progressEl = $("progress");
@@ -288,6 +291,9 @@ let questionToken = 0;
 let seenSentenceIds = [];
 let sentencePrefetch = null;
 let nextTimer = null;
+
+// Тренування за групами (null — звичайний марафон)
+let training = null;
 
 // ---------- Локальне сховище (може бути недоступне) ----------
 
@@ -349,6 +355,8 @@ function renderMenu() {
     btn.addEventListener("click", () => {
       if (game.status === "soon") {
         showSoon(game);
+      } else if (game.id === "naholosy") {
+        showModes();
       } else {
         startGame(game.id);
       }
@@ -402,6 +410,15 @@ function restartAnimation(el, className) {
 }
 
 function updateUI() {
+  livesEl.hidden = Boolean(training);
+  if (training) {
+    scoreEl.textContent = `${training.done}/${training.total}`;
+    progressEl.hidden = false;
+    progressFill.style.width = `${(training.done / training.total) * 100}%`;
+    progressEl.classList.toggle("done", training.done >= training.total);
+    return;
+  }
+
   if (currentGame === "naholosy") {
     scoreEl.textContent = score >= TOTAL_WORDS ? `${score} 🏆` : `${score}/${TOTAL_WORDS}`;
     progressEl.hidden = false;
@@ -459,6 +476,8 @@ function renderStressWord(container, word) {
 
 function startGame(gameType) {
   clearTimeout(nextTimer);
+  training = null;
+  $("btn-menu").textContent = "‹ Меню";
   currentGame = gameType;
   score = 0;
   lives = MAX_LIVES;
@@ -478,6 +497,7 @@ function startGame(gameType) {
 
 function showMenu() {
   clearTimeout(nextTimer);
+  training = null;
   questionToken++;
   $("celebrate").hidden = true;
   renderBestScores();
@@ -497,6 +517,26 @@ function handleAnswer(isCorrect, highlight, mistake) {
   highlight();
 
   const [okDelay, badDelay] = DELAYS[currentGame];
+
+  if (training) {
+    if (isCorrect) {
+      training.done++;
+      if (training.round === 1) training.firstTry++;
+      streak++;
+      const praise = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+      setFeedback(streak >= 3 ? `${praise} 🔥 ${streak} поспіль` : praise, "good");
+    } else {
+      // Слово не зараховується: воно піде в роботу над помилками
+      training.done++;
+      streak = 0;
+      training.roundMistakes.push({ ...mistake, question: currentQuestion });
+      setFeedback("Запам'ятай правильний варіант 👆 Повторимо наприкінці", "bad");
+    }
+    updateUI();
+    restartAnimation(scoreEl, "bump");
+    schedule(nextQuestion, isCorrect ? okDelay : badDelay);
+    return;
+  }
 
   if (isCorrect) {
     score++;
@@ -530,7 +570,14 @@ function nextQuestion() {
   sentenceEl.innerHTML = "";
   setFeedback("");
 
-  if (currentGame === "naholosy") {
+  if (training) {
+    if (training.queue.length === 0) {
+      finishTrainingRound();
+      return;
+    }
+    currentQuestion = training.queue.shift();
+    renderNaholosy();
+  } else if (currentGame === "naholosy") {
     if (remainingQuestions.length === 0) {
       remainingQuestions = [...naholosyData];
     }
@@ -732,12 +779,11 @@ function gameOver() {
   showScreen("over");
 }
 
-function renderMistakes() {
-  const list = $("mistakes-list");
+function renderMistakes(items = mistakes, list = $("mistakes-list"), section = $("mistakes")) {
   list.innerHTML = "";
-  $("mistakes").hidden = mistakes.length === 0;
+  section.hidden = items.length === 0;
 
-  mistakes.forEach(m => {
+  items.forEach(m => {
     const li = document.createElement("li");
 
     if (m.sentence) {
@@ -771,6 +817,192 @@ function renderMistakes() {
     }
     list.appendChild(li);
   });
+}
+
+// ---------- Тренування за групами ----------
+
+const ALPHABET = "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя";
+
+function firstLetter(q) {
+  return [].concat(q.correct)[0][0].toLowerCase();
+}
+
+// Ділимо слова за абеткою на групи по ~15 так, щоб межі груп
+// по можливості збігалися з межами літер
+function buildGroups(data, target = 15, min = 10, max = 19) {
+  const sorted = data
+    .map((q, i) => ({ q, i, letter: firstLetter(q) }))
+    .sort((x, y) => ALPHABET.indexOf(x.letter) - ALPHABET.indexOf(y.letter) || x.i - y.i);
+
+  const n = sorted.length;
+  const best = new Array(n + 1).fill(Infinity);
+  const prev = new Array(n + 1).fill(-1);
+  best[0] = 0;
+  for (let end = 1; end <= n; end++) {
+    for (let size = min; size <= max && size <= end; size++) {
+      const start = end - size;
+      if (best[start] === Infinity) continue;
+      const atBoundary = end === n || sorted[end].letter !== sorted[end - 1].letter;
+      const cost = best[start] + (size - target) ** 2 + (atBoundary ? 0 : 12);
+      if (cost < best[end]) {
+        best[end] = cost;
+        prev[end] = start;
+      }
+    }
+  }
+
+  const ranges = [];
+  for (let end = n; end > 0; end = prev[end]) ranges.unshift([prev[end], end]);
+
+  const groups = ranges.map(([start, end]) => {
+    const items = sorted.slice(start, end);
+    const first = items[0].letter.toUpperCase();
+    const last = items[items.length - 1].letter.toUpperCase();
+    return { label: first === last ? first : `${first}–${last}`, words: items.map(x => x.q) };
+  });
+
+  // Однакові назви (наприклад, дві групи на «П») нумеруємо
+  const total = {};
+  groups.forEach(g => { total[g.label] = (total[g.label] || 0) + 1; });
+  const seen = {};
+  groups.forEach(g => {
+    if (total[g.label] > 1) {
+      seen[g.label] = (seen[g.label] || 0) + 1;
+      g.label += ` (${seen[g.label]})`;
+    }
+  });
+  return groups;
+}
+
+const GROUPS = buildGroups(naholosyData);
+
+function groupKey(i) {
+  return `train_naholosy_${GROUPS[i].label}`;
+}
+
+function showModes() {
+  clearTimeout(nextTimer);
+  training = null;
+  questionToken++;
+  renderGroups();
+  renderBestScores();
+  showScreen("modes");
+}
+
+function renderGroups() {
+  const list = $("group-list");
+  list.innerHTML = "";
+  GROUPS.forEach((group, i) => {
+    const best = Number(storageGet(groupKey(i))) || 0;
+    const mastered = best >= group.words.length;
+
+    const btn = document.createElement("button");
+    btn.className = "group-tile" + (mastered ? " mastered" : "");
+
+    const label = document.createElement("span");
+    label.className = "group-label";
+    label.textContent = group.label;
+
+    const info = document.createElement("span");
+    info.className = "group-info";
+    info.textContent = mastered
+      ? "✓ вивчено"
+      : best > 0 ? `${best}/${group.words.length}` : `${group.words.length} слів`;
+
+    btn.append(label, info);
+    btn.addEventListener("click", () => startTraining(i));
+    list.appendChild(btn);
+  });
+}
+
+function startTraining(groupIndex) {
+  clearTimeout(nextTimer);
+  const group = GROUPS[groupIndex];
+  const queue = [...group.words];
+  shuffleArray(queue);
+
+  currentGame = "naholosy";
+  streak = 0;
+  training = {
+    groupIndex,
+    round: 1,
+    queue,
+    total: queue.length,
+    done: 0,
+    firstTry: 0,
+    roundMistakes: []
+  };
+  gtag('event', 'training_start', { game_type: currentGame, group: group.label });
+
+  $("btn-menu").textContent = "‹ Групи";
+  $("test-note").hidden = true;
+  hintEl.textContent = "Підказка: можна відповідати клавішами 1, 2, 3";
+  updateUI();
+  showScreen("game");
+  nextQuestion();
+}
+
+function startMistakesRound() {
+  const unique = [];
+  training.roundMistakes.forEach(m => {
+    if (!unique.includes(m.question)) unique.push(m.question);
+  });
+  shuffleArray(unique);
+  training.round++;
+  training.queue = unique;
+  training.total = unique.length;
+  training.done = 0;
+  training.roundMistakes = [];
+  streak = 0;
+  updateUI();
+  showScreen("game");
+  nextQuestion();
+}
+
+function finishTrainingRound() {
+  const group = GROUPS[training.groupIndex];
+  const wrong = training.roundMistakes;
+
+  if (training.round === 1) {
+    const best = Number(storageGet(groupKey(training.groupIndex))) || 0;
+    if (training.firstTry > best) storageSet(groupKey(training.groupIndex), String(training.firstTry));
+    gtag('event', 'training_done', {
+      game_type: currentGame,
+      group: group.label,
+      first_try: training.firstTry,
+      total: group.words.length
+    });
+  }
+
+  $("train-title").textContent = training.round === 1
+    ? `Група ${group.label}`
+    : wrong.length === 0 ? "Помилки виправлено 💪" : "Ще трохи!";
+
+  if (training.round === 1) {
+    $("train-score").textContent = `${training.firstTry}/${group.words.length}`;
+    $("train-sub").textContent = wrong.length === 0
+      ? "Без жодної помилки! 🎉"
+      : "правильно з першого разу";
+  } else {
+    $("train-score").textContent = wrong.length === 0 ? "✓" : `${training.total - wrong.length}/${training.total}`;
+    $("train-sub").textContent = wrong.length === 0
+      ? "Усі слова групи тепер правильні"
+      : "Ці слова ще раз — і готово";
+  }
+
+  const fixBtn = $("btn-fix-mistakes");
+  const uniqueCount = new Set(wrong.map(m => m.question)).size;
+  fixBtn.hidden = wrong.length === 0;
+  fixBtn.textContent = `🔁 Робота над помилками (${uniqueCount})`;
+
+  const nextBtn = $("btn-train-next");
+  const hasNext = training.groupIndex + 1 < GROUPS.length;
+  nextBtn.hidden = wrong.length > 0 || !hasNext;
+  if (hasNext) nextBtn.textContent = `Наступна група: ${GROUPS[training.groupIndex + 1].label} →`;
+
+  renderMistakes(wrong, $("train-mistakes-list"), $("train-mistakes"));
+  if (wrong.length === 0 && training.round === 1) launchConfetti();
+  showScreen("trainOver");
 }
 
 // ---------- Турнірна таблиця ----------
@@ -913,7 +1145,16 @@ $("soon").addEventListener("click", e => {
   if (e.target === $("soon")) $("soon").hidden = true;
 });
 $("btn-leaders").addEventListener("click", () => showLeaders("naholosy"));
-$("btn-menu").addEventListener("click", showMenu);
+$("btn-menu").addEventListener("click", () => {
+  if (training) showModes();
+  else showMenu();
+});
+$("btn-modes-back").addEventListener("click", showMenu);
+$("btn-marathon").addEventListener("click", () => startGame("naholosy"));
+$("btn-fix-mistakes").addEventListener("click", startMistakesRound);
+$("btn-train-next").addEventListener("click", () => startTraining(training.groupIndex + 1));
+$("btn-train-again").addEventListener("click", () => startTraining(training.groupIndex));
+$("btn-train-groups").addEventListener("click", showModes);
 $("btn-leaders-back").addEventListener("click", showMenu);
 $("btn-again").addEventListener("click", () => startGame(currentGame));
 $("btn-over-menu").addEventListener("click", showMenu);

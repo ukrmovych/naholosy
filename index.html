@@ -19,7 +19,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=20261012b">
+<link rel="stylesheet" href="style.css?v=20261012c">
 </head>
 <body>
 
@@ -66,6 +66,50 @@
     </section>
 
     <p id="hint" class="hint"></p>
+  </main>
+
+  <!-- Наголоси: вибір режиму -->
+  <main id="modes" class="screen" hidden>
+    <header class="top-bar">
+      <button id="btn-modes-back" class="icon-btn" aria-label="В меню">‹ Меню</button>
+      <h2 class="screen-title">Наголоси</h2>
+    </header>
+
+    <button id="btn-marathon" class="game-tile featured marathon-tile">
+      <span class="tile-icon" aria-hidden="true">🏁</span>
+      <span class="tile-name">Марафон
+        <span class="tile-sub">Усі 233 слова · 3 життя · турнірна таблиця</span>
+      </span>
+      <span class="mode-best" data-best="naholosy"></span>
+    </button>
+
+    <section class="groups-section">
+      <h3 class="section-title">🎯 Тренування за групами</h3>
+      <p class="section-sub">По ~15 слів, без життів. Наприкінці — робота над помилками, поки все не буде правильно.</p>
+      <div id="group-list" class="group-grid"></div>
+    </section>
+  </main>
+
+  <!-- Результат тренування -->
+  <main id="train-over" class="screen" hidden>
+    <section class="card over-card">
+      <img class="over-logo" src="logo.png" alt="Логотип ukr_movych" width="80" height="80">
+      <h2 id="train-title"></h2>
+      <p class="over-score"><span id="train-score"></span></p>
+      <p id="train-sub" class="over-best"></p>
+
+      <div class="over-actions">
+        <button id="btn-fix-mistakes" class="btn-primary"></button>
+        <button id="btn-train-next" class="btn-primary"></button>
+        <button id="btn-train-again" class="btn-secondary">Ще раз цю групу</button>
+        <button id="btn-train-groups" class="btn-secondary">До груп</button>
+      </div>
+    </section>
+
+    <section id="train-mistakes" class="card mistakes" hidden>
+      <h3>Слова для повторення</h3>
+      <ul id="train-mistakes-list" class="mistakes-list"></ul>
+    </section>
   </main>
 
   <!-- Кінець гри -->
@@ -143,8 +187,8 @@
     <span>by <b>@ukr_movych</b></span>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261012b"></script>
-  <script src="script.js?v=20261012b"></script>
+  <script src="leaderboard-config.js?v=20261012c"></script>
+  <script src="script.js?v=20261012c"></script>
 
 </body>
 </html>

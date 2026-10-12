@@ -1054,3 +1054,93 @@ button:focus-visible {
     font-size: 22px;
   }
 }
+
+/* ---------- Наголоси: режими й групи ---------- */
+
+#modes .screen-title {
+  padding-right: 70px;
+}
+
+.marathon-tile {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.tile-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.section-title {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.section-sub {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (min-width: 520px) {
+  .group-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.group-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 76px;
+  padding: 10px 6px;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 4px 0 var(--line);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.15s ease;
+}
+
+.group-tile:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.group-label {
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.group-info {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.group-tile.mastered {
+  border-color: var(--green);
+  box-shadow: 0 4px 0 #3a8a3e;
+}
+
+.group-tile.mastered .group-info {
+  color: var(--green);
+}
+
+@media (hover: hover) {
+  .group-tile:hover {
+    border-color: var(--orange);
+  }
+}
