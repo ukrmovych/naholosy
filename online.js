@@ -20,7 +20,8 @@ const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/d
 
 screens.online = $("online");
 const onlineBody = $("online-body");
-const tgApp = window.Telegram && window.Telegram.WebApp;
+// Скрипт Telegram вантажиться асинхронно, тому беремо WebApp щоразу заново
+const tgWebApp = () => window.Telegram && window.Telegram.WebApp;
 let online = null;
 let supabaseClient = null;
 
@@ -81,6 +82,7 @@ function formatSeconds(ms) {
 }
 
 function defaultName() {
+  const tgApp = tgWebApp();
   const tgUser = tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.user;
   return storageGet("player_name") || (tgUser && tgUser.first_name) || "";
 }
@@ -373,6 +375,7 @@ function shareInvite(link) {
   const what = online.mode === "class" ? "гри в наголоси для класу" : online.mode === "duel" ? "онлайн-дуелі в наголоси" : "спринту в наголоси";
   const text = `Приєднуйся до ${what}! Код кімнати: ${online.code}`;
   track('online_share', { mode: online.mode });
+  const tgApp = tgWebApp();
   if (tgApp && tgApp.initData && typeof tgApp.openTelegramLink === "function") {
     tgApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
   } else if (navigator.share) {
@@ -810,14 +813,33 @@ $("btn-online-join").addEventListener("click", () => openOnline(null));
 $("btn-online-back").addEventListener("click", exitOnline);
 window.addEventListener("beforeunload", () => leaveOnline());
 
-// Запрошення: …?room=КОД (сайт) або start_param «room_КОД» (мініапка Telegram)
-(function openInviteFromLink() {
+// Запрошення: …?room=КОД (сайт) або start_param «room_КОД» (мініапка Telegram).
+// Telegram передає start_param і в адресі (tgWebAppStartParam), тож не чекаємо його скрипта.
+function telegramStartParam() {
+  const tgApp = tgWebApp();
+  const fromSdk = tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.start_param;
+  if (fromSdk) return fromSdk;
+  const fromQuery = new URLSearchParams(location.search).get("tgWebAppStartParam");
+  if (fromQuery) return fromQuery;
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const fromHash = hash.get("tgWebAppStartParam");
+  if (fromHash) return fromHash;
+  const data = hash.get("tgWebAppData");
+  return data ? new URLSearchParams(data).get("start_param") || "" : "";
+}
+
+function openInviteFromLink() {
   const fromUrl = new URLSearchParams(location.search).get("room");
-  const startParam = tgApp && tgApp.initDataUnsafe && tgApp.initDataUnsafe.start_param;
+  const startParam = telegramStartParam();
   const fromTg = startParam && startParam.startsWith("room_") ? startParam.slice(5) : "";
   const code = (fromUrl || fromTg || "").toUpperCase();
-  if (/^[A-Z0-9]{5}$/.test(code)) {
-    track('online_invite_open', { source: fromTg ? "telegram" : "link" });
-    openOnline(null, code);
-  }
-})();
+  if (!/^[A-Z0-9]{5}$/.test(code)) return false;
+  track('online_invite_open', { source: fromTg ? "telegram" : "link" });
+  openOnline(null, code);
+  return true;
+}
+
+// Якщо код не знайшовся одразу — ще раз, коли довантажиться скрипт Telegram
+if (!openInviteFromLink() && document.readyState !== "complete") {
+  window.addEventListener("load", openInviteFromLink, { once: true });
+}
