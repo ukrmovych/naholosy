@@ -146,56 +146,107 @@ button:focus-visible {
   text-align: center;
 }
 
-.mode-list {
+/* Сітка ігор: «Наголоси» на всю ширину, решта — плитки по 2 (на компі по 3) */
+.game-grid {
   display: grid;
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.mode-card {
+@media (min-width: 520px) {
+  .game-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.game-tile {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 18px 20px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 112px;
+  padding: 14px;
   text-align: left;
   background: var(--surface);
   border: 2px solid var(--line);
   border-radius: var(--radius);
-  transition: transform 0.12s ease, border-color 0.15s ease, background-color 0.15s ease;
+  box-shadow: 0 4px 0 var(--line);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.15s ease;
 }
 
-.mode-main {
+.game-tile:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.tile-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.tile-name {
+  font-size: 18px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.game-tile .badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.game-tile.featured {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  min-height: 0;
+  padding: 18px 20px;
   background: var(--orange);
   border-color: var(--orange);
   box-shadow: 0 6px 0 var(--orange-dark);
 }
 
-.mode-card:active {
-  transform: translateY(3px);
-}
-
-.mode-main:active {
+.game-tile.featured:active {
   box-shadow: 0 3px 0 var(--orange-dark);
 }
 
-.mode-icon {
-  font-size: 30px;
-  line-height: 1;
+.game-tile.featured .tile-icon {
+  font-size: 32px;
 }
 
-.mode-text {
+.game-tile.featured .tile-name {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  min-width: 0;
+  font-size: 24px;
+  overflow-wrap: normal;
 }
 
-.mode-name {
-  font-size: 22px;
+.game-tile.featured .mode-best {
+  white-space: nowrap;
+}
+
+.game-tile.featured .mode-best {
+  opacity: 0.9;
+}
+
+/* Ще не готові ігри — приглушені */
+.game-tile.is-soon {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+  color: var(--muted);
+}
+
+.game-tile.is-soon .tile-icon {
+  filter: grayscale(0.6);
+  opacity: 0.7;
 }
 
 .mode-best {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 400;
   opacity: 0.8;
 }
@@ -205,19 +256,47 @@ button:focus-visible {
 }
 
 .mode-arrow {
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1;
   opacity: 0.7;
 }
 
 .badge {
   display: inline-block;
-  margin-left: 6px;
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--brown);
-  font-size: 13px;
-  vertical-align: middle;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.badge-beta {
+  background: #2f6b33;
+}
+
+/* Турнірна таблиця — окремо від ігор */
+.leaders-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px 18px;
+  background: var(--surface-2);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 18px;
+  text-align: left;
+}
+
+.leaders-btn span:nth-child(2) {
+  flex: 1;
+}
+
+.brand-tag-soon {
+  margin: -8px 0 18px;
 }
 
 /* ---------- Верхня панель ---------- */
@@ -338,7 +417,8 @@ button:focus-visible {
     border-color: var(--orange);
   }
 
-  .mode-card:not(.mode-main):hover {
+  .game-tile:not(.featured):hover,
+  .leaders-btn:hover {
     border-color: var(--orange);
   }
 }
@@ -948,4 +1028,29 @@ button:focus-visible {
   font-weight: 400;
   line-height: 1.35;
   text-align: center;
+}
+
+/* Маленькі телефони: компактніша шапка меню, щоб влізло більше ігор */
+@media (max-width: 380px) {
+  .menu-logo img {
+    width: 72px;
+    height: 72px;
+  }
+
+  .title {
+    margin-bottom: 20px;
+  }
+
+  .game-tile {
+    min-height: 100px;
+    padding: 12px;
+  }
+
+  .tile-name {
+    font-size: 16px;
+  }
+
+  .game-tile.featured .tile-name {
+    font-size: 22px;
+  }
 }

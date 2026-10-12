@@ -255,6 +255,15 @@ const DELAYS = {
 
 const PRAISE = ["Правильно!", "Так тримати!", "Супер!", "Чудово!", "Влучно!", "Є!"];
 
+// Усі ігри в меню. Нова гра = новий рядок тут.
+// status: "live" — працює, "beta" — працює в тестовому режимі, "soon" — ще немає
+const GAMES = [
+  { id: "naholosy", name: "Наголоси", icon: "🗣️", status: "live", featured: true },
+  { id: "leksychna", name: "Лексична помилка", icon: "🔎", status: "beta" },
+  { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: "soon" },
+  { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon" }
+];
+
 const $ = id => document.getElementById(id);
 const screens = { menu: $("menu"), game: $("game"), over: $("over"), leaders: $("leaders") };
 const scoreEl = $("score");
@@ -300,6 +309,61 @@ function storageSet(key, value) {
 
 function getBest(game) {
   return Number(storageGet(`best_${game}`)) || 0;
+}
+
+function renderMenu() {
+  const list = $("game-list");
+  list.innerHTML = "";
+
+  GAMES.forEach(game => {
+    const btn = document.createElement("button");
+    btn.className = "game-tile"
+      + (game.featured ? " featured" : "")
+      + (game.status === "soon" ? " is-soon" : "");
+
+    const icon = document.createElement("span");
+    icon.className = "tile-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = game.icon;
+
+    const name = document.createElement("span");
+    name.className = "tile-name";
+    name.textContent = game.name;
+
+    btn.append(icon, name);
+
+    if (game.status !== "live") {
+      const badge = document.createElement("span");
+      badge.className = `badge badge-${game.status}`;
+      badge.textContent = game.status;
+      btn.appendChild(badge);
+    }
+
+    if (game.status !== "soon") {
+      const best = document.createElement("span");
+      best.className = "mode-best";
+      best.dataset.best = game.id;
+      btn.appendChild(best);
+    }
+
+    btn.addEventListener("click", () => {
+      if (game.status === "soon") {
+        showSoon(game);
+      } else {
+        startGame(game.id);
+      }
+    });
+    list.appendChild(btn);
+  });
+
+  renderBestScores();
+}
+
+function showSoon(game) {
+  gtag('event', 'soon_click', { game_type: game.id });
+  $("soon-title").textContent = `${game.icon} ${game.name}`;
+  $("soon").hidden = false;
+  $("btn-soon-ok").focus();
 }
 
 function renderBestScores() {
@@ -844,8 +908,10 @@ async function showLeaders(game) {
 
 // ---------- Події ----------
 
-$("btn-naholosy").addEventListener("click", () => startGame("naholosy"));
-$("btn-leksychna").addEventListener("click", () => startGame("leksychna"));
+$("btn-soon-ok").addEventListener("click", () => { $("soon").hidden = true; });
+$("soon").addEventListener("click", e => {
+  if (e.target === $("soon")) $("soon").hidden = true;
+});
 $("btn-leaders").addEventListener("click", () => showLeaders("naholosy"));
 $("btn-menu").addEventListener("click", showMenu);
 $("btn-leaders-back").addEventListener("click", showMenu);
@@ -867,7 +933,7 @@ document.addEventListener("keydown", e => {
   if (btn) btn.click();
 });
 
-renderBestScores();
+renderMenu();
 
 // ---------- Заборона копіювання ----------
 // Зупиняє звичайне виділення, копіювання й контекстне меню (крім поля для імені)
@@ -880,4 +946,8 @@ function isEditable(target) {
   document.addEventListener(type, e => {
     if (!isEditable(e.target)) e.preventDefault();
   });
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") $("soon").hidden = true;
 });

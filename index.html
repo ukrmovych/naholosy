@@ -19,7 +19,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=20261012">
+<link rel="stylesheet" href="style.css?v=20261012b">
 </head>
 <body>
 
@@ -31,33 +31,14 @@
     </div>
     <h1 class="title">Що качатимемо?</h1>
 
-    <div class="mode-list">
-      <button id="btn-naholosy" class="mode-card mode-main">
-        <span class="mode-icon" aria-hidden="true">🗣️</span>
-        <span class="mode-text">
-          <span class="mode-name">Наголоси</span>
-          <span class="mode-best" data-best="naholosy"></span>
-        </span>
-        <span class="mode-arrow" aria-hidden="true">›</span>
-      </button>
+    <!-- Кнопки ігор малює script.js зі списку GAMES -->
+    <div id="game-list" class="game-grid"></div>
 
-      <button id="btn-leksychna" class="mode-card">
-        <span class="mode-icon" aria-hidden="true">🔎</span>
-        <span class="mode-text">
-          <span class="mode-name">Лексична помилка <span class="badge">soon</span></span>
-          <span class="mode-best" data-best="leksychna"></span>
-        </span>
-        <span class="mode-arrow" aria-hidden="true">›</span>
-      </button>
-
-      <button id="btn-leaders" class="mode-card">
-        <span class="mode-icon" aria-hidden="true">🏆</span>
-        <span class="mode-text">
-          <span class="mode-name">Турнірна таблиця</span>
-        </span>
-        <span class="mode-arrow" aria-hidden="true">›</span>
-      </button>
-    </div>
+    <button id="btn-leaders" class="leaders-btn">
+      <span aria-hidden="true">🏆</span>
+      <span>Турнірна таблиця</span>
+      <span class="mode-arrow" aria-hidden="true">›</span>
+    </button>
   </main>
 
   <!-- Гра -->
@@ -146,13 +127,24 @@
   </div>
   <div id="confetti" class="confetti" aria-hidden="true"></div>
 
+  <!-- «Скоро» -->
+  <div id="soon" class="modal" hidden>
+    <div class="modal-card">
+      <div class="over-emoji" aria-hidden="true">🚧</div>
+      <h2 id="soon-title"></h2>
+      <p>Скоро тут з'явиться топовий тренажер — слідкуй!</p>
+      <div class="brand-tag brand-tag-soon"><img src="logo.png" alt="" width="28" height="28"><span>@ukr_movych</span></div>
+      <button id="btn-soon-ok" class="btn-primary">Чекаю!</button>
+    </div>
+  </div>
+
   <footer class="brand">
     <img src="logo.png" alt="" width="36" height="36">
     <span>by <b>@ukr_movych</b></span>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261012"></script>
-  <script src="script.js?v=20261012"></script>
+  <script src="leaderboard-config.js?v=20261012b"></script>
+  <script src="script.js?v=20261012b"></script>
 
 </body>
 </html>
