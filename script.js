@@ -640,6 +640,8 @@ function pickOne(list) {
 function klychnyiPrefix(frame) {
   switch (frame) {
     case "pf": return "Шановна пані";
+    case "sm": return "Шановний";
+    case "sf": return "Шановна";
     case "lm": return pickOne(["Любий", "Дорогий"]);
     case "lf": return pickOne(["Люба", "Дорога"]);
     case "bm": return `Любий ${pickOne(KLYCHNYI_NAMES.m)}`;
