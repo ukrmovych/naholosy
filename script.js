@@ -1946,7 +1946,7 @@ function renderFeedbackButton() {
   $("feedback-btn-title").textContent = sent ? "Дякуємо за відгук!" : "Залиш відгук";
   $("feedback-btn-sub").textContent = sent
     ? "Хочеш щось додати? Пиши ще — ми все читаємо 🧡"
-    : "Як тобі цей тренажер? Що особливо хочеш виділити? 🧡";
+    : "Чим тобі допоміг тренажер? Це 1 хвилина, а нам — дуже важливо 🧡";
 }
 
 function showFeedback() {
