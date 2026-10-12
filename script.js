@@ -899,7 +899,13 @@ function renderGroups() {
     const mastered = best >= group.words.length;
 
     const btn = document.createElement("button");
-    btn.className = "group-tile" + (mastered ? " mastered" : "");
+    btn.className = "group-tile" + (mastered ? " mastered" : best > 0 ? " tried" : "");
+    if (best > 0 && !mastered) {
+      // Колір від жовтого до зеленого: що кращий результат, то зеленіше
+      const ratio = best / group.words.length;
+      btn.style.setProperty("--p", ratio.toFixed(2));
+      btn.style.setProperty("--h", Math.round(45 + 55 * ratio));
+    }
 
     const label = document.createElement("span");
     label.className = "group-label";
@@ -909,7 +915,7 @@ function renderGroups() {
     info.className = "group-info";
     info.textContent = mastered
       ? "✓ вивчено"
-      : best > 0 ? `${best}/${group.words.length}` : `${group.words.length} слів`;
+      : best > 0 ? `${Math.round((best / group.words.length) * 100)}%` : `${group.words.length} слів`;
 
     btn.append(label, info);
     btn.addEventListener("click", () => startTraining(i));

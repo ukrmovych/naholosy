@@ -19,7 +19,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=20261012d">
+<link rel="stylesheet" href="style.css?v=20261012e">
 </head>
 <body>
 
@@ -53,10 +53,6 @@
       <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
     </div>
 
-    <p id="test-note" class="test-note" hidden>
-      🧪 Розділ працює в тестовому режимі: деякі речення ще потребують доопрацювання.
-    </p>
-
     <section class="card">
       <div class="brand-tag"><img src="logo.png" alt="" width="28" height="28"><span>@ukr_movych</span></div>
       <p id="question" class="question"></p>
@@ -64,6 +60,10 @@
       <div id="answers" class="answers"></div>
       <p id="feedback" class="feedback" aria-live="polite"></p>
     </section>
+
+    <p id="test-note" class="test-note" hidden>
+      🧪 Розділ працює в тестовому режимі: деякі речення ще потребують доопрацювання.
+    </p>
 
     <p id="hint" class="hint"></p>
   </main>
@@ -75,18 +75,36 @@
       <h2 class="screen-title">Наголоси</h2>
     </header>
 
-    <button id="btn-marathon" class="game-tile featured marathon-tile">
-      <span class="tile-icon" aria-hidden="true">🏁</span>
-      <span class="tile-name">Марафон
-        <span class="tile-sub">Усі 233 слова · 3 життя · турнірна таблиця</span>
-      </span>
-      <span class="mode-best" data-best="naholosy"></span>
-    </button>
+    <p class="modes-lead">Обери режим</p>
 
-    <section class="groups-section">
-      <h3 class="section-title">🎯 Тренування за групами</h3>
-      <p class="section-sub">По ~15 слів, без життів. Наприкінці — робота над помилками, поки все не буде правильно.</p>
+    <section class="mode-panel">
+      <div class="mode-head">
+        <span class="mode-num">1</span>
+        <span class="mode-head-text">
+          <span class="mode-title">🏁 Марафон</span>
+          <span class="mode-desc">Усі 233 слова · 3 життя · турнірна таблиця</span>
+        </span>
+      </div>
+      <button id="btn-marathon" class="btn-primary mode-start">
+        Почати марафон
+        <span class="mode-best" data-best="naholosy"></span>
+      </button>
+    </section>
+
+    <section class="mode-panel">
+      <div class="mode-head">
+        <span class="mode-num">2</span>
+        <span class="mode-head-text">
+          <span class="mode-title">🎯 Тренування за групами</span>
+          <span class="mode-desc">По ~15 слів, без життів. Наприкінці — робота над помилками, поки все не буде правильно.</span>
+        </span>
+      </div>
       <div id="group-list" class="group-grid"></div>
+      <p class="group-legend">
+        <span class="legend-item"><span class="legend-dot legend-new"></span> не розпочато</span>
+        <span class="legend-item"><span class="legend-dot legend-mid"></span> є над чим попрацювати</span>
+        <span class="legend-item"><span class="legend-dot legend-done"></span> вивчено</span>
+      </p>
     </section>
   </main>
 
@@ -187,8 +205,8 @@
     <span>by <b>@ukr_movych</b></span>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261012d"></script>
-  <script src="script.js?v=20261012d"></script>
+  <script src="leaderboard-config.js?v=20261012e"></script>
+  <script src="script.js?v=20261012e"></script>
 
 </body>
 </html>

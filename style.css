@@ -1019,7 +1019,7 @@ button:focus-visible {
 /* ---------- Тестовий режим ---------- */
 
 .test-note {
-  margin: -4px 0 14px;
+  margin: 16px 0 0;
   padding: 10px 14px;
   border: 2px dashed var(--brown);
   border-radius: 12px;
@@ -1059,30 +1059,67 @@ button:focus-visible {
   padding-right: 70px;
 }
 
-.marathon-tile {
-  width: 100%;
-  margin-bottom: 24px;
+.modes-lead {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 16px;
+  text-align: center;
 }
 
-.tile-sub {
-  display: block;
-  margin-top: 4px;
+/* Два режими — дві однакові за виглядом панелі з помаранчевою рамкою */
+.mode-panel {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 2px solid var(--orange);
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+.mode-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mode-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--orange);
+  font-size: 16px;
+}
+
+.mode-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mode-title {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.mode-desc {
+  color: var(--muted);
   font-size: 14px;
   font-weight: 400;
-  opacity: 0.9;
-}
-
-.section-title {
-  margin: 0 0 4px;
-  font-size: 20px;
-}
-
-.section-sub {
-  margin: 0 0 14px;
-  color: var(--muted);
-  font-size: 15px;
-  font-weight: 400;
   line-height: 1.35;
+}
+
+.mode-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.mode-start .mode-best {
+  font-size: 13px;
 }
 
 .group-grid {
@@ -1091,13 +1128,19 @@ button:focus-visible {
   gap: 10px;
 }
 
-@media (min-width: 520px) {
+@media (min-width: 560px) {
   .group-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
 .group-tile {
+  /* --h: відтінок від жовтого (45) до жовто-зеленого (100), --p: прогрес 0…1.
+     Чистий зелений — лише для вивчених груп */
+  --h: 45;
+  --p: 0;
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1128,13 +1171,76 @@ button:focus-visible {
   color: var(--muted);
 }
 
+/* Уже пробував: фон і рамка від жовтого до зеленого залежно від результату */
+.group-tile.tried {
+  background: hsla(var(--h), 65%, 42%, calc(0.12 + 0.2 * var(--p)));
+  border-color: hsl(var(--h), 65%, 45%);
+  box-shadow: 0 4px 0 hsl(var(--h), 55%, 30%);
+}
+
+.group-tile.tried .group-info {
+  color: hsl(var(--h), 75%, 65%);
+}
+
+/* Смужка прогресу внизу плитки */
+.group-tile.tried::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  width: calc(var(--p) * 100%);
+  background: hsl(var(--h), 70%, 50%);
+}
+
 .group-tile.mastered {
+  background: var(--green);
   border-color: var(--green);
   box-shadow: 0 4px 0 #3a8a3e;
 }
 
 .group-tile.mastered .group-info {
-  color: var(--green);
+  color: #fff;
+}
+
+.group-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 6px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.legend-item {
+  white-space: nowrap;
+}
+
+.legend-dot {
+  display: inline-block;
+  vertical-align: -1px;
+  width: 12px;
+  height: 12px;
+  margin-left: 6px;
+  border-radius: 4px;
+  border: 2px solid var(--line);
+}
+
+.legend-new {
+  background: var(--surface);
+}
+
+.legend-mid {
+  background: linear-gradient(90deg, hsl(45, 65%, 45%), hsl(100, 65%, 45%));
+  border-color: transparent;
+}
+
+.legend-done {
+  background: var(--green);
+  border-color: transparent;
 }
 
 @media (hover: hover) {
