@@ -627,12 +627,30 @@ function nextQuestion() {
 
 // ---------- Кличний відмінок ----------
 
-function klychnyiPrefix(gender) {
-  return gender === "f" ? "Шановна пані" : "Шановний пане";
+// Початок речення залежно від типу слова (див. klychnyi-data.js)
+const KLYCHNYI_NAMES = {
+  m: ["Іване", "Андрію", "Тарасе", "Олексію", "Петре", "Миколо", "Богдане", "Сергію"],
+  f: ["Маріє", "Олено", "Ганно", "Оксано", "Наталіє", "Ірино", "Галино", "Софіє"]
+};
+
+function pickOne(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function klychnyiPrefix(frame) {
+  switch (frame) {
+    case "pf": return "Шановна пані";
+    case "lm": return pickOne(["Любий", "Дорогий"]);
+    case "lf": return pickOne(["Люба", "Дорога"]);
+    case "bm": return `Любий ${pickOne(KLYCHNYI_NAMES.m)}`;
+    case "bf": return `Люба ${pickOne(KLYCHNYI_NAMES.f)}`;
+    default: return "Шановний пане";
+  }
 }
 
 function renderKlychnyi() {
-  const [gender, nominative, vocative, wrong] = currentQuestion;
+  const [frame, nominative, vocative, wrong] = currentQuestion;
+  const prefix = klychnyiPrefix(frame);
   questionEl.textContent = "Обери правильну форму звертання";
 
   // «Шановний пане ___!»
@@ -640,7 +658,7 @@ function renderKlychnyi() {
   sentenceEl.innerHTML = "";
   const line = document.createElement("p");
   line.className = "address-line";
-  line.append(`${klychnyiPrefix(gender)} `);
+  line.append(`${prefix} `);
   const gap = document.createElement("span");
   gap.className = "address-gap";
   gap.textContent = "…";
@@ -670,7 +688,7 @@ function renderKlychnyi() {
           }
         });
         if (!isCorrect) btn.classList.add("wrong");
-      }, { plain: true, prefix: klychnyiPrefix(gender), chosen: word, correct: [vocative] });
+      }, { plain: true, prefix, chosen: word, correct: [vocative] });
     };
     answersEl.appendChild(btn);
   });
