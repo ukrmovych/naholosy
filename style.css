@@ -264,13 +264,11 @@ button:focus-visible {
 
 .badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: 999px;
   background: var(--brown);
   color: #fff;
-  font-size: 12px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  font-size: 13px;
 }
 
 .badge-beta {

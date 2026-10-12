@@ -257,6 +257,9 @@ const PRAISE = ["Правильно!", "Так тримати!", "Супер!", 
 
 // Усі ігри в меню. Нова гра = новий рядок тут.
 // status: "live" — працює, "beta" — працює в тестовому режимі, "soon" — ще немає
+// Підписи на плитках ігор
+const STATUS_LABELS = { beta: "бета", soon: "скоро" };
+
 const GAMES = [
   { id: "naholosy", name: "Наголоси", sub: "Усі, що потрібні для НМТ!", icon: "🗣️", status: "live", featured: true },
   { id: "leksychna", name: "Лексична помилка", icon: "🔎", status: "beta" },
@@ -349,7 +352,7 @@ function renderMenu() {
     if (game.status !== "live") {
       const badge = document.createElement("span");
       badge.className = `badge badge-${game.status}`;
-      badge.textContent = game.status;
+      badge.textContent = STATUS_LABELS[game.status];
       btn.appendChild(badge);
     }
 
