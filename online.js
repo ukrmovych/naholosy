@@ -237,7 +237,7 @@ async function joinRoom(code, name) {
     online.joinWait = { resolve, reject, timer: setTimeout(() => reject(new Error("notfound")), 6000) };
     online.rt.send("join", me);
   }).catch(err => { leaveOnline(true); throw err; });
-  gtag('event', 'online_join', { mode: online.mode });
+  track('online_join', { mode: online.mode });
 }
 
 function leaveOnline(silent = false) {
@@ -372,7 +372,7 @@ function renderLobby() {
 function shareInvite(link) {
   const what = online.mode === "class" ? "гри в наголоси для класу" : online.mode === "duel" ? "онлайн-дуелі в наголоси" : "спринту в наголоси";
   const text = `Приєднуйся до ${what}! Код кімнати: ${online.code}`;
-  gtag('event', 'online_share', { mode: online.mode });
+  track('online_share', { mode: online.mode });
   if (tgApp && tgApp.initData && typeof tgApp.openTelegramLink === "function") {
     tgApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
   } else if (navigator.share) {
@@ -817,7 +817,7 @@ window.addEventListener("beforeunload", () => leaveOnline());
   const fromTg = startParam && startParam.startsWith("room_") ? startParam.slice(5) : "";
   const code = (fromUrl || fromTg || "").toUpperCase();
   if (/^[A-Z0-9]{5}$/.test(code)) {
-    gtag('event', 'online_invite_open', { source: fromTg ? "telegram" : "link" });
+    track('online_invite_open', { source: fromTg ? "telegram" : "link" });
     openOnline(null, code);
   }
 })();

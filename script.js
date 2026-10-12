@@ -256,6 +256,27 @@ const DELAYS = {
 
 // Бета-режим: ігри в розробці відкриваються лише за посиланням …/?beta (або …/beta/)
 const BETA = new URLSearchParams(location.search).has("beta");
+// ---------- Статистика ----------
+// Кожна подія йде в Google Analytics, а важливі — ще й у таблицю game_events
+// у Supabase (її показує сторінка …/stats/, див. STATS.md)
+const STATS_EVENTS = new Set([
+  "game_start", "game_over", "all_words_done", "training_start", "training_done",
+  "duel_start", "duel_end", "soon_click", "leaderboard_submit",
+  "online_join", "online_share", "online_invite_open"
+]);
+
+function track(name, params = {}) {
+  if (name !== "visit") gtag('event', name, params); // візити GA рахує сам
+  if (name !== "visit" && !STATS_EVENTS.has(name)) return;
+  if (typeof leaderboardEnabled === "undefined" || !leaderboardEnabled) return;
+  const { game_type: game = null, ...details } = params;
+  lbRequest("game_events", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ player: getPlayerId(), event: name, game, details })
+  }).catch(() => {});
+}
+
 const KLYCHNYI_TOTAL = typeof klychnyiData !== "undefined" ? klychnyiData.length : 0;
 
 const PRAISE = ["Правильно!", "Так тримати!", "Супер!", "Чудово!", "Влучно!", "Є!"];
@@ -384,7 +405,7 @@ function renderMenu() {
 }
 
 function showSoon(game) {
-  gtag('event', 'soon_click', { game_type: game.id });
+  track('soon_click', { game_type: game.id });
   $("soon-title").textContent = `${game.icon} ${game.name}`;
   $("soon").hidden = false;
   $("btn-soon-ok").focus();
@@ -506,7 +527,7 @@ function startGame(gameType) {
   streak = 0;
   mistakes = [];
   updateUI();
-  gtag('event', 'game_start', {
+  track('game_start', {
     game_type: gameType
   });
 
@@ -845,7 +866,7 @@ function renderLeksychna() {
 // ---------- Святкування ----------
 
 function celebrate() {
-  gtag('event', 'all_words_done', {
+  track('all_words_done', {
     game_type: currentGame
   });
   $("celebrate-text").textContent =
@@ -875,7 +896,7 @@ function launchConfetti() {
 // ---------- Кінець гри ----------
 
 function gameOver() {
-  gtag('event', 'game_over', {
+  track('game_over', {
     game_type: currentGame,
     final_score: score
   });
@@ -1034,7 +1055,7 @@ function showModes(game = modesGame) {
   $("marathon-best").dataset.best = game;
   $("groups-panel").hidden = !isNaholosy;
   // Онлайн-режими поки що лише в бета-версії (…/?beta)
-  $("online-panel").hidden = !isNaholosy || !BETA;
+  $("online-panel").hidden = !isNaholosy;
   $("duel-num").textContent = isNaholosy ? "3" : "2";
   $("duel-desc").textContent = `Один екран, 2–4 гравці. Хто перший натисне ${isNaholosy ? "правильний наголос" : "правильну форму звертання"} — отримує бал.`;
 
@@ -1092,7 +1113,7 @@ function startTraining(groupIndex) {
     firstTry: 0,
     roundMistakes: []
   };
-  gtag('event', 'training_start', { game_type: currentGame, group: group.label });
+  track('training_start', { game_type: currentGame, group: group.label });
 
   $("btn-menu").textContent = "‹ Групи";
   $("test-note").hidden = true;
@@ -1126,7 +1147,7 @@ function finishTrainingRound() {
   if (training.round === 1) {
     const best = Number(storageGet(groupKey(training.groupIndex))) || 0;
     if (training.firstTry > best) storageSet(groupKey(training.groupIndex), String(training.firstTry));
-    gtag('event', 'training_done', {
+    track('training_done', {
       game_type: currentGame,
       group: group.label,
       first_try: training.firstTry,
@@ -1308,7 +1329,7 @@ function startDuel() {
     question: null,
     over: false
   };
-  gtag('event', 'duel_start', { game_type: modesGame, players: n, layout, teams, target: duelSetup.target });
+  track('duel_start', { game_type: modesGame, players: n, layout, teams, target: duelSetup.target });
   buildDuelBoard();
   showScreen("duel");
   checkDuelOrientation();
@@ -1558,7 +1579,7 @@ function duelTap(i, word, btn) {
 
 // winner — номер гравця або (у командах) номер команди
 function finishDuel(winner) {
-  gtag('event', 'duel_end', { game_type: duel.game, players: duel.n, layout: duel.layout, teams: duel.teams, score: duel.scores.join(":") });
+  track('duel_end', { game_type: duel.game, players: duel.n, layout: duel.layout, teams: duel.teams, score: duel.scores.join(":") });
   for (let i = 0; i < duel.n; i++) {
     const pane = duelPane(i);
     const won = scoreSlot(i) === winner;
@@ -1750,7 +1771,7 @@ $("submit-form").addEventListener("submit", async e => {
         : "Готово! Ти в таблиці 🏆",
       "good"
     );
-    gtag('event', 'leaderboard_submit', { game_type: currentGame, score });
+    track('leaderboard_submit', { game_type: currentGame, score });
   } catch (err) {
     button.disabled = false;
     setSubmitStatus("Не вдалося зберегти. Спробуй ще раз", "bad");
@@ -1869,3 +1890,10 @@ function isEditable(target) {
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") $("soon").hidden = true;
 });
+
+// Відвідування: одна подія на запуск гри (з Telegram чи з сайту).
+// Після load, бо скрипт Telegram вантажиться асинхронно.
+window.addEventListener("load", () => track("visit", {
+  tg: Boolean(window.Telegram && Telegram.WebApp && Telegram.WebApp.initData),
+  beta: BETA
+}));

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#211a14">
+<title>Статистика гри</title>
+<link rel="icon" type="image/png" href="../favicon.png">
+<style>
+@font-face { font-family: 'Balsamiq Sans'; font-weight: 700; font-display: swap; src: url(../fonts/balsamiq-sans-cyrillic-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Balsamiq Sans'; font-weight: 700; font-display: swap; src: url(../fonts/balsamiq-sans-latin-700-normal.woff2) format('woff2'); unicode-range: U+0000-00FF; }
+:root {
+  --bg: #211a14; --surface: #2b2219; --surface-2: #362a20; --line: #45372b;
+  --orange: #FF7900; --green: #4CAF50; --red: #e0533d; --text: #fff; --muted: #b9a797;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+h1, h2, .big { font-family: 'Balsamiq Sans', system-ui, sans-serif; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 20px 16px 48px; }
+header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+header img { width: 44px; height: 44px; }
+h1 { margin: 0; font-size: 26px; flex: 1; }
+h2 { font-size: 19px; margin: 28px 0 10px; }
+button { font: inherit; cursor: pointer; border: 2px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 999px; padding: 6px 14px; }
+button:hover { border-color: var(--orange); }
+button.on { background: var(--orange); border-color: var(--orange); color: #211a14; font-weight: 700; }
+.periods { display: flex; gap: 6px; flex-wrap: wrap; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.card { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+.card .big { font-size: 30px; color: var(--orange); line-height: 1.1; }
+.card .label { color: var(--muted); font-size: 14px; }
+.panel { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 14px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+.chart { display: flex; align-items: flex-end; gap: 3px; height: 150px; padding-top: 18px; }
+.chart .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; position: relative; }
+.chart .bar { width: 100%; max-width: 34px; background: var(--orange); border-radius: 5px 5px 0 0; min-height: 2px; }
+.chart .bar.zero { background: var(--line); }
+.chart .val { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.chart-labels { display: flex; gap: 3px; margin-top: 4px; }
+.chart-labels span { flex: 1; text-align: center; font-size: 11px; color: var(--muted); min-width: 0; overflow: hidden; }
+.legend { font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+.rows .row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.rows .name { width: 40%; min-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rows .track { flex: 1; background: var(--surface-2); border-radius: 6px; height: 14px; }
+.rows .fill { background: var(--orange); height: 100%; border-radius: 6px; }
+.rows .n { width: 42px; text-align: right; }
+.login { max-width: 360px; margin: 12vh auto 0; text-align: center; }
+.login input { width: 100%; font: inherit; font-size: 18px; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); color: var(--text); margin: 14px 0 10px; text-align: center; }
+.login input:focus { outline: none; border-color: var(--orange); }
+.login button { width: 100%; padding: 12px; font-size: 17px; }
+.error { color: var(--red); min-height: 1.4em; }
+.note { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font-size: 14px; color: var(--muted); margin-top: 10px; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <form id="login" class="login" hidden>
+    <img src="../logo.png" alt="" width="96" height="96">
+    <h1>Статистика гри</h1>
+    <input id="password" type="password" placeholder="Пароль" autocomplete="current-password" required>
+    <button class="on" type="submit">Увійти</button>
+    <p id="login-error" class="error"></p>
+    <p class="muted small">Пароль показується внизу, коли запускаєш <b>stats.sql</b> у Supabase.</p>
+  </form>
+
+  <main id="dash" hidden>
+    <header>
+      <img src="../logo.png" alt="">
+      <h1>Статистика гри</h1>
+      <button id="logout" type="button">Вийти</button>
+    </header>
+    <div class="periods" id="periods">
+      <button type="button" data-days="1">Сьогодні</button>
+      <button type="button" data-days="7">7 днів</button>
+      <button type="button" data-days="30">30 днів</button>
+      <button type="button" data-days="90">90 днів</button>
+      <button type="button" id="refresh" title="Оновити">↻</button>
+    </div>
+    <p id="status" class="muted small"></p>
+    <div id="content"></div>
+  </main>
+
+</div>
+<script src="../leaderboard-config.js"></script>
+<script>
+const CFG = window.LEADERBOARD_CONFIG || {};
+const GAME_NAMES = {
+  naholosy: "🗣️ Наголоси", leksychna: "🔎 Лексична помилка", klychnyi: "📣 Кличний відмінок",
+  chyslivnyky: "🔢 Числівники", frazeolohizmy: "💬 Фразеологізми", inshomovni: "🌍 Іншомовні слова"
+};
+const ONLINE_NAMES = { duel: "⚔️ Онлайн-дуель", sprint: "⏱ Спринт 60 с", class: "🏫 Гра для класу" };
+const $ = id => document.getElementById(id);
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
+};
+
+let password = store.get("stats_password") || "";
+let days = Number(store.get("stats_days")) || 7;
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+const num = v => (v === null || v === undefined ? "—" : Number(v).toLocaleString("uk-UA"));
+const pct = (a, b) => (b ? Math.round(a / b * 100) + "%" : "—");
+
+async function fetchStats() {
+  const res = await fetch(`${CFG.url}/rest/v1/rpc/get_stats`, {
+    method: "POST",
+    headers: { apikey: CFG.anonKey, Authorization: `Bearer ${CFG.anonKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_password: password, p_days: days })
+  });
+  if (res.ok) return res.json();
+  const text = await res.text();
+  if (text.includes("wrong password")) throw new Error("password");
+  if (res.status === 404 || text.includes("get_stats")) throw new Error("nosql");
+  throw new Error("network");
+}
+
+function showLogin(message = "") {
+  $("dash").hidden = true;
+  $("login").hidden = false;
+  $("login-error").textContent = message;
+  $("password").focus();
+}
+
+async function load() {
+  $("login").hidden = true;
+  $("dash").hidden = false;
+  document.querySelectorAll("#periods [data-days]").forEach(b => b.classList.toggle("on", Number(b.dataset.days) === days));
+  $("status").textContent = "Завантажую…";
+  try {
+    const s = await fetchStats();
+    render(s);
+    $("status").textContent = `Оновлено о ${new Date().toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}`;
+  } catch (err) {
+    if (err.message === "password") {
+      store.set("stats_password", null);
+      password = "";
+      showLogin("Неправильний пароль");
+    } else if (err.message === "nosql") {
+      $("content").innerHTML = "";
+      $("status").textContent = "У Supabase ще немає функції статистики: запусти stats.sql (див. STATS.md).";
+    } else {
+      $("status").textContent = "Не вдалося завантажити. Перевір інтернет і натисни ↻";
+    }
+  }
+}
+
+function chart(items, key, labelFn) {
+  const max = Math.max(1, ...items.map(i => i[key]));
+  const bars = items.map(i => `<div class="col" title="${esc(labelFn(i, true))}: ${i[key]}">
+      ${i[key] ? `<span class="val">${i[key]}</span>` : ""}
+      <div class="bar${i[key] ? "" : " zero"}" style="height:${i[key] / max * 100}%"></div></div>`).join("");
+  const step = Math.ceil(items.length / 12);
+  const labels = items.map((i, n) => `<span>${n % step === 0 ? esc(labelFn(i)) : ""}</span>`).join("");
+  return `<div class="chart">${bars}</div><div class="chart-labels">${labels}</div>`;
+}
+
+function rows(list) {
+  const max = Math.max(1, ...list.map(r => r.n));
+  return `<div class="rows">${list.map(r => `<div class="row"><span class="name">${esc(r.name)}</span>
+    <span class="track"><span class="fill" style="display:block;width:${r.n / max * 100}%"></span></span>
+    <span class="n">${num(r.n)}</span></div>`).join("")}</div>`;
+}
+
+function card(value, label) {
+  return `<div class="card"><div class="big">${value}</div><div class="label">${label}</div></div>`;
+}
+
+function render(s) {
+  const p = s.players, v = s.visits;
+  const period = days === 1 ? "сьогодні" : `за ${days} днів`;
+  let html = `<h2>Люди ${period}</h2><div class="cards">
+    ${card(num(p.period), "гравців (пристроїв)")}
+    ${card(num(p.new), "з них нових")}
+    ${days > 1 ? card(num(p.returning), "приходили у 2+ різні дні") : ""}
+    ${card(num(p.played), "почали хоч одну гру")}
+    ${card(num(v.total), `відкриттів гри<br><span class="small">з них у Telegram: ${pct(v.telegram, v.total)}</span>`)}
+    ${days > 1 ? card(num(p.today), "гравців сьогодні") : ""}
+    ${card(num(p.all_time), "гравців за весь час")}
+  </div>`;
+
+  if (days > 1) {
+    const dayLabel = (d, full) => {
+      const dt = new Date(d.day + "T12:00:00");
+      return full ? dt.toLocaleDateString("uk-UA", { weekday: "short", day: "numeric", month: "long" })
+        : dt.toLocaleDateString("uk-UA", { day: "numeric", month: "numeric" });
+    };
+    html += `<h2>По днях</h2><div class="panel"><p class="legend">Гравців за день</p>${chart(s.daily, "players", dayLabel)}
+      <p class="legend" style="margin-top:16px">Розпочатих ігор за день (марафони, тренування, дуелі)</p>${chart(s.daily, "games", dayLabel)}</div>`;
+  }
+
+  const games = Object.entries(s.games || {}).filter(([id]) => id !== "null");
+  const played = games.filter(([, g]) => g.players || g.marathons || g.trainings || g.duels);
+  if (played.length) {
+    html += `<h2>Ігри</h2><div class="panel"><table>
+      <tr><th>Гра</th><th>Гравців</th><th>Марафонів</th><th>Сер. рахунок</th><th>Рекорд</th><th>Тренувань</th><th>з них до кінця</th><th>Дуелей</th><th>Усі слова 🎉</th><th>У таблицю</th></tr>
+      ${played.sort((a, b) => b[1].players - a[1].players).map(([id, g]) => `<tr>
+        <td>${esc(GAME_NAMES[id] || id)}</td><td>${num(g.players)}</td><td>${num(g.marathons)}</td>
+        <td>${num(g.avg_score)}</td><td>${num(g.max_score)}</td><td>${num(g.trainings)}</td><td>${num(g.trainings_done)}</td>
+        <td>${num(g.duels)}</td><td>${num(g.all_words)}</td><td>${num(g.leaderboard)}</td></tr>`).join("")}
+    </table></div>`;
+  }
+
+  if (s.groups && s.groups.length) {
+    html += `<h2>Найпопулярніші групи тренувань</h2><div class="panel">${rows(s.groups.map(g => ({ name: g.group, n: g.count })))}</div>`;
+  }
+
+  const duelPlayers = Object.entries(s.duel_players || {});
+  if (duelPlayers.length) {
+    html += `<h2>Дуелі на одному телефоні</h2><div class="panel">${rows(duelPlayers.sort((a, b) => a[0] - b[0]).map(([n, c]) => ({ name: `${n} гравці`, n: c })))}</div>`;
+  }
+
+  const online = Object.entries(s.online || {});
+  const ox = s.online_extra || {};
+  if (online.length || ox.joins || ox.shares) {
+    html += `<h2>Онлайн-режими</h2><div class="panel"><table>
+      <tr><th>Режим</th><th>Створено кімнат</th><th>Почато ігор</th><th>Дограно</th><th>Гравців у середньому</th><th>Найбільша гра</th></tr>
+      ${online.map(([m, o]) => `<tr><td>${esc(ONLINE_NAMES[m] || m)}</td><td>${num(o.created)}</td><td>${num(o.started)}</td>
+        <td>${num(o.finished)}</td><td>${num(o.avg_players)}</td><td>${num(o.max_players)}</td></tr>`).join("")}
+    </table>
+    <p class="note">Надіслали запрошення: <b>${num(ox.shares)}</b> · відкрили гру за запрошенням: <b>${num(ox.invites)}</b> · приєдналися до кімнати: <b>${num(ox.joins)}</b></p></div>`;
+  }
+
+  const soon = games.filter(([, g]) => g.soon_clicks).sort((a, b) => b[1].soon_clicks - a[1].soon_clicks);
+  if (soon.length) {
+    html += `<h2>Яких ігор чекають</h2><p class="muted small">Скільки разів натиснули на гру з позначкою «скоро»</p>
+      <div class="panel">${rows(soon.map(([id, g]) => ({ name: GAME_NAMES[id] || id, n: g.soon_clicks })))}</div>`;
+  }
+
+  if (s.hours && s.hours.some(h => h.games)) {
+    html += `<h2>О котрій грають</h2><div class="panel"><p class="legend">Розпочатих ігор за годиною (київський час)</p>
+      ${chart(s.hours, "games", (h, full) => full ? `${h.hour}:00–${h.hour}:59` : String(h.hour))}</div>`;
+  }
+
+  const lb = Object.entries(s.leaderboard || {});
+  if (lb.length) {
+    html += `<h2>Турнірна таблиця</h2><div class="panel"><table>
+      <tr><th>Гра</th><th>Гравців у таблиці</th><th>Нових ${period}</th><th>Найкращий результат</th></tr>
+      ${lb.map(([id, l]) => `<tr><td>${esc(GAME_NAMES[id] || id)}</td><td>${num(l.players)}</td><td>${num(l.new)}</td><td>${num(l.best)}</td></tr>`).join("")}
+    </table></div>`;
+  }
+
+  html += `<p class="note">«Гравець» — це один пристрій (телефон чи браузер). Імен і особистих даних гра не збирає.
+    Статистика тут рахується з моменту, коли в Supabase запустили <b>stats.sql</b>; давніші дані є лише в Google Analytics.</p>`;
+  $("content").innerHTML = html;
+}
+
+$("login").addEventListener("submit", e => {
+  e.preventDefault();
+  password = $("password").value.trim();
+  store.set("stats_password", password);
+  load();
+});
+$("logout").addEventListener("click", () => {
+  store.set("stats_password", null);
+  password = "";
+  $("password").value = "";
+  showLogin();
+});
+$("periods").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.days) { days = Number(b.dataset.days); store.set("stats_days", String(days)); }
+  load();
+});
+
+if (!CFG.url || !CFG.anonKey) {
+  document.body.innerHTML = '<p class="wrap">Supabase не налаштовано (leaderboard-config.js).</p>';
+} else if (password) {
+  load();
+} else {
+  showLogin();
+}
+</script>
+</body>
+</html>
