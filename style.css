@@ -1413,11 +1413,12 @@ body.duel-open .brand {
 
 /* ---------- Репліка маскота в меню ---------- */
 
-/* Бульбашка над маскотом, по центру, хвостиком донизу */
+/* Бульбашка над маскотом, по центру; хвостик навскіс заходить на лого збоку */
 .speech {
   position: relative;
+  z-index: 1;
   max-width: 260px;
-  margin: 0 0 10px;
+  margin: 0 0 -4px;
   padding: 10px 16px;
   border-radius: 18px;
   background: #fff;
@@ -1432,12 +1433,12 @@ body.duel-open .brand {
 .speech::after {
   content: '';
   position: absolute;
-  left: 50%;
-  bottom: -12px;
-  margin-left: -10px;
-  border-width: 14px 10px 0;
-  border-style: solid;
-  border-color: #fff transparent transparent;
+  top: calc(100% - 2px);
+  left: calc(50% + 18px);
+  width: 24px;
+  height: 30px;
+  background: #fff;
+  clip-path: polygon(0 0, 100% 0, 10% 100%);
 }
 
 @media (max-width: 380px) {
