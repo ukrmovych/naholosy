@@ -1358,8 +1358,49 @@ async function lbRequest(path, options = {}) {
       ...(options.headers || {})
     }
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.status === 204 || res.status === 201 ? null : res.json();
+  if (!res.ok) {
+    const err = new Error(`HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// Прихований ідентифікатор гравця на цьому пристрої: так таблиця
+// відрізняє одного гравця від інших людей з таким самим іменем
+function getPlayerId() {
+  let id = storageGet("player_id");
+  if (!id || !/^[0-9a-f-]{36}$/.test(id)) {
+    id = window.crypto && crypto.randomUUID
+      ? crypto.randomUUID()
+      : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    storageSet("player_id", id);
+  }
+  return id;
+}
+
+// Записує результат; у таблиці лишається найкращий результат гравця.
+// Повертає результат, який стоїть у таблиці (або null для старої бази).
+async function submitScore(name, game, value) {
+  try {
+    return await lbRequest("rpc/submit_score", {
+      method: "POST",
+      body: JSON.stringify({ p_player: getPlayerId(), p_name: name, p_game: game, p_score: value })
+    });
+  } catch (err) {
+    // База ще без функції submit_score (не запущено leaderboard-best-score.sql)
+    if (err.status !== 404) throw err;
+    await lbRequest("scores", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ name, game, score: value })
+    });
+    return null;
+  }
 }
 
 function prepareSubmitForm() {
@@ -1391,14 +1432,15 @@ $("submit-form").addEventListener("submit", async e => {
   setSubmitStatus("Зберігаю…");
 
   try {
-    await lbRequest("scores", {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ name, game: currentGame, score })
-    });
+    const stored = await submitScore(name, currentGame, score);
     storageSet("player_name", name);
     $("player-name").disabled = true;
-    setSubmitStatus("Готово! Ти в таблиці 🏆", "good");
+    setSubmitStatus(
+      stored !== null && stored > score
+        ? `У таблиці лишається твій рекорд — ${stored} 🏆`
+        : "Готово! Ти в таблиці 🏆",
+      "good"
+    );
     gtag('event', 'leaderboard_submit', { game_type: currentGame, score });
   } catch (err) {
     button.disabled = false;
