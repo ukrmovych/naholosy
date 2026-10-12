@@ -261,7 +261,9 @@ const GAMES = [
   { id: "naholosy", name: "Наголоси", icon: "🗣️", status: "live", featured: true },
   { id: "leksychna", name: "Лексична помилка", icon: "🔎", status: "beta" },
   { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: "soon" },
-  { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon" }
+  { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon" },
+  { id: "frazeolohizmy", name: "Фразеологізми", icon: "💬", status: "soon" },
+  { id: "inshomovni", name: "Іншомовні слова", icon: "🌍", status: "soon" }
 ];
 
 const $ = id => document.getElementById(id);
