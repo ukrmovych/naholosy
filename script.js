@@ -1327,6 +1327,18 @@ document.addEventListener("keydown", e => {
 
 renderMenu();
 
+// Посилання @ukr_movych: у Telegram відкриваємо через Telegram, на сайті — у новій вкладці
+document.querySelectorAll("[data-tg-link]").forEach(link => {
+  link.addEventListener("click", e => {
+    gtag('event', 'brand_click', { place: link.className });
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (tg && tg.initData && typeof tg.openTelegramLink === "function") {
+      e.preventDefault();
+      tg.openTelegramLink(link.href);
+    }
+  });
+});
+
 // ---------- Заборона копіювання ----------
 // Зупиняє звичайне виділення, копіювання й контекстне меню (крім поля для імені)
 

@@ -1446,3 +1446,30 @@ body.duel-open .brand {
     font-size: 14px;
   }
 }
+
+/* ---------- Посилання @ukr_movych ---------- */
+
+a[data-tg-link] {
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+a[data-tg-link]:active {
+  opacity: 0.7;
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  a[data-tg-link]:hover span,
+  a.handle[data-tg-link]:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+footer {
+  display: flex;
+  justify-content: center;
+}
