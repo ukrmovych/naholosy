@@ -1022,7 +1022,7 @@ function finishTrainingRound() {
 
 // ---------- Дуель на одному екрані (2–4 гравці) ----------
 
-const DUEL_TARGET = 10;
+const DUEL_TARGETS = [10, 20, 50];
 const TG_LINK = "https://t.me/+GkBggS477tlmODQy";
 
 // Командні кольори: команда 1 — помаранчеві відтінки, команда 2 — бірюзові
@@ -1042,7 +1042,8 @@ const duelSetup = {
   layout: ["table", "wall"].includes(storageGet("duel_layout"))
     ? storageGet("duel_layout")
     : (coarsePointer ? "table" : "wall"),
-  teams: storageGet("duel_teams") === "1"
+  teams: storageGet("duel_teams") === "1",
+  target: DUEL_TARGETS.includes(Number(storageGet("duel_target"))) ? Number(storageGet("duel_target")) : 10
 };
 let duel = null;
 
@@ -1063,14 +1064,12 @@ function playerName(i, teams) {
   return teams ? `Команда ${teamOf(i) + 1}` : DUEL_PLAYERS[i].name;
 }
 
-// «На столі» можна лише для 2 (навпроти) і 4 (2 на 2)
-function duelLayoutAllowed(n, layout) {
-  return layout === "wall" || n === 2 || n === 4;
+// Як тримати пристрій для кожної розкладки
+function bestOrientation(n, layout) {
+  return layout === "table" && n !== 3 ? "portrait" : "landscape";
 }
 
 function renderDuelSetup() {
-  if (!duelLayoutAllowed(duelSetup.n, duelSetup.layout)) duelSetup.layout = "wall";
-
   document.querySelectorAll("#duel-players button").forEach(b => {
     const on = Number(b.dataset.n) === duelSetup.n;
     b.classList.toggle("active", on);
@@ -1080,7 +1079,11 @@ function renderDuelSetup() {
     const on = b.dataset.layout === duelSetup.layout;
     b.classList.toggle("active", on);
     b.setAttribute("aria-checked", on);
-    b.disabled = !duelLayoutAllowed(duelSetup.n, b.dataset.layout);
+  });
+  document.querySelectorAll("#duel-target button").forEach(b => {
+    const on = Number(b.dataset.target) === duelSetup.target;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-checked", on);
   });
 
   const { n, layout } = duelSetup;
@@ -1092,11 +1095,14 @@ function renderDuelSetup() {
     b.setAttribute("aria-checked", on);
   });
 
+  const orientation = bestOrientation(n, layout) === "portrait" ? "вертикально" : "горизонтально";
   let hint = layout === "wall"
-    ? `${n} колонки поруч, усі прямо — для дошки чи великої сенсорної панелі.`
+    ? `${n} колонки поруч, усі прямо — для дошки, великої сенсорної панелі чи екрана ${orientation}.`
     : n === 2
-      ? "Телефон чи планшет лежить між гравцями: верхня половина перевернута."
-      : "«2 на 2»: телефон чи планшет посередині, верхні дві частини перевернуті.";
+      ? "Телефон чи планшет лежить між гравцями вертикально: верхня половина перевернута."
+      : n === 3
+        ? "Телефон чи планшет лежить горизонтально: двоє гравців з одного боку, третій — навпроти (середня частина перевернута)."
+        : "«2 на 2»: телефон чи планшет лежить вертикально, верхні дві частини перевернуті.";
   if (teams) {
     hint += layout === "wall"
       ? " Команда 1 — ліві колонки, команда 2 — праві. Бал спільний: хто з пари перший."
@@ -1106,7 +1112,7 @@ function renderDuelSetup() {
 
   // Мініатюра поділу екрана
   const preview = $("duel-preview");
-  preview.className = `duel-preview ${layoutClass(n, layout)}`;
+  preview.className = `duel-preview ${layoutClass(n, layout)} ${bestOrientation(n, layout)}`;
   preview.innerHTML = "";
   for (let i = 0; i < n; i++) {
     const cell = document.createElement("span");
@@ -1129,7 +1135,9 @@ function layoutClass(n, layout) {
 // Хто сидить навпроти й бачить перевернутий екран
 function isMirrored(i, n, layout) {
   if (layout !== "table") return false;
-  return n === 2 ? i === 1 : i >= 2;
+  if (n === 2) return i === 1;
+  if (n === 3) return i === 1; // середній гравець сидить навпроти двох крайніх
+  return i >= 2;
 }
 
 function showKeyHints() {
@@ -1145,6 +1153,7 @@ function startDuel() {
     n,
     layout,
     teams,
+    target: duelSetup.target,
     // у командній грі рахунок ведеться по командах
     scores: new Array(teams ? 2 : n).fill(0),
     locked: new Array(n).fill(false),
@@ -1153,9 +1162,10 @@ function startDuel() {
     question: null,
     over: false
   };
-  gtag('event', 'duel_start', { game_type: "naholosy", players: n, layout, teams });
+  gtag('event', 'duel_start', { game_type: "naholosy", players: n, layout, teams, target: duelSetup.target });
   buildDuelBoard();
   showScreen("duel");
+  checkDuelOrientation();
   nextDuelRound();
 }
 
@@ -1189,11 +1199,27 @@ function buildDuelBoard() {
     <a class="duel-brand" href="${TG_LINK}" target="_blank" rel="noopener" data-tg-link>
       <img src="logo.png" alt="" width="26" height="26">@ukr_movych
     </a>
-    <span class="duel-goal">до ${DUEL_TARGET}</span>
+    <span class="duel-goal">до ${duel.target}</span>
     <button class="btn-primary btn-small duel-again" hidden>Ще раз</button>`;
   bar.querySelector(".duel-exit").addEventListener("click", exitDuel);
   bar.querySelector(".duel-again").addEventListener("click", startDuel);
   board.appendChild(bar);
+
+  // Підказка повернути пристрій, якщо він тримається не так
+  const want = bestOrientation(duel.n, duel.layout);
+  const rotate = document.createElement("div");
+  rotate.className = `duel-rotate want-${want}`;
+  rotate.hidden = true;
+  rotate.innerHTML = `
+    <div class="rotate-phone" aria-hidden="true"><span>📱</span></div>
+    <p class="rotate-title">Поверни пристрій ${want === "portrait" ? "вертикально" : "горизонтально"}</p>
+    <p class="rotate-sub">Так усім гравцям буде зручно й нічого не обріжеться</p>
+    <button class="btn-secondary btn-small rotate-skip">Грати так</button>`;
+  rotate.querySelector(".rotate-skip").addEventListener("click", () => {
+    duel.ignoreOrientation = true;
+    rotate.hidden = true;
+  });
+  board.appendChild(rotate);
 }
 
 function duelPane(i) {
@@ -1273,8 +1299,23 @@ function fitDuelText() {
   });
 }
 
+// Телефон тримають не так, як треба для розкладки → просимо повернути
+function checkDuelOrientation() {
+  const rotate = document.querySelector(".duel-rotate");
+  if (!duel || !rotate) return;
+  const portrait = window.innerHeight >= window.innerWidth;
+  const want = bestOrientation(duel.n, duel.layout);
+  // Великі екрани (планшети в 2×2, дошки) показують усе й так — лише телефони
+  const small = Math.min(window.innerWidth, window.innerHeight) < 600;
+  const wrong = want === "portrait" ? !portrait : portrait;
+  rotate.hidden = !(small && wrong) || Boolean(duel.ignoreOrientation);
+}
+
 window.addEventListener("resize", () => {
-  if (duel && !screens.duel.hidden) fitDuelText();
+  if (duel && !screens.duel.hidden) {
+    checkDuelOrientation();
+    fitDuelText();
+  }
 });
 
 function duelCorrectWords() {
@@ -1311,7 +1352,7 @@ function duelTap(i, word, btn) {
         ? `Швидшою була команда ${teamOf(i) + 1}`
         : `Швидше був ${DUEL_PLAYERS[i].name.toLowerCase()}`);
     }
-    if (duel.scores[slot] >= DUEL_TARGET) {
+    if (duel.scores[slot] >= duel.target) {
       duel.over = true;
       schedule(() => finishDuel(slot), 1200);
     } else {
@@ -1381,6 +1422,13 @@ document.querySelectorAll("#duel-layout button").forEach(b => {
   b.addEventListener("click", () => {
     duelSetup.layout = b.dataset.layout;
     storageSet("duel_layout", duelSetup.layout);
+    renderDuelSetup();
+  });
+});
+document.querySelectorAll("#duel-target button").forEach(b => {
+  b.addEventListener("click", () => {
+    duelSetup.target = Number(b.dataset.target);
+    storageSet("duel_target", String(duelSetup.target));
     renderDuelSetup();
   });
 });

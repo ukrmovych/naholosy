@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261012o">
+<link rel="stylesheet" href="style.css?v=20261012p">
 </head>
 <body>
 
@@ -114,7 +114,7 @@
         <span class="mode-num">3</span>
         <span class="mode-head-text">
           <span class="mode-title">⚔️ Дуель</span>
-          <span class="mode-desc">Один екран, 2–4 гравці. Хто перший натисне правильний наголос — отримує бал. Граємо до 10.</span>
+          <span class="mode-desc">Один екран, 2–4 гравці. Хто перший натисне правильний наголос — отримує бал.</span>
         </span>
       </div>
 
@@ -140,6 +140,14 @@
             <div id="duel-teams" class="seg" role="radiogroup" aria-label="Кожен сам за себе чи командами">
               <button data-teams="0" role="radio">👤 Кожен сам</button>
               <button data-teams="1" role="radio">👥 Команди</button>
+            </div>
+          </div>
+          <div class="setup-row">
+            <span class="setup-label">До очок</span>
+            <div id="duel-target" class="seg" role="radiogroup" aria-label="До скількох очок">
+              <button data-target="10" role="radio">10</button>
+              <button data-target="20" role="radio">20</button>
+              <button data-target="50" role="radio">50</button>
             </div>
           </div>
           <p id="duel-hint" class="setup-hint"></p>
@@ -255,8 +263,8 @@
     </a>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261012o"></script>
-  <script src="script.js?v=20261012o"></script>
+  <script src="leaderboard-config.js?v=20261012p"></script>
+  <script src="script.js?v=20261012p"></script>
 
 </body>
 </html>

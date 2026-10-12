@@ -1340,7 +1340,7 @@ button:focus-visible {
   background: var(--bg);
 }
 
-.duel-preview.layout-wall {
+.duel-preview.landscape {
   width: 132px;
   height: 84px;
 }
@@ -1360,7 +1360,8 @@ button:focus-visible {
 
 .duel-preview.layout-table.n-2 { grid-template-rows: 1fr 4px 1fr; }
 .duel-preview.layout-table.n-4 { grid-template-rows: 1fr 4px 1fr; }
-.duel-preview.layout-wall { grid-template-rows: 4px 1fr; }
+.duel-preview.layout-wall,
+.duel-preview.layout-table.n-3 { grid-template-rows: 4px 1fr; }
 
 .pv-bar {
   border-radius: 2px;
@@ -1381,7 +1382,7 @@ button:focus-visible {
     height: 92px;
   }
 
-  .duel-preview.layout-wall {
+  .duel-preview.landscape {
     width: 110px;
     height: 70px;
   }
@@ -1419,6 +1420,13 @@ body.duel-open > footer {
 .layout-table.n-2 {
   grid-template-areas: "p1" "bar" "p0";
   grid-template-rows: 1fr auto 1fr;
+}
+
+/* 3 гравці на столі: двоє крайніх з одного боку, середній — навпроти */
+.layout-table.n-3 {
+  grid-template-areas: "bar bar bar" "p0 p1 p2";
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto 1fr;
 }
 
 .layout-table.n-4 {
@@ -1476,6 +1484,7 @@ body.duel-open > footer {
 }
 
 .layout-table.n-2 .duel-pane::before,
+.layout-table.n-3 .duel-pane::before,
 .layout-table.n-4 .duel-pane::before {
   top: auto;
   bottom: 0;
@@ -1483,6 +1492,7 @@ body.duel-open > footer {
 
 /* Роздільники між колонками / чвертями */
 .layout-wall .duel-pane + .duel-pane,
+.layout-table.n-3 .duel-pane + .duel-pane,
 .layout-table.n-4 .duel-pane[data-player="1"],
 .layout-table.n-4 .duel-pane[data-player="3"] {
   border-left: 2px solid var(--line);
@@ -1514,9 +1524,22 @@ body.duel-open > footer {
   margin: 0 auto;
 }
 
+.duel-head {
+  gap: 8px;
+}
+
 .duel-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   color: var(--pc);
   font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-score {
+  flex: none;
 }
 
 .duel-score {
@@ -1791,4 +1814,71 @@ footer {
 
 .duel-answer > span:first-child {
   white-space: nowrap;
+}
+
+/* ---------- «Поверни пристрій» ---------- */
+
+.duel-rotate {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(20, 15, 11, 0.95);
+  text-align: center;
+}
+
+.duel-rotate[hidden] {
+  display: none;
+}
+
+.rotate-phone {
+  font-size: 64px;
+  line-height: 1;
+}
+
+.rotate-phone span {
+  display: inline-block;
+}
+
+/* Анімація: телефон повертається в потрібне положення */
+.want-landscape .rotate-phone span {
+  animation: turn-landscape 1.8s ease-in-out infinite;
+}
+
+.want-portrait .rotate-phone span {
+  transform: rotate(90deg);
+  animation: turn-portrait 1.8s ease-in-out infinite;
+}
+
+@keyframes turn-landscape {
+  0%, 25% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(90deg); }
+}
+
+@keyframes turn-portrait {
+  0%, 25% { transform: rotate(90deg); }
+  60%, 100% { transform: rotate(0deg); }
+}
+
+.rotate-title {
+  margin: 8px 0 0;
+  font-size: 22px;
+}
+
+.rotate-sub {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.rotate-skip {
+  width: auto;
+  padding: 10px 18px;
+  font-size: 15px;
 }
