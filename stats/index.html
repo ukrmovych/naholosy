@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#211a14">
-<title>Статистика гри</title>
+<title>Статистика і відгуки</title>
 <link rel="icon" type="image/png" href="../favicon.png">
 <style>
 @font-face { font-family: 'Balsamiq Sans'; font-weight: 700; font-display: swap; src: url(../fonts/balsamiq-sans-cyrillic-700-normal.woff2) format('woff2'); }
@@ -57,6 +57,21 @@ tr:last-child td { border-bottom: 0; }
 .login button { width: 100%; padding: 12px; font-size: 17px; }
 .error { color: var(--red); min-height: 1.4em; }
 .note { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font-size: 14px; color: var(--muted); margin-top: 10px; }
+.views { display: flex; gap: 6px; margin: 0 0 12px; }
+.views button { font-size: 17px; padding: 8px 16px; }
+.fb-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 6px 0 12px; }
+.fb-tools label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; cursor: pointer; }
+.fb-tools input { width: 18px; height: 18px; accent-color: var(--orange); }
+.fb-list { display: grid; gap: 10px; }
+.fb { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 14px; }
+.fb.pub { border-color: rgba(255, 121, 0, .55); }
+.fb-text { margin: 0 0 10px; font-size: 17px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fb-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--muted); font-size: 13px; }
+.fb-meta b { color: var(--text); font-weight: 600; }
+.fb-meta .tag { background: var(--surface-2); border-radius: 999px; padding: 2px 8px; }
+.fb-meta .tag.ok { color: var(--green); }
+.fb-meta .tag.no { color: var(--red); }
+.fb-meta button { margin-left: auto; padding: 4px 12px; font-size: 13px; }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -78,6 +93,11 @@ tr:last-child td { border-bottom: 0; }
       <h1>Статистика гри</h1>
       <button id="logout" type="button">Вийти</button>
     </header>
+    <div class="views" id="views">
+      <button type="button" data-view="stats" class="on">📊 Статистика</button>
+      <button type="button" data-view="feedback">💬 Відгуки <span id="fb-count"></span></button>
+    </div>
+    <div id="stats-view">
     <div class="periods" id="periods">
       <button type="button" data-days="1">Сьогодні</button>
       <button type="button" data-days="7">7 днів</button>
@@ -87,6 +107,15 @@ tr:last-child td { border-bottom: 0; }
     </div>
     <p id="status" class="muted small"></p>
     <div id="content"></div>
+    </div>
+    <div id="feedback-view" hidden>
+      <div class="fb-tools">
+        <label><input type="checkbox" id="fb-only-pub" checked> лише ті, що можна публікувати</label>
+        <label><input type="checkbox" id="fb-only-good"> лише з оцінкою 4–5</label>
+        <span id="fb-summary" class="muted small"></span>
+      </div>
+      <div id="fb-list" class="fb-list"></div>
+    </div>
   </main>
 
 </div>
@@ -127,6 +156,83 @@ async function fetchStats() {
   throw new Error("network");
 }
 
+// ---------- Відгуки ----------
+const ROLE_NAMES = { student: "🎒 учень/учениця", teacher: "👩‍🏫 вчитель/ка", parent: "👨‍👩‍👧 батьки", other: "✨ інше" };
+const RATING_EMOJI = ["", "😕", "😐", "🙂", "😃", "🤩"];
+let feedback = null;
+let view = store.get("stats_view") === "feedback" ? "feedback" : "stats";
+
+async function fetchFeedback() {
+  const res = await fetch(`${CFG.url}/rest/v1/rpc/get_feedback`, {
+    method: "POST",
+    headers: { apikey: CFG.anonKey, Authorization: `Bearer ${CFG.anonKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_password: password })
+  });
+  if (res.ok) return res.json();
+  const text = await res.text();
+  if (text.includes("wrong password")) throw new Error("password");
+  if (res.status === 404 || text.includes("get_feedback")) throw new Error("nosql");
+  throw new Error("network");
+}
+
+async function loadFeedback() {
+  try {
+    feedback = await fetchFeedback();
+    $("fb-count").textContent = feedback.length ? `(${feedback.length})` : "";
+    renderFeedback();
+  } catch (err) {
+    if (err.message === "password") return;
+    $("fb-list").innerHTML = err.message === "nosql"
+      ? '<p class="note">У Supabase ще немає таблиці відгуків: запусти feedback.sql (див. STATS.md).</p>'
+      : '<p class="note">Не вдалося завантажити відгуки. Перевір інтернет.</p>';
+  }
+}
+
+function feedbackQuote(f) {
+  const who = [f.name, f.role === "teacher" ? "вчитель/ка" : f.role === "parent" ? "батьки" : ""].filter(Boolean).join(", ");
+  return `«${f.message.trim()}»${who ? ` — ${who}` : ""}`;
+}
+
+function renderFeedback() {
+  if (!feedback) return;
+  const onlyPub = $("fb-only-pub").checked;
+  const onlyGood = $("fb-only-good").checked;
+  const list = feedback.filter(f => (!onlyPub || f.can_publish) && (!onlyGood || f.rating >= 4));
+  const rated = feedback.filter(f => f.rating);
+  const avg = rated.length ? (rated.reduce((a, f) => a + f.rating, 0) / rated.length).toFixed(1).replace(".", ",") : "—";
+  $("fb-summary").textContent = `Усього: ${feedback.length} · середня оцінка: ${avg} з 5 · показано: ${list.length}`;
+  if (!list.length) {
+    $("fb-list").innerHTML = `<p class="note">${feedback.length ? "Немає відгуків за цим фільтром." : "Відгуків ще немає. Вони з'являться тут, щойно хтось натисне «Залиш відгук» у грі."}</p>`;
+    return;
+  }
+  $("fb-list").innerHTML = list.map((f, i) => `<article class="fb${f.can_publish ? " pub" : ""}">
+    <p class="fb-text">${esc(f.message)}</p>
+    <div class="fb-meta">
+      ${f.rating ? `<span title="Оцінка ${f.rating} з 5">${RATING_EMOJI[f.rating]} ${f.rating}/5</span>` : ""}
+      ${f.name ? `<b>${esc(f.name)}</b>` : '<span>без імені</span>'}
+      ${f.role ? `<span class="tag">${ROLE_NAMES[f.role] || esc(f.role)}</span>` : ""}
+      ${f.contact ? `<span class="tag">${esc(f.contact)}</span>` : ""}
+      <span class="tag ${f.can_publish ? "ok" : "no"}">${f.can_publish ? "✓ можна публікувати" : "✕ не публікувати"}</span>
+      <span>${new Date(f.created_at).toLocaleDateString("uk-UA", { day: "numeric", month: "long", year: "numeric" })}${f.source === "telegram" ? " · Telegram" : ""}</span>
+      <button type="button" data-copy="${i}">Скопіювати</button>
+    </div>
+  </article>`).join("");
+  $("fb-list").querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => {
+    navigator.clipboard.writeText(feedbackQuote(list[Number(b.dataset.copy)])).then(() => {
+      b.textContent = "Скопійовано ✓";
+      setTimeout(() => { b.textContent = "Скопіювати"; }, 1500);
+    });
+  }));
+}
+
+function setView(v) {
+  view = v;
+  store.set("stats_view", v);
+  document.querySelectorAll("#views button").forEach(b => b.classList.toggle("on", b.dataset.view === v));
+  $("stats-view").hidden = v !== "stats";
+  $("feedback-view").hidden = v !== "feedback";
+}
+
 function showLogin(message = "") {
   $("dash").hidden = true;
   $("login").hidden = false;
@@ -137,6 +243,8 @@ function showLogin(message = "") {
 async function load() {
   $("login").hidden = true;
   $("dash").hidden = false;
+  setView(view);
+  loadFeedback();
   document.querySelectorAll("#periods [data-days]").forEach(b => b.classList.toggle("on", Number(b.dataset.days) === days));
   $("status").textContent = "Завантажую…";
   try {
@@ -269,6 +377,12 @@ $("logout").addEventListener("click", () => {
   $("password").value = "";
   showLogin();
 });
+$("views").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (b) setView(b.dataset.view);
+});
+$("fb-only-pub").addEventListener("change", renderFeedback);
+$("fb-only-good").addEventListener("change", renderFeedback);
 $("periods").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (!b) return;

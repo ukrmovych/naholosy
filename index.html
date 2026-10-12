@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261013e">
+<link rel="stylesheet" href="style.css?v=20261013f">
 </head>
 <body>
 
@@ -41,6 +41,88 @@
       <span>Турнірна таблиця</span>
       <span class="mode-arrow" aria-hidden="true">›</span>
     </button>
+
+    <button id="btn-feedback" class="feedback-btn">
+      <span class="feedback-btn-emoji" aria-hidden="true">💬</span>
+      <span class="feedback-btn-text">
+        <span id="feedback-btn-title" class="feedback-btn-title">Залиш відгук</span>
+        <span id="feedback-btn-sub" class="feedback-btn-sub">Чим тобі допоміг тренажер? Це 1 хвилина, а нам — дуже важливо 🧡</span>
+      </span>
+      <span class="mode-arrow" aria-hidden="true">›</span>
+    </button>
+  </main>
+
+  <!-- Відгук -->
+  <main id="feedback" class="screen" hidden>
+    <header class="top-bar">
+      <button id="btn-feedback-back" class="icon-btn" aria-label="В меню">‹ Меню</button>
+      <h2 class="screen-title">Твій відгук</h2>
+    </header>
+
+    <form id="feedback-form" class="card feedback-card" novalidate>
+      <p class="feedback-lead">
+        Нам дуже важливо знати, як тобі тренажер 🧡
+        Розкажи: що допомогло найбільше, що найкрутіше, чим він особливий саме для тебе?
+      </p>
+
+      <div class="feedback-field">
+        <span class="setup-label">Як тобі тренажер?</span>
+        <div id="feedback-rating" class="feedback-rating" role="radiogroup" aria-label="Оцінка">
+          <button type="button" data-rating="1" role="radio" aria-label="1 з 5">😕</button>
+          <button type="button" data-rating="2" role="radio" aria-label="2 з 5">😐</button>
+          <button type="button" data-rating="3" role="radio" aria-label="3 з 5">🙂</button>
+          <button type="button" data-rating="4" role="radio" aria-label="4 з 5">😃</button>
+          <button type="button" data-rating="5" role="radio" aria-label="5 з 5">🤩</button>
+        </div>
+      </div>
+
+      <label class="feedback-field">
+        <span class="setup-label">Твій відгук</span>
+        <textarea id="feedback-text" rows="5" maxlength="2000"
+          placeholder="Наприклад: «За тиждень вивчила всі наголоси, а дуелі з подругою — це взагалі топ!»"></textarea>
+      </label>
+      <div class="feedback-chips" aria-label="Підказки, з чого почати">
+        <button type="button" class="chip">Найбільше сподобалось…</button>
+        <button type="button" class="chip">До НМТ мені допомогло…</button>
+        <button type="button" class="chip">Від інших тренажерів відрізняється тим, що…</button>
+        <button type="button" class="chip">Раджу друзям, бо…</button>
+      </div>
+
+      <div class="feedback-field">
+        <span class="setup-label">Хто ти?</span>
+        <div id="feedback-role" class="seg seg-wrap" role="radiogroup" aria-label="Хто ти">
+          <button type="button" data-role="student" role="radio">🎒 Учень / учениця</button>
+          <button type="button" data-role="teacher" role="radio">👩‍🏫 Вчитель / ка</button>
+          <button type="button" data-role="parent" role="radio">👨‍👩‍👧 Батьки</button>
+          <button type="button" data-role="other" role="radio">✨ Інше</button>
+        </div>
+      </div>
+
+      <label class="feedback-field">
+        <span class="setup-label">Як тебе підписати? <span class="optional">(необов'язково)</span></span>
+        <input id="feedback-name" type="text" maxlength="40" autocomplete="given-name" placeholder="Наприклад: Оля, 11 клас, Львів">
+      </label>
+
+      <label class="feedback-check">
+        <input id="feedback-publish" type="checkbox" checked>
+        <span>Можна показати мій відгук іншим (наприклад, на сторінці тренажера чи в соцмережах ukr_movych)</span>
+      </label>
+
+      <label id="feedback-contact-row" class="feedback-check" hidden>
+        <input id="feedback-contact" type="checkbox">
+        <span>Можна написати мені в Telegram (<span id="feedback-username"></span>), якщо будуть питання</span>
+      </label>
+
+      <p id="feedback-status" class="submit-status" role="status"></p>
+      <button id="btn-feedback-send" class="btn-primary" type="submit">Надіслати відгук</button>
+    </form>
+
+    <section id="feedback-thanks" class="card feedback-card feedback-thanks" hidden>
+      <div class="over-emoji" aria-hidden="true">🧡</div>
+      <h3>Дякуємо!</h3>
+      <p>Твій відгук уже в нас. Саме такі слова надихають робити тренажер ще кращим.</p>
+      <button id="btn-feedback-done" class="btn-primary" type="button">Повернутися в меню</button>
+    </section>
   </main>
 
   <!-- Гра -->
@@ -309,10 +391,11 @@
     </a>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261013e"></script>
-  <script src="klychnyi-data.js?v=20261013e"></script>
-  <script src="script.js?v=20261013e"></script>
-  <script src="online.js?v=20261013e"></script>
+  <script src="leaderboard-config.js?v=20261013f"></script>
+  <script src="klychnyi-data.js?v=20261013f"></script>
+  <script src="script.js?v=20261013f"></script>
+  <script src="online.js?v=20261013f"></script>
+  <script src="feedback.js?v=20261013f"></script>
 
 </body>
 </html>
