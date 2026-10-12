@@ -1020,7 +1020,7 @@ function finishTrainingRound() {
   showScreen("trainOver");
 }
 
-// ---------- Дуель удвох на одному екрані ----------
+// ---------- Дуель на одному екрані ----------
 
 const DUEL_TARGET = 10;
 let duel = null;
