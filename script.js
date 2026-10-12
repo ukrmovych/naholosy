@@ -1025,6 +1025,9 @@ function finishTrainingRound() {
 const DUEL_TARGET = 10;
 const TG_LINK = "https://t.me/+GkBggS477tlmODQy";
 
+// Командні кольори: команда 1 — помаранчеві відтінки, команда 2 — бірюзові
+const TEAM_COLORS = [["#FF7900", "#ffa24d"], ["#2fb8a6", "#74d9cb"]];
+
 const DUEL_PLAYERS = [
   { name: "Гравець 1", color: "#FF7900", keys: ["1", "2", "3"] },
   { name: "Гравець 2", color: "#2fb8a6", keys: ["8", "9", "0"] },
@@ -1038,9 +1041,27 @@ const duelSetup = {
   n: [2, 3, 4].includes(Number(storageGet("duel_n"))) ? Number(storageGet("duel_n")) : 2,
   layout: ["table", "wall"].includes(storageGet("duel_layout"))
     ? storageGet("duel_layout")
-    : (coarsePointer ? "table" : "wall")
+    : (coarsePointer ? "table" : "wall"),
+  teams: storageGet("duel_teams") === "1"
 };
 let duel = null;
+
+function teamsOn(n = duelSetup.n, teams = duelSetup.teams) {
+  return n === 4 && teams;
+}
+
+// Команда гравця: на столі — нижня пара проти верхньої, на стіні — ліва проти правої
+function teamOf(i) {
+  return i < 2 ? 0 : 1;
+}
+
+function playerColor(i, teams) {
+  return teams ? TEAM_COLORS[teamOf(i)][i % 2] : DUEL_PLAYERS[i].color;
+}
+
+function playerName(i, teams) {
+  return teams ? `Команда ${teamOf(i) + 1}` : DUEL_PLAYERS[i].name;
+}
 
 // «На столі» можна лише для 2 (навпроти) і 4 (2 на 2)
 function duelLayoutAllowed(n, layout) {
@@ -1063,11 +1084,25 @@ function renderDuelSetup() {
   });
 
   const { n, layout } = duelSetup;
-  $("duel-hint").textContent = layout === "wall"
+  const teams = teamsOn();
+  $("duel-teams-row").hidden = n !== 4;
+  document.querySelectorAll("#duel-teams button").forEach(b => {
+    const on = (b.dataset.teams === "1") === duelSetup.teams;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-checked", on);
+  });
+
+  let hint = layout === "wall"
     ? `${n} колонки поруч, усі прямо — для дошки чи великої сенсорної панелі.`
     : n === 2
       ? "Телефон чи планшет лежить між гравцями: верхня половина перевернута."
-      : "Режим «2 на 2»: планшет посередині, верхні дві частини перевернуті.";
+      : "«2 на 2»: телефон чи планшет посередині, верхні дві частини перевернуті.";
+  if (teams) {
+    hint += layout === "wall"
+      ? " Команда 1 — ліві колонки, команда 2 — праві. Бал спільний: хто з пари перший."
+      : " Команда 1 — нижня пара, команда 2 — верхня. Бал спільний: хто з пари перший.";
+  }
+  $("duel-hint").textContent = hint;
 
   // Мініатюра поділу екрана
   const preview = $("duel-preview");
@@ -1076,7 +1111,7 @@ function renderDuelSetup() {
   for (let i = 0; i < n; i++) {
     const cell = document.createElement("span");
     cell.className = "pv-cell" + (isMirrored(i, n, layout) ? " flipped" : "");
-    cell.style.setProperty("--pc", DUEL_PLAYERS[i].color);
+    cell.style.setProperty("--pc", playerColor(i, teams));
     cell.style.gridArea = `p${i}`;
     cell.textContent = i + 1;
     preview.appendChild(cell);
@@ -1105,17 +1140,20 @@ function startDuel() {
   clearTimeout(nextTimer);
   training = null;
   const { n, layout } = duelSetup;
+  const teams = teamsOn();
   duel = {
     n,
     layout,
-    scores: new Array(n).fill(0),
+    teams,
+    // у командній грі рахунок ведеться по командах
+    scores: new Array(teams ? 2 : n).fill(0),
     locked: new Array(n).fill(false),
     queue: [],
     resolved: false,
     question: null,
     over: false
   };
-  gtag('event', 'duel_start', { game_type: "naholosy", players: n, layout });
+  gtag('event', 'duel_start', { game_type: "naholosy", players: n, layout, teams });
   buildDuelBoard();
   showScreen("duel");
   nextDuelRound();
@@ -1127,12 +1165,11 @@ function buildDuelBoard() {
   board.innerHTML = "";
 
   for (let i = 0; i < duel.n; i++) {
-    const pl = DUEL_PLAYERS[i];
     const pane = document.createElement("section");
     pane.className = "duel-pane" + (isMirrored(i, duel.n, duel.layout) ? " flipped" : "");
     pane.dataset.player = i;
     pane.style.gridArea = `p${i}`;
-    pane.style.setProperty("--pc", pl.color);
+    pane.style.setProperty("--pc", playerColor(i, duel.teams));
     pane.innerHTML = `
       <div class="duel-head">
         <span class="duel-name"></span>
@@ -1140,7 +1177,7 @@ function buildDuelBoard() {
       </div>
       <div class="duel-answers"></div>
       <p class="duel-status"></p>`;
-    pane.querySelector(".duel-name").textContent = pl.name;
+    pane.querySelector(".duel-name").textContent = playerName(i, duel.teams);
     board.appendChild(pane);
   }
 
@@ -1163,9 +1200,13 @@ function duelPane(i) {
   return document.querySelector(`.duel-pane[data-player="${i}"]`);
 }
 
+function scoreSlot(i) {
+  return duel.teams ? teamOf(i) : i;
+}
+
 function updateDuelScores() {
   for (let i = 0; i < duel.n; i++) {
-    duelPane(i).querySelector(".duel-score").textContent = duel.scores[i];
+    duelPane(i).querySelector(".duel-score").textContent = duel.scores[scoreSlot(i)];
   }
 }
 
@@ -1213,7 +1254,28 @@ function nextDuelRound() {
     });
   }
   updateDuelScores();
+  fitDuelText();
 }
+
+// Довгі слова у вузьких частинах екрана: зменшуємо шрифт, доки слово не влізе
+function fitDuelText() {
+  document.querySelectorAll(".duel-answer").forEach(btn => {
+    const word = btn.firstElementChild;
+    if (!word) return;
+    btn.style.fontSize = "";
+    let size = parseFloat(getComputedStyle(btn).fontSize);
+    const pad = parseFloat(getComputedStyle(btn).paddingLeft) + parseFloat(getComputedStyle(btn).paddingRight);
+    const max = btn.clientWidth - pad - 4;
+    while (word.scrollWidth > max && size > 11) {
+      size -= 1;
+      btn.style.fontSize = `${size}px`;
+    }
+  });
+}
+
+window.addEventListener("resize", () => {
+  if (duel && !screens.duel.hidden) fitDuelText();
+});
 
 function duelCorrectWords() {
   return Array.isArray(duel.question.correct) ? duel.question.correct : [duel.question.correct];
@@ -1236,17 +1298,22 @@ function duelTap(i, word, btn) {
 
   if (duelCorrectWords().includes(word)) {
     duel.resolved = true;
-    duel.scores[i]++;
+    const slot = scoreSlot(i);
+    duel.scores[slot]++;
     updateDuelScores();
     revealDuelAnswer(false);
-    duelPane(i).classList.add("won-round");
     for (let j = 0; j < duel.n; j++) {
-      if (j === i) setDuelStatus(j, "+1 — швидше за всіх! ⚡", "good");
-      else setDuelStatus(j, `Швидше був ${DUEL_PLAYERS[i].name.toLowerCase()}`);
+      const sameSide = duel.teams && teamOf(j) === teamOf(i);
+      if (j === i || sameSide) duelPane(j).classList.add("won-round");
+      if (j === i) setDuelStatus(j, duel.teams ? "+1 команді — швидше за всіх! ⚡" : "+1 — швидше за всіх! ⚡", "good");
+      else if (sameSide) setDuelStatus(j, "+1 команді — партнер був швидшим ⚡", "good");
+      else setDuelStatus(j, duel.teams
+        ? `Швидшою була команда ${teamOf(i) + 1}`
+        : `Швидше був ${DUEL_PLAYERS[i].name.toLowerCase()}`);
     }
-    if (duel.scores[i] >= DUEL_TARGET) {
+    if (duel.scores[slot] >= DUEL_TARGET) {
       duel.over = true;
-      schedule(() => finishDuel(i), 1200);
+      schedule(() => finishDuel(slot), 1200);
     } else {
       schedule(nextDuelRound, 1200);
     }
@@ -1267,14 +1334,18 @@ function duelTap(i, word, btn) {
   }
 }
 
+// winner — номер гравця або (у командах) номер команди
 function finishDuel(winner) {
-  gtag('event', 'duel_end', { game_type: "naholosy", players: duel.n, layout: duel.layout, score: duel.scores.join(":") });
+  gtag('event', 'duel_end', { game_type: "naholosy", players: duel.n, layout: duel.layout, teams: duel.teams, score: duel.scores.join(":") });
   for (let i = 0; i < duel.n; i++) {
     const pane = duelPane(i);
+    const won = scoreSlot(i) === winner;
     pane.querySelector(".duel-answers").innerHTML = "";
     pane.classList.remove("won-round", "lost-round");
-    pane.classList.add(i === winner ? "winner" : "loser");
-    setDuelStatus(i, i === winner ? "🏆 Перемога!" : "Наступного разу пощастить 💪", i === winner ? "good win" : "lose");
+    pane.classList.add(won ? "winner" : "loser");
+    setDuelStatus(i,
+      won ? (duel.teams ? "🏆 Команда перемогла!" : "🏆 Перемога!") : "Наступного разу пощастить 💪",
+      won ? "good win" : "lose");
   }
   document.querySelector(".duel-again").hidden = false;
   document.querySelector(".duel-goal").hidden = true;
@@ -1310,6 +1381,13 @@ document.querySelectorAll("#duel-layout button").forEach(b => {
   b.addEventListener("click", () => {
     duelSetup.layout = b.dataset.layout;
     storageSet("duel_layout", duelSetup.layout);
+    renderDuelSetup();
+  });
+});
+document.querySelectorAll("#duel-teams button").forEach(b => {
+  b.addEventListener("click", () => {
+    duelSetup.teams = b.dataset.teams === "1";
+    storageSet("duel_teams", duelSetup.teams ? "1" : "0");
     renderDuelSetup();
   });
 });

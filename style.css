@@ -1739,3 +1739,56 @@ footer {
   display: flex;
   justify-content: center;
 }
+
+/* «2 на 2» на телефоні: компактні чверті */
+@media (max-width: 560px) {
+  .layout-table.n-4 .duel-pane {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .layout-table.n-4 .duel-name {
+    font-size: 13px;
+  }
+
+  .layout-table.n-4 .duel-score {
+    min-width: 38px;
+    padding: 2px 10px;
+    font-size: 18px;
+  }
+
+  .layout-table.n-4 .duel-answer {
+    min-height: 42px;
+    padding: 6px 8px;
+  }
+
+  .layout-table.n-4 .duel-answer .note {
+    font-size: 11px;
+  }
+
+  .layout-table.n-4 .duel-status {
+    font-size: 12px;
+  }
+
+  .layout-table.n-4 .duel-status.win {
+    font-size: 22px;
+  }
+
+  .layout-table.n-4 .duel-status.lose {
+    font-size: 14px;
+  }
+}
+
+/* Кнопка не ширша за свою частину екрана; слово не переноситься — шрифт підганяє script.js */
+.duel-answers {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.duel-answer {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.duel-answer > span:first-child {
+  white-space: nowrap;
+}
