@@ -1057,12 +1057,33 @@ function showModes(game = modesGame) {
   // Онлайн-режими поки що лише в бета-версії (…/?beta)
   $("online-panel").hidden = !isNaholosy;
   $("duel-num").textContent = isNaholosy ? "3" : "2";
-  $("duel-desc").textContent = `Один екран, 2–4 гравці. Хто перший натисне ${isNaholosy ? "правильний наголос" : "правильну форму звертання"} — отримує бал.`;
+  $("duel-desc").textContent = `Один екран, 2–4 гравці: хто перший натисне ${isNaholosy ? "правильний наголос" : "правильну форму"}`;
 
   if (isNaholosy) renderGroups();
+  setOpenPanel(storageGet("modes_open") || "", false);
   renderBestScores();
   showScreen("modes");
 }
+
+// Режими згортаються: відкритий лише один, щоб не гортати довгий екран
+function setOpenPanel(name, scroll = true) {
+  document.querySelectorAll("#modes .collapsible").forEach(panel => {
+    const open = panel.dataset.panel === name && !panel.hidden;
+    panel.classList.toggle("open", open);
+    panel.querySelector(".mode-toggle").setAttribute("aria-expanded", String(open));
+    if (open && scroll) {
+      requestAnimationFrame(() => panel.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  });
+  storageSet("modes_open", name);
+}
+
+document.querySelectorAll("#modes .mode-toggle").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const panel = btn.closest(".collapsible");
+    setOpenPanel(panel.classList.contains("open") ? "" : panel.dataset.panel);
+  });
+});
 
 function renderGroups() {
   const list = $("group-list");
@@ -1094,6 +1115,9 @@ function renderGroups() {
     btn.addEventListener("click", () => startTraining(i));
     list.appendChild(btn);
   });
+
+  const done = GROUPS.filter((g, i) => (Number(storageGet(groupKey(i))) || 0) >= g.words.length).length;
+  $("groups-progress").textContent = done ? `✓ вивчено ${done} з ${GROUPS.length} груп` : "";
 }
 
 function startTraining(groupIndex) {

@@ -87,11 +87,106 @@ function defaultName() {
   return storageGet("player_name") || (tgUser && tgUser.first_name) || "";
 }
 
+function webInviteLink(code) {
+  return `${location.origin}${location.pathname}?room=${code}`;
+}
+
 function inviteLink(code) {
   const app = (window.LEADERBOARD_CONFIG || {}).telegramAppLink;
   if (app) return `${app}?startapp=room_${code}`;
-  return `${location.origin}${location.pathname}?room=${code}`;
+  return webInviteLink(code);
 }
+
+// ---------- QR-код запрошення ----------
+// Бібліотека лежить у грі (vendor/), вантажиться лише коли потрібен QR
+
+let qrLoading = null;
+
+function loadQrLib() {
+  if (window.qrcode) return Promise.resolve();
+  if (!qrLoading) {
+    qrLoading = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "vendor/qrcode.js?v=1.4.4";
+      s.onload = resolve;
+      s.onerror = () => { qrLoading = null; reject(new Error("qr")); };
+      document.head.appendChild(s);
+    });
+  }
+  return qrLoading;
+}
+
+// Куди веде QR: у Telegram чи одразу в браузер (для класу зручніше браузер —
+// учням не треба мати Telegram). Вибір запам'ятовується окремо для кожного режиму.
+function qrTarget() {
+  if (!(window.LEADERBOARD_CONFIG || {}).telegramAppLink) return "web";
+  return storageGet(`qr_target_${online.mode}`) || (online.mode === "class" ? "web" : "tg");
+}
+
+function qrLink() {
+  return qrTarget() === "web" ? webInviteLink(online.code) : inviteLink(online.code);
+}
+
+function qrImage(link) {
+  const box = el("div", { class: "qr-box", role: "img", "aria-label": "QR-код запрошення" });
+  loadQrLib().then(() => {
+    const qr = qrcode(0, "M");
+    qr.addData(link);
+    qr.make();
+    box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 4, scalable: true });
+  }).catch(() => { box.classList.add("qr-error"); box.textContent = "Не вдалося створити QR-код. Перевір інтернет."; });
+  return box;
+}
+
+function qrTargetSwitch(onChange) {
+  if (!(window.LEADERBOARD_CONFIG || {}).telegramAppLink) return null;
+  const current = qrTarget();
+  return el("div", { class: "qr-target" },
+    el("span", { class: "setup-label" }, "QR відкриває гру"),
+    el("div", { class: "seg" }, [["web", "🌐 У браузері"], ["tg", "✈️ У Telegram"]].map(([value, label]) => el("button", {
+      class: current === value ? "active" : "",
+      on: { click: () => { storageSet(`qr_target_${online.mode}`, value); onChange(); } }
+    }, label))));
+}
+
+function qrCaption() {
+  return qrTarget() === "web"
+    ? "Наведи камеру телефона на код — гра відкриється в браузері"
+    : "Наведи камеру телефона на код — гра відкриється в Telegram";
+}
+
+function closeQrOverlay() {
+  const ov = document.querySelector(".qr-overlay");
+  if (ov) ov.remove();
+}
+
+function openQrOverlay() {
+  closeQrOverlay();
+  track('online_qr', { mode: online.mode });
+  const count = el("p", { class: "qr-count" });
+  const ov = el("div", { class: "qr-overlay", role: "dialog", "aria-label": "QR-код кімнати" },
+    el("button", { class: "icon-btn qr-close", "aria-label": "Закрити", on: { click: closeQrOverlay } }, "✕ Закрити"),
+    el("div", { class: "qr-overlay-body" },
+      qrImage(qrLink()),
+      el("div", { class: "qr-side" },
+        el("p", { class: "qr-caption" }, qrCaption()),
+        el("p", { class: "qr-or" }, "або «Маю код — приєднатися» і код:"),
+        el("div", { class: "room-code" }, online.code),
+        count,
+        qrTargetSwitch(() => { renderLobby(); openQrOverlay(); }))));
+  ov.addEventListener("click", e => { if (e.target === ov) closeQrOverlay(); });
+  document.body.appendChild(ov);
+  updateQrCount();
+}
+
+function updateQrCount() {
+  const count = document.querySelector(".qr-overlay .qr-count");
+  if (!count || !online) return;
+  const n = online.players.length;
+  count.textContent = online.mode === "class" ? `Приєдналося учнів: ${n}` : `Гравців у кімнаті: ${n}`;
+}
+
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeQrOverlay(); });
 
 // ---------- Статистика ----------
 
@@ -243,6 +338,7 @@ async function joinRoom(code, name) {
 }
 
 function leaveOnline(silent = false) {
+  closeQrOverlay();
   if (!online) return;
   clearTimeout(online.timer);
   clearInterval(online.ticker);
@@ -338,12 +434,27 @@ function renderLobby() {
   const children = [];
   if (online.isHost) {
     const link = inviteLink(online.code);
-    const share = el("button", { class: "btn-secondary", on: { click: () => shareInvite(link) } }, "📨 Надіслати запрошення");
-    children.push(
-      el("p", { class: "online-hint" }, online.mode === "class" ? "Учні відкривають гру → «Маю код — приєднатися»" : "Друг відкриває гру → «Маю код — приєднатися»"),
-      el("div", { class: "room-code", "aria-label": "Код кімнати" }, online.code),
-      share
-    );
+    const share = el("button", { class: "btn-secondary", on: { click: () => shareInvite(link) } }, "📨 Надіслати");
+    const qrBtn = el("button", { class: "btn-secondary", on: { click: openQrOverlay } },
+      online.mode === "class" ? "🔍 QR на весь екран" : "▦ QR-код");
+    if (online.mode === "class") {
+      // Для класу QR одразу на екрані: учні сканують його з проєктора
+      children.push(
+        el("div", { class: "qr-inline" },
+          qrImage(qrLink()),
+          el("p", { class: "online-hint" }, qrCaption())),
+        el("p", { class: "online-hint" }, "Або учні відкривають гру → «Маю код — приєднатися»:"),
+        el("div", { class: "room-code", "aria-label": "Код кімнати" }, online.code),
+        el("div", { class: "invite-actions" }, qrBtn, share),
+        qrTargetSwitch(renderLobby)
+      );
+    } else {
+      children.push(
+        el("p", { class: "online-hint" }, "Друг відкриває гру → «Маю код — приєднатися»"),
+        el("div", { class: "room-code", "aria-label": "Код кімнати" }, online.code),
+        el("div", { class: "invite-actions" }, share, qrBtn)
+      );
+    }
   } else {
     children.push(el("p", { class: "online-hint" }, `Кімната ${online.code}. Чекаємо, поки ведучий почне гру…`));
   }
@@ -369,6 +480,7 @@ function renderLobby() {
   }
 
   setOnline(m.title, el("section", { class: "card online-card" }, ...children));
+  updateQrCount();
 }
 
 function shareInvite(link) {
@@ -386,6 +498,7 @@ function shareInvite(link) {
 }
 
 function startOnlineGame() {
+  closeQrOverlay();
   online.seed = Math.floor(Math.random() * 1e9);
   online.phase = "playing";
   online.startedAt = Date.now();

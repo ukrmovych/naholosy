@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261013d">
+<link rel="stylesheet" href="style.css?v=20261013e">
 </head>
 <body>
 
@@ -93,30 +93,36 @@
       </button>
     </section>
 
-    <section id="groups-panel" class="mode-panel">
-      <div class="mode-head">
+    <section id="groups-panel" class="mode-panel collapsible" data-panel="groups">
+      <button class="mode-head mode-toggle" type="button" aria-expanded="false" aria-controls="groups-body">
         <span class="mode-num">2</span>
         <span class="mode-head-text">
-          <span class="mode-title">🎯 Тренування за групами</span>
-          <span class="mode-desc">По ~15 слів, без життів. Наприкінці — робота над помилками, поки все не буде правильно.</span>
+          <span class="mode-title">🎯 Тренування</span>
+          <span class="mode-desc">Групи по ~15 слів, без життів, з роботою над помилками</span>
+          <span id="groups-progress" class="mode-progress"></span>
         </span>
-      </div>
+        <span class="mode-chevron" aria-hidden="true">›</span>
+      </button>
+      <div id="groups-body" class="mode-body">
       <div id="group-list" class="group-grid"></div>
       <p class="group-legend">
         <span class="legend-item"><span class="legend-dot legend-new"></span> не розпочато</span>
         <span class="legend-item"><span class="legend-dot legend-mid"></span> є над чим попрацювати</span>
         <span class="legend-item"><span class="legend-dot legend-done"></span> вивчено</span>
       </p>
+      </div>
     </section>
 
-    <section class="mode-panel">
-      <div class="mode-head">
+    <section class="mode-panel collapsible" data-panel="duel">
+      <button class="mode-head mode-toggle" type="button" aria-expanded="false" aria-controls="duel-body">
         <span id="duel-num" class="mode-num">3</span>
         <span class="mode-head-text">
           <span class="mode-title">⚔️ Дуель</span>
-          <span id="duel-desc" class="mode-desc">Один екран, 2–4 гравці. Хто перший натисне правильний наголос — отримує бал.</span>
+          <span id="duel-desc" class="mode-desc">2–4 гравці: хто перший натисне правильний наголос</span>
         </span>
-      </div>
+        <span class="mode-chevron" aria-hidden="true">›</span>
+      </button>
+      <div id="duel-body" class="mode-body">
 
       <div class="duel-setup">
         <div class="setup-controls">
@@ -156,16 +162,20 @@
       </div>
 
       <button id="btn-duel" class="btn-primary">Почати дуель</button>
+      </div>
     </section>
 
-    <section id="online-panel" class="mode-panel">
-      <div class="mode-head">
+    <section id="online-panel" class="mode-panel collapsible" data-panel="online">
+      <button class="mode-head mode-toggle" type="button" aria-expanded="false" aria-controls="online-body-panel">
         <span class="mode-num">4</span>
         <span class="mode-head-text">
           <span class="mode-title">🌐 Онлайн з друзями</span>
-          <span class="mode-desc">Кожен на своєму телефоні. Створи кімнату й надішли друзям код або посилання.</span>
+          <span class="mode-desc">Кожен на своєму телефоні: дуель, спринт, гра для класу</span>
         </span>
-      </div>
+        <span class="mode-chevron" aria-hidden="true">›</span>
+      </button>
+      <div id="online-body-panel" class="mode-body">
+      <p class="mode-note">Створи кімнату й надішли друзям код, посилання або QR-код.</p>
       <div class="online-modes">
         <button class="online-mode-btn" data-mode="duel">
           <span class="om-title">⚔️ Онлайн-дуель</span>
@@ -181,6 +191,7 @@
         </button>
       </div>
       <button id="btn-online-join" class="btn-secondary">🔑 Маю код — приєднатися</button>
+      </div>
     </section>
   </main>
 
@@ -298,10 +309,10 @@
     </a>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261013d"></script>
-  <script src="klychnyi-data.js?v=20261013d"></script>
-  <script src="script.js?v=20261013d"></script>
-  <script src="online.js?v=20261013d"></script>
+  <script src="leaderboard-config.js?v=20261013e"></script>
+  <script src="klychnyi-data.js?v=20261013e"></script>
+  <script src="script.js?v=20261013e"></script>
+  <script src="online.js?v=20261013e"></script>
 
 </body>
 </html>
