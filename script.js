@@ -258,7 +258,7 @@ const PRAISE = ["Правильно!", "Так тримати!", "Супер!", 
 // Усі ігри в меню. Нова гра = новий рядок тут.
 // status: "live" — працює, "beta" — працює в тестовому режимі, "soon" — ще немає
 const GAMES = [
-  { id: "naholosy", name: "Наголоси", icon: "🗣️", status: "live", featured: true },
+  { id: "naholosy", name: "Наголоси", sub: "Усі, що потрібні для НМТ!", icon: "🗣️", status: "live", featured: true },
   { id: "leksychna", name: "Лексична помилка", icon: "🔎", status: "beta" },
   { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: "soon" },
   { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon" },
@@ -269,7 +269,7 @@ const GAMES = [
 const $ = id => document.getElementById(id);
 const screens = {
   menu: $("menu"), modes: $("modes"), game: $("game"), over: $("over"),
-  trainOver: $("train-over"), leaders: $("leaders")
+  trainOver: $("train-over"), leaders: $("leaders"), duel: $("duel")
 };
 const scoreEl = $("score");
 const livesEl = $("lives");
@@ -337,6 +337,12 @@ function renderMenu() {
     const name = document.createElement("span");
     name.className = "tile-name";
     name.textContent = game.name;
+    if (game.sub) {
+      const sub = document.createElement("span");
+      sub.className = "tile-sub";
+      sub.textContent = game.sub;
+      name.appendChild(sub);
+    }
 
     btn.append(icon, name);
 
@@ -397,6 +403,7 @@ function showScreen(name) {
   Object.entries(screens).forEach(([key, el]) => {
     el.hidden = key !== name;
   });
+  document.body.classList.toggle("duel-open", name === "duel");
   window.scrollTo(0, 0);
 }
 
@@ -1013,6 +1020,139 @@ function finishTrainingRound() {
   showScreen("trainOver");
 }
 
+// ---------- Дуель удвох на одному екрані ----------
+
+const DUEL_TARGET = 10;
+let duel = null;
+
+function duelHalf(player) {
+  return document.querySelector(`.duel-half[data-player="${player}"]`);
+}
+
+function startDuel() {
+  clearTimeout(nextTimer);
+  training = null;
+  duel = { scores: [0, 0], queue: [], locked: [false, false], resolved: false, question: null };
+  gtag('event', 'duel_start', { game_type: "naholosy" });
+  $("duel-end").hidden = true;
+  showScreen("duel");
+  updateDuelScores();
+  nextDuelRound();
+}
+
+function updateDuelScores() {
+  [0, 1].forEach(p => {
+    duelHalf(p).querySelector(".duel-score").textContent = duel.scores[p];
+  });
+}
+
+function setDuelStatus(player, text, kind) {
+  const el = duelHalf(player).querySelector(".duel-status");
+  el.textContent = text;
+  el.className = "duel-status" + (kind ? ` ${kind}` : "");
+}
+
+function nextDuelRound() {
+  if (duel.queue.length === 0) {
+    duel.queue = [...naholosyData];
+    shuffleArray(duel.queue);
+  }
+  duel.question = duel.queue.shift();
+  duel.locked = [false, false];
+  duel.resolved = false;
+
+  const words = [...duel.question.words];
+  shuffleArray(words);
+
+  [0, 1].forEach(p => {
+    const box = duelHalf(p).querySelector(".duel-answers");
+    box.innerHTML = "";
+    setDuelStatus(p, "Хто швидше?");
+    duelHalf(p).classList.remove("won-round", "lost-round");
+    words.forEach(word => {
+      const btn = document.createElement("button");
+      btn.className = "answer duel-answer";
+      btn.dataset.word = word;
+      renderStressWord(btn, word);
+      // pointerdown — щоб обидва гравці могли тиснути одночасно і без затримки
+      btn.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        duelTap(p, word, btn);
+      });
+      box.appendChild(btn);
+    });
+  });
+}
+
+function duelCorrectWords() {
+  return Array.isArray(duel.question.correct) ? duel.question.correct : [duel.question.correct];
+}
+
+function revealDuelAnswer(blink) {
+  const correct = duelCorrectWords();
+  document.querySelectorAll(".duel-answer").forEach(b => {
+    if (correct.includes(b.dataset.word)) {
+      b.classList.add("correct");
+      if (blink) b.classList.add("blink");
+    } else if (!b.classList.contains("wrong")) {
+      b.classList.add("dim");
+    }
+  });
+}
+
+function duelTap(player, word, btn) {
+  if (!duel || duel.resolved || duel.locked[player]) return;
+  const other = 1 - player;
+
+  if (duelCorrectWords().includes(word)) {
+    duel.resolved = true;
+    duel.scores[player]++;
+    updateDuelScores();
+    revealDuelAnswer(false);
+    duelHalf(player).classList.add("won-round");
+    setDuelStatus(player, "+1 — швидше за всіх! ⚡", "good");
+    setDuelStatus(other, "Суперник був швидшим", "");
+
+    if (duel.scores[player] >= DUEL_TARGET) {
+      schedule(() => finishDuel(player), 1200);
+    } else {
+      schedule(nextDuelRound, 1200);
+    }
+    return;
+  }
+
+  // Помилка: цей гравець пропускає раунд
+  duel.locked[player] = true;
+  btn.classList.add("wrong");
+  duelHalf(player).classList.add("lost-round");
+  setDuelStatus(player, "Помилка — чекай наступне слово", "bad");
+
+  if (duel.locked[other]) {
+    duel.resolved = true;
+    revealDuelAnswer(true);
+    setDuelStatus(player, "Обидва помилились 🙈", "bad");
+    setDuelStatus(other, "Обидва помилились 🙈", "bad");
+    schedule(nextDuelRound, 2000);
+  }
+}
+
+function finishDuel(winner) {
+  gtag('event', 'duel_end', { game_type: "naholosy", score: `${duel.scores[0]}:${duel.scores[1]}` });
+  [0, 1].forEach(p => {
+    duelHalf(p).querySelector(".duel-answers").innerHTML = "";
+    duelHalf(p).classList.remove("won-round", "lost-round");
+    setDuelStatus(p, p === winner ? "🏆 Перемога!" : "Наступного разу пощастить 💪", p === winner ? "good win" : "lose");
+  });
+  $("duel-end").hidden = false;
+  launchConfetti();
+}
+
+function exitDuel() {
+  clearTimeout(nextTimer);
+  duel = null;
+  showModes();
+}
+
 // ---------- Турнірна таблиця ----------
 
 const LB = window.LEADERBOARD_CONFIG || {};
@@ -1158,6 +1298,9 @@ $("btn-menu").addEventListener("click", () => {
   else showMenu();
 });
 $("btn-modes-back").addEventListener("click", showMenu);
+$("btn-duel").addEventListener("click", startDuel);
+$("btn-duel-exit").addEventListener("click", exitDuel);
+$("btn-duel-again").addEventListener("click", startDuel);
 $("btn-marathon").addEventListener("click", () => startGame("naholosy"));
 $("btn-fix-mistakes").addEventListener("click", startMistakesRound);
 $("btn-train-next").addEventListener("click", () => startTraining(training.groupIndex + 1));

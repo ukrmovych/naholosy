@@ -19,7 +19,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=20261012e">
+<link rel="stylesheet" href="style.css?v=20261012f">
 </head>
 <body>
 
@@ -105,6 +105,46 @@
         <span class="legend-item"><span class="legend-dot legend-mid"></span> є над чим попрацювати</span>
         <span class="legend-item"><span class="legend-dot legend-done"></span> вивчено</span>
       </p>
+    </section>
+
+    <section class="mode-panel">
+      <div class="mode-head">
+        <span class="mode-num">3</span>
+        <span class="mode-head-text">
+          <span class="mode-title">⚔️ Дуель удвох</span>
+          <span class="mode-desc">Один телефон чи планшет, двоє гравців з різних боків. Хто перший натисне правильний наголос — отримує бал. Граємо до 10.</span>
+        </span>
+      </div>
+      <button id="btn-duel" class="btn-primary">Почати дуель</button>
+    </section>
+  </main>
+
+  <!-- Дуель: екран ділиться навпіл, верхня половина перевернута -->
+  <main id="duel" class="duel" hidden>
+    <section class="duel-half duel-top" data-player="1">
+      <div class="duel-head">
+        <span class="duel-name">Гравець 2</span>
+        <span class="duel-score">0</span>
+      </div>
+      <div class="duel-answers"></div>
+      <p class="duel-status"></p>
+    </section>
+
+    <div class="duel-mid">
+      <button id="btn-duel-exit" class="icon-btn duel-exit" aria-label="Вийти з дуелі">✕</button>
+      <span class="duel-brand"><img src="logo.png" alt="" width="26" height="26">@ukr_movych</span>
+      <div id="duel-end" class="duel-end" hidden>
+        <button id="btn-duel-again" class="btn-primary btn-small">Ще раз</button>
+      </div>
+    </div>
+
+    <section class="duel-half duel-bottom" data-player="0">
+      <div class="duel-head">
+        <span class="duel-name">Гравець 1</span>
+        <span class="duel-score">0</span>
+      </div>
+      <div class="duel-answers"></div>
+      <p class="duel-status"></p>
     </section>
   </main>
 
@@ -205,8 +245,8 @@
     <span>by <b>@ukr_movych</b></span>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261012e"></script>
-  <script src="script.js?v=20261012e"></script>
+  <script src="leaderboard-config.js?v=20261012f"></script>
+  <script src="script.js?v=20261012f"></script>
 
 </body>
 </html>
