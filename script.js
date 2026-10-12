@@ -1033,6 +1033,8 @@ function showModes(game = modesGame) {
     : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
   $("marathon-best").dataset.best = game;
   $("groups-panel").hidden = !isNaholosy;
+  // Онлайн-режими поки що лише в бета-версії (…/?beta)
+  $("online-panel").hidden = !isNaholosy || !BETA;
   $("duel-num").textContent = isNaholosy ? "3" : "2";
   $("duel-desc").textContent = `Один екран, 2–4 гравці. Хто перший натисне ${isNaholosy ? "правильний наголос" : "правильну форму звертання"} — отримує бал.`;
 

@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261012w">
+<link rel="stylesheet" href="style.css?v=20261013b">
 </head>
 <body>
 
@@ -157,6 +157,40 @@
 
       <button id="btn-duel" class="btn-primary">Почати дуель</button>
     </section>
+
+    <section id="online-panel" class="mode-panel">
+      <div class="mode-head">
+        <span class="mode-num">4</span>
+        <span class="mode-head-text">
+          <span class="mode-title">🌐 Онлайн з друзями</span>
+          <span class="mode-desc">Кожен на своєму телефоні. Створи кімнату й надішли друзям код або посилання.</span>
+        </span>
+      </div>
+      <div class="online-modes">
+        <button class="online-mode-btn" data-mode="duel">
+          <span class="om-title">⚔️ Онлайн-дуель</span>
+          <span class="om-desc">Удвох. Однакове слово — хто правильно й швидше, тому бал</span>
+        </button>
+        <button class="online-mode-btn" data-mode="sprint">
+          <span class="om-title">⏱ Спринт 60 секунд</span>
+          <span class="om-desc">2–10 гравців. Хто дасть більше правильних відповідей за хвилину</span>
+        </button>
+        <button class="online-mode-btn" data-mode="class">
+          <span class="om-title">🏫 Гра для класу</span>
+          <span class="om-desc">Учитель веде гру на проєкторі, учні відповідають з телефонів</span>
+        </button>
+      </div>
+      <button id="btn-online-join" class="btn-secondary">🔑 Маю код — приєднатися</button>
+    </section>
+  </main>
+
+  <!-- Онлайн: вміст малює online.js -->
+  <main id="online" class="screen" hidden>
+    <header class="top-bar">
+      <button id="btn-online-back" class="icon-btn" aria-label="Вийти">‹ Вийти</button>
+      <h2 id="online-title" class="screen-title">Онлайн</h2>
+    </header>
+    <div id="online-body" class="online-body"></div>
   </main>
 
   <!-- Дуель: поле малює script.js (2–4 гравці, на столі або на стіні) -->
@@ -264,9 +298,10 @@
     </a>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261012w"></script>
-  <script src="klychnyi-data.js?v=20261012w"></script>
-  <script src="script.js?v=20261012w"></script>
+  <script src="leaderboard-config.js?v=20261013b"></script>
+  <script src="klychnyi-data.js?v=20261013b"></script>
+  <script src="script.js?v=20261013b"></script>
+  <script src="online.js?v=20261013b"></script>
 
 </body>
 </html>
