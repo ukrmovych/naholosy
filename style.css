@@ -934,3 +934,18 @@ button:focus-visible {
   from { transform: scale(0.8); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+/* ---------- Тестовий режим ---------- */
+
+.test-note {
+  margin: -4px 0 14px;
+  padding: 10px 14px;
+  border: 2px dashed var(--brown);
+  border-radius: 12px;
+  background: rgba(87, 68, 53, 0.25);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: center;
+}

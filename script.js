@@ -407,6 +407,7 @@ function startGame(gameType) {
 
   remainingQuestions = gameType === "naholosy" ? [...naholosyData] : [];
   showScreen("game");
+  $("test-note").hidden = gameType !== "leksychna";
   hintEl.textContent = gameType === "naholosy" ? "Підказка: можна відповідати клавішами 1, 2, 3" : "";
   nextQuestion();
 }
