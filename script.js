@@ -250,8 +250,13 @@ const TOTAL_WORDS = naholosyData.length;
 // Затримки перед наступним питанням: [правильно, помилка]
 const DELAYS = {
   naholosy: [600, 2000],
-  leksychna: [1000, 3000]
+  leksychna: [1000, 3000],
+  klychnyi: [600, 2200]
 };
+
+// Бета-режим: ігри в розробці відкриваються лише за посиланням …/?beta (або …/beta/)
+const BETA = new URLSearchParams(location.search).has("beta");
+const KLYCHNYI_TOTAL = typeof klychnyiData !== "undefined" ? klychnyiData.length : 0;
 
 const PRAISE = ["Правильно!", "Так тримати!", "Супер!", "Чудово!", "Влучно!", "Є!"];
 
@@ -263,7 +268,7 @@ const STATUS_LABELS = { beta: "бета", soon: "скоро" };
 const GAMES = [
   { id: "naholosy", name: "Наголоси", sub: "Усі, що потрібні для НМТ!", icon: "🗣️", status: "live", featured: true },
   { id: "leksychna", name: "Лексична помилка", icon: "🔎", status: "beta" },
-  { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: "soon" },
+  { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: BETA ? "beta" : "soon" },
   { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon" },
   { id: "frazeolohizmy", name: "Фразеологізми", icon: "💬", status: "soon" },
   { id: "inshomovni", name: "Іншомовні слова", icon: "🌍", status: "soon" }
@@ -436,6 +441,11 @@ function updateUI() {
     progressEl.hidden = false;
     progressFill.style.width = `${Math.min(score / TOTAL_WORDS, 1) * 100}%`;
     progressEl.classList.toggle("done", score >= TOTAL_WORDS);
+  } else if (currentGame === "klychnyi") {
+    scoreEl.textContent = score >= KLYCHNYI_TOTAL ? `${score} 🏆` : `${score}/${KLYCHNYI_TOTAL}`;
+    progressEl.hidden = false;
+    progressFill.style.width = `${Math.min(score / KLYCHNYI_TOTAL, 1) * 100}%`;
+    progressEl.classList.toggle("done", score >= KLYCHNYI_TOTAL);
   } else {
     scoreEl.textContent = score;
     progressEl.hidden = true;
@@ -500,10 +510,17 @@ function startGame(gameType) {
     game_type: gameType
   });
 
-  remainingQuestions = gameType === "naholosy" ? [...naholosyData] : [];
+  remainingQuestions = gameType === "naholosy" ? [...naholosyData]
+    : gameType === "klychnyi" ? [...klychnyiData]
+    : [];
   showScreen("game");
-  $("test-note").hidden = gameType !== "leksychna";
-  hintEl.textContent = gameType === "naholosy" ? "Підказка: можна відповідати клавішами 1, 2, 3" : "";
+  $("test-note").hidden = gameType === "naholosy";
+  $("test-note").textContent = gameType === "klychnyi"
+    ? "🧪 Бета-версія тренажера. Помітили неточність — напишіть @ukr_movych."
+    : "🧪 Розділ працює в тестовому режимі: деякі речення ще потребують доопрацювання.";
+  hintEl.textContent = gameType === "naholosy" || gameType === "klychnyi"
+    ? "Підказка: можна відповідати клавішами 1, 2, 3"
+    : "";
   nextQuestion();
 }
 
@@ -598,7 +615,65 @@ function nextQuestion() {
     renderNaholosy();
   } else if (currentGame === "leksychna") {
     loadSentence();
+  } else if (currentGame === "klychnyi") {
+    if (remainingQuestions.length === 0) {
+      remainingQuestions = [...klychnyiData];
+    }
+    const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
+    currentQuestion = remainingQuestions.splice(randomIndex, 1)[0];
+    renderKlychnyi();
   }
+}
+
+// ---------- Кличний відмінок ----------
+
+function klychnyiPrefix(gender) {
+  return gender === "f" ? "Шановна пані" : "Шановний пане";
+}
+
+function renderKlychnyi() {
+  const [gender, nominative, vocative, wrong] = currentQuestion;
+  questionEl.textContent = "Обери правильну форму звертання";
+
+  // «Шановний пане ___!»
+  sentenceEl.hidden = false;
+  sentenceEl.innerHTML = "";
+  const line = document.createElement("p");
+  line.className = "address-line";
+  line.append(`${klychnyiPrefix(gender)} `);
+  const gap = document.createElement("span");
+  gap.className = "address-gap";
+  gap.textContent = "…";
+  line.append(gap, "!");
+  sentenceEl.appendChild(line);
+
+  const options = [vocative, nominative, wrong];
+  shuffleArray(options);
+
+  options.forEach(word => {
+    const btn = document.createElement("button");
+    btn.className = "answer";
+    btn.dataset.word = word;
+    btn.textContent = word;
+
+    btn.onclick = () => {
+      const isCorrect = word === vocative;
+      handleAnswer(isCorrect, () => {
+        gap.textContent = vocative;
+        gap.classList.add(isCorrect ? "filled-ok" : "filled-fix");
+        Array.from(answersEl.children).forEach(b => {
+          if (b.dataset.word === vocative) {
+            b.classList.add("correct");
+            if (!isCorrect) b.classList.add("blink");
+          } else if (b !== btn) {
+            b.classList.add("dim");
+          }
+        });
+        if (!isCorrect) btn.classList.add("wrong");
+      }, { plain: true, prefix: klychnyiPrefix(gender), chosen: word, correct: [vocative] });
+    };
+    answersEl.appendChild(btn);
+  });
 }
 
 // ---------- Речення з бази ----------
@@ -781,7 +856,9 @@ function gameOver() {
   const isRecord = score > best;
   if (isRecord) storageSet(`best_${currentGame}`, String(score));
 
-  $("over-score").textContent = currentGame === "naholosy" ? `${score}/${TOTAL_WORDS}` : score;
+  $("over-score").textContent = currentGame === "naholosy" ? `${score}/${TOTAL_WORDS}`
+    : currentGame === "klychnyi" ? `${score}/${KLYCHNYI_TOTAL}`
+    : score;
   $("over-best").textContent = isRecord && score > 0
     ? "🎉 Новий рекорд!"
     : `Рекорд: ${Math.max(best, score)}`;
@@ -811,6 +888,18 @@ function renderMistakes(items = mistakes, list = $("mistakes-list"), section = $
         p.appendChild(document.createTextNode(" "));
       });
       li.appendChild(p);
+    } else if (m.plain) {
+      // Кличний відмінок: обрана форма -> правильна
+      const was = document.createElement("span");
+      was.className = "was";
+      was.textContent = m.chosen;
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      arrow.textContent = "→";
+      const right = document.createElement("span");
+      right.className = "right plain-right";
+      right.textContent = `${m.prefix} ${m.correct[0]}!`;
+      li.append(was, arrow, right);
     } else {
       // Наголоси: обране слово -> правильне
       const was = document.createElement("span");
@@ -1534,7 +1623,8 @@ async function submitScore(name, game, value) {
 
 function prepareSubmitForm() {
   const form = $("submit-form");
-  form.hidden = !leaderboardEnabled || score <= 0;
+  // Турнірна таблиця — лише для ігор, які вже не в бета-версії
+  form.hidden = !leaderboardEnabled || score <= 0 || !["naholosy", "leksychna"].includes(currentGame);
   form.querySelector("button").disabled = false;
   $("player-name").disabled = false;
   $("player-name").value = storageGet("player_name") || "";
@@ -1650,7 +1740,7 @@ document.querySelectorAll(".tab").forEach(tab => {
 
 // Клавіші 1–4 для вибору варіанта в «Наголосах»
 document.addEventListener("keydown", e => {
-  if (screens.game.hidden || currentGame !== "naholosy" || !$("celebrate").hidden) return;
+  if (screens.game.hidden || !["naholosy", "klychnyi"].includes(currentGame) || !$("celebrate").hidden) return;
   if (e.target.tagName === "INPUT") return;
   const btn = answersEl.children[Number(e.key) - 1];
   if (btn) btn.click();
