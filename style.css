@@ -1275,17 +1275,18 @@ button:focus-visible {
   gap: 10px;
 }
 
+/* Підпис над перемикачем — щоб влазили зрозумілі довгі підписи */
 .setup-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
 }
 
 .setup-label {
-  flex: none;
-  width: 64px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
+  padding-left: 4px;
 }
 
 /* Сегментований перемикач */
@@ -1387,9 +1388,6 @@ button:focus-visible {
     height: 70px;
   }
 
-  .setup-label {
-    width: 58px;
-  }
 }
 
 /* ---------- Дуель: поле ---------- */
