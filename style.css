@@ -867,7 +867,8 @@ button:focus-visible {
 
 .tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 6px;
   margin-bottom: 14px;
   padding: 5px;
@@ -1911,4 +1912,22 @@ footer {
 
 .mistakes-list .plain-right {
   font-size: 18px;
+}
+
+/* Початок речення в дуелі (кличний відмінок) */
+.duel-lead {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 520px;
+  font-size: clamp(18px, 4.5vw, 26px);
+  text-align: center;
+}
+
+.layout-wall .duel-lead {
+  font-size: clamp(18px, 2.2vw, 34px);
+}
+
+.layout-table.n-4 .duel-lead,
+.layout-table.n-3 .duel-lead {
+  font-size: clamp(14px, 3.6vw, 22px);
 }

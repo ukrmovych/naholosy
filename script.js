@@ -371,8 +371,8 @@ function renderMenu() {
     btn.addEventListener("click", () => {
       if (game.status === "soon") {
         showSoon(game);
-      } else if (game.id === "naholosy") {
-        showModes();
+      } else if (game.id === "naholosy" || game.id === "klychnyi") {
+        showModes(game.id);
       } else {
         startGame(game.id);
       }
@@ -646,12 +646,23 @@ function klychnyiPrefix(frame) {
     case "lf": return pickOne(["Люба", "Дорога"]);
     case "bm": return `Любий ${pickOne(KLYCHNYI_NAMES.m)}`;
     case "bf": return `Люба ${pickOne(KLYCHNYI_NAMES.f)}`;
+    case "oh": return "О";
+    case "ln": return pickOne(["Любе", "Маленьке"]);
     default: return "Шановний пане";
   }
 }
 
+// Варіанти відповіді: кличний, називний і неправильні форми (без повторів —
+// у IV відміні кличний збігається з називним)
+function klychnyiOptions(row) {
+  const [, nominative, vocative, ...wrong] = row;
+  const options = [...new Set([vocative, nominative, ...wrong])];
+  shuffleArray(options);
+  return options;
+}
+
 function renderKlychnyi() {
-  const [frame, nominative, vocative, wrong] = currentQuestion;
+  const [frame, , vocative] = currentQuestion;
   const prefix = klychnyiPrefix(frame);
   questionEl.textContent = "Обери правильну форму звертання";
 
@@ -667,10 +678,7 @@ function renderKlychnyi() {
   line.append(gap, "!");
   sentenceEl.appendChild(line);
 
-  const options = [vocative, nominative, wrong];
-  shuffleArray(options);
-
-  options.forEach(word => {
+  klychnyiOptions(currentQuestion).forEach(word => {
     const btn = document.createElement("button");
     btn.className = "answer";
     btn.dataset.word = word;
@@ -1001,11 +1009,34 @@ function groupKey(i) {
   return `train_naholosy_${GROUPS[i].label}`;
 }
 
-function showModes() {
+// 1 звертання, 2 звертання, 5 звертань
+function plural(n, one, few, many) {
+  const n10 = n % 10, n100 = n % 100;
+  if (n10 === 1 && n100 !== 11) return one;
+  if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return few;
+  return many;
+}
+
+// Екран режимів (марафон / групи / дуель) для гри з вибором слів
+let modesGame = "naholosy";
+
+function showModes(game = modesGame) {
   clearTimeout(nextTimer);
   training = null;
   questionToken++;
-  renderGroups();
+  modesGame = game;
+
+  const isNaholosy = game === "naholosy";
+  $("modes-title").textContent = isNaholosy ? "Наголоси" : "Кличний відмінок";
+  $("marathon-desc").textContent = isNaholosy
+    ? `Усі ${TOTAL_WORDS} слова · 3 життя · турнірна таблиця`
+    : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
+  $("marathon-best").dataset.best = game;
+  $("groups-panel").hidden = !isNaholosy;
+  $("duel-num").textContent = isNaholosy ? "3" : "2";
+  $("duel-desc").textContent = `Один екран, 2–4 гравці. Хто перший натисне ${isNaholosy ? "правильний наголос" : "правильну форму звертання"} — отримує бал.`;
+
+  if (isNaholosy) renderGroups();
   renderBestScores();
   showScreen("modes");
 }
@@ -1262,6 +1293,7 @@ function startDuel() {
   const { n, layout } = duelSetup;
   const teams = teamsOn();
   duel = {
+    game: modesGame,
     n,
     layout,
     teams,
@@ -1274,7 +1306,7 @@ function startDuel() {
     question: null,
     over: false
   };
-  gtag('event', 'duel_start', { game_type: "naholosy", players: n, layout, teams, target: duelSetup.target });
+  gtag('event', 'duel_start', { game_type: modesGame, players: n, layout, teams, target: duelSetup.target });
   buildDuelBoard();
   showScreen("duel");
   checkDuelOrientation();
@@ -1297,6 +1329,7 @@ function buildDuelBoard() {
         <span class="duel-name"></span>
         <span class="duel-score">0</span>
       </div>
+      <p class="duel-lead" hidden></p>
       <div class="duel-answers"></div>
       <p class="duel-status"></p>`;
     pane.querySelector(".duel-name").textContent = playerName(i, duel.teams);
@@ -1354,17 +1387,37 @@ function setDuelStatus(i, text, kind) {
   el.className = "duel-status" + (kind ? ` ${kind}` : "");
 }
 
+// Питання дуелі: варіанти, правильні відповіді, (для кличного) початок речення
+function makeDuelRound(question) {
+  if (duel.game === "klychnyi") {
+    return {
+      lead: klychnyiPrefix(question[0]),
+      words: klychnyiOptions(question),
+      correct: [question[2]],
+      render: (btn, word) => { btn.textContent = word; }
+    };
+  }
+  const words = [...question.words];
+  shuffleArray(words);
+  return {
+    lead: null,
+    words,
+    correct: Array.isArray(question.correct) ? question.correct : [question.correct],
+    render: renderStressWord
+  };
+}
+
 function nextDuelRound() {
   if (duel.queue.length === 0) {
-    duel.queue = [...naholosyData];
+    duel.queue = duel.game === "klychnyi" ? [...klychnyiData] : [...naholosyData];
     shuffleArray(duel.queue);
   }
   duel.question = duel.queue.shift();
+  duel.round = makeDuelRound(duel.question);
   duel.locked.fill(false);
   duel.resolved = false;
 
-  const words = [...duel.question.words];
-  shuffleArray(words);
+  const { words, lead } = duel.round;
   const keys = showKeyHints();
 
   for (let i = 0; i < duel.n; i++) {
@@ -1373,11 +1426,21 @@ function nextDuelRound() {
     const box = pane.querySelector(".duel-answers");
     box.innerHTML = "";
     setDuelStatus(i, "Хто швидше?");
+
+    const leadEl = pane.querySelector(".duel-lead");
+    leadEl.hidden = !lead;
+    if (lead) {
+      leadEl.innerHTML = "";
+      const gap = document.createElement("span");
+      gap.className = "address-gap";
+      gap.textContent = "…";
+      leadEl.append(`${lead} `, gap, "!");
+    }
     words.forEach((word, k) => {
       const btn = document.createElement("button");
       btn.className = "answer duel-answer";
       btn.dataset.word = word;
-      renderStressWord(btn, word);
+      duel.round.render(btn, word);
       if (keys) {
         const key = document.createElement("kbd");
         key.textContent = DUEL_PLAYERS[i].keys[k].toUpperCase();
@@ -1431,11 +1494,15 @@ window.addEventListener("resize", () => {
 });
 
 function duelCorrectWords() {
-  return Array.isArray(duel.question.correct) ? duel.question.correct : [duel.question.correct];
+  return duel.round.correct;
 }
 
 function revealDuelAnswer(blink) {
   const correct = duelCorrectWords();
+  document.querySelectorAll(".duel-lead .address-gap").forEach(gap => {
+    gap.textContent = correct[0];
+    gap.classList.add("filled-fix");
+  });
   document.querySelectorAll(".duel-answer").forEach(b => {
     if (correct.includes(b.dataset.word)) {
       b.classList.add("correct");
@@ -1489,7 +1556,7 @@ function duelTap(i, word, btn) {
 
 // winner — номер гравця або (у командах) номер команди
 function finishDuel(winner) {
-  gtag('event', 'duel_end', { game_type: "naholosy", players: duel.n, layout: duel.layout, teams: duel.teams, score: duel.scores.join(":") });
+  gtag('event', 'duel_end', { game_type: duel.game, players: duel.n, layout: duel.layout, teams: duel.teams, score: duel.scores.join(":") });
   for (let i = 0; i < duel.n; i++) {
     const pane = duelPane(i);
     const won = scoreSlot(i) === winner;
@@ -1507,8 +1574,9 @@ function finishDuel(winner) {
 
 function exitDuel() {
   clearTimeout(nextTimer);
+  const game = duel ? duel.game : modesGame;
   duel = null;
-  showModes();
+  showModes(game);
 }
 
 // Клавіатура: у кожного гравця свої три клавіші (видно на кнопках)
@@ -1644,7 +1712,7 @@ async function submitScore(name, game, value) {
 function prepareSubmitForm() {
   const form = $("submit-form");
   // Турнірна таблиця — лише для ігор, які вже не в бета-версії
-  form.hidden = !leaderboardEnabled || score <= 0 || !["naholosy", "leksychna"].includes(currentGame);
+  form.hidden = !leaderboardEnabled || score <= 0 || !["naholosy", "leksychna", "klychnyi"].includes(currentGame);
   form.querySelector("button").disabled = false;
   $("player-name").disabled = false;
   $("player-name").value = storageGet("player_name") || "";
@@ -1742,7 +1810,7 @@ $("btn-menu").addEventListener("click", () => {
 });
 $("btn-modes-back").addEventListener("click", showMenu);
 $("btn-duel").addEventListener("click", startDuel);
-$("btn-marathon").addEventListener("click", () => startGame("naholosy"));
+$("btn-marathon").addEventListener("click", () => startGame(modesGame));
 $("btn-fix-mistakes").addEventListener("click", startMistakesRound);
 $("btn-train-next").addEventListener("click", () => startTraining(training.groupIndex + 1));
 $("btn-train-again").addEventListener("click", () => startTraining(training.groupIndex));
@@ -1767,6 +1835,9 @@ document.addEventListener("keydown", e => {
 });
 
 renderMenu();
+
+// Вкладка «Кличний» у турнірній таблиці — поки гра в бета-версії, лише за бета-посиланням
+document.querySelector('.tab[data-game="klychnyi"]').hidden = !BETA;
 
 // Посилання @ukr_movych: у Telegram відкриваємо через Telegram, на сайті — у новій вкладці
 document.addEventListener("click", e => {

@@ -20,7 +20,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261012u">
+<link rel="stylesheet" href="style.css?v=20261012w">
 </head>
 <body>
 
@@ -74,7 +74,7 @@
   <main id="modes" class="screen" hidden>
     <header class="top-bar">
       <button id="btn-modes-back" class="icon-btn" aria-label="В меню">‹ Меню</button>
-      <h2 class="screen-title">Наголоси</h2>
+      <h2 id="modes-title" class="screen-title">Наголоси</h2>
     </header>
 
     <p class="modes-lead">Обери режим</p>
@@ -84,16 +84,16 @@
         <span class="mode-num">1</span>
         <span class="mode-head-text">
           <span class="mode-title">🏁 Марафон</span>
-          <span class="mode-desc">Усі 233 слова · 3 життя · турнірна таблиця</span>
+          <span id="marathon-desc" class="mode-desc">Усі 233 слова · 3 життя · турнірна таблиця</span>
         </span>
       </div>
       <button id="btn-marathon" class="btn-primary mode-start">
         Почати марафон
-        <span class="mode-best" data-best="naholosy"></span>
+        <span id="marathon-best" class="mode-best" data-best="naholosy"></span>
       </button>
     </section>
 
-    <section class="mode-panel">
+    <section id="groups-panel" class="mode-panel">
       <div class="mode-head">
         <span class="mode-num">2</span>
         <span class="mode-head-text">
@@ -111,10 +111,10 @@
 
     <section class="mode-panel">
       <div class="mode-head">
-        <span class="mode-num">3</span>
+        <span id="duel-num" class="mode-num">3</span>
         <span class="mode-head-text">
           <span class="mode-title">⚔️ Дуель</span>
-          <span class="mode-desc">Один екран, 2–4 гравці. Хто перший натисне правильний наголос — отримує бал.</span>
+          <span id="duel-desc" class="mode-desc">Один екран, 2–4 гравці. Хто перший натисне правильний наголос — отримує бал.</span>
         </span>
       </div>
 
@@ -224,7 +224,8 @@
 
     <div class="tabs" role="tablist">
       <button class="tab active" data-game="naholosy" role="tab">Наголоси</button>
-      <button class="tab" data-game="leksychna" role="tab">Лексична помилка</button>
+      <button class="tab" data-game="leksychna" role="tab">Лексична</button>
+      <button class="tab" data-game="klychnyi" role="tab" hidden>Кличний</button>
     </div>
 
     <section class="card">
@@ -263,9 +264,9 @@
     </a>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261012u"></script>
-  <script src="klychnyi-data.js?v=20261012u"></script>
-  <script src="script.js?v=20261012u"></script>
+  <script src="leaderboard-config.js?v=20261012w"></script>
+  <script src="klychnyi-data.js?v=20261012w"></script>
+  <script src="script.js?v=20261012w"></script>
 
 </body>
 </html>

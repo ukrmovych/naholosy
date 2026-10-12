@@ -9,7 +9,7 @@ create table if not exists public.scores (
   created_at timestamptz not null default now(),
 
   constraint name_length check (char_length(name) between 2 and 20),
-  constraint game_known check (game in ('naholosy', 'leksychna')),
+  constraint game_known check (game in ('naholosy', 'leksychna', 'klychnyi')),
   constraint score_range check (score between 1 and 100000),
   -- без посилань і реклами в імені
   constraint name_no_links check (
