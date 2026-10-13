@@ -252,7 +252,7 @@ const DELAYS = {
   naholosy: [600, 2000],
   leksychna: [1000, 3000],
   klychnyi: [600, 2200],
-  frazeolohizmy: [1400, 3600]
+  frazeolohizmy: [4000, 6500] // час прочитати значення фразеологізму (є й кнопка «Далі →»)
 };
 
 // Бета-режим: ігри в розробці відкриваються лише за посиланням …/?beta (або …/beta/)
@@ -441,9 +441,21 @@ function showScreen(name) {
   window.scrollTo(0, 0);
 }
 
+let nextFn = null;
+
 function schedule(fn, delay) {
   clearTimeout(nextTimer);
-  nextTimer = setTimeout(fn, delay);
+  nextFn = fn;
+  nextTimer = setTimeout(() => { nextFn = null; fn(); }, delay);
+}
+
+// «Далі →»: не чекати, поки мине пауза після відповіді
+function skipWait() {
+  if (!nextFn) return;
+  clearTimeout(nextTimer);
+  const fn = nextFn;
+  nextFn = null;
+  fn();
 }
 
 function restartAnimation(el, className) {
@@ -895,6 +907,11 @@ function renderFrazeo() {
           wrong.append(w, ` — ${frazeoMeaning(phrase)}`);
           sentenceEl.appendChild(wrong);
         }
+        const next = document.createElement("button");
+        next.className = "btn-secondary frazeo-next";
+        next.textContent = "Далі →";
+        next.addEventListener("click", skipWait);
+        sentenceEl.appendChild(next);
       }, { frazeo: true, text: card.text.replace("___", card.fill), chosen: phrase });
     };
     answersEl.appendChild(btn);
@@ -1243,8 +1260,17 @@ function showModes(game = modesGame) {
       : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
   $("marathon-best").dataset.best = game;
   $("groups-panel").hidden = !isNaholosy;
-  // Онлайн-режими поки що лише в бета-версії (…/?beta)
-  $("online-panel").hidden = !isNaholosy;
+  // Онлайн: у «Наголосах» — усі три режими, у «Фразеологізмах» — поки лише дуель
+  $("online-panel").hidden = !isNaholosy && !isFrazeo;
+  $("online-num").textContent = isNaholosy ? "4" : "3";
+  $("online-desc").textContent = isNaholosy
+    ? "Кожен на своєму телефоні: дуель, спринт, гра для класу"
+    : "Онлайн-дуель: кожен на своєму телефоні";
+  document.querySelectorAll('.online-mode-btn[data-mode="sprint"], .online-mode-btn[data-mode="class"]')
+    .forEach(b => { b.hidden = isFrazeo; });
+  $("online-duel-desc").textContent = isFrazeo
+    ? "Удвох. Однакове речення — хто правильно й швидше добере фразеологізм, тому бал"
+    : "Удвох. Однакове слово — хто правильно й швидше, тому бал";
   $("duel-num").textContent = isNaholosy ? "3" : "2";
   $("duel-desc").textContent = `Один екран, 2–4 гравці: хто перший ${isNaholosy ? "натисне правильний наголос" : isFrazeo ? "добере фразеологізм" : "натисне правильну форму"}`;
 

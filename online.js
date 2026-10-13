@@ -5,6 +5,8 @@
 //  ⚔️ duel   — удвох: однакове слово, бал отримує той, хто відповів правильно і швидше
 //  ⏱ sprint — 2–10 гравців: за 60 секунд якомога більше правильних відповідей
 //  🏫 class  — учитель веде гру (не грає), учні відповідають, бали за правильність і швидкість
+//
+// Гра (online.game): "naholosy" — усі три режими; "frazeolohizmy" — поки лише дуель.
 
 const ONLINE_MODES = {
   duel: { title: "⚔️ Онлайн-дуель", max: 2, hostPlays: true },
@@ -14,6 +16,9 @@ const ONLINE_MODES = {
 
 const ONLINE_DUEL_TARGET = 10;
 const ONLINE_DUEL_LIMIT = 12000;   // мс на слово в дуелі
+// «Фразеологізми»: речення довше читати, а після раунду — ще й значення фразеологізму
+const ONLINE_FRAZEO_LIMIT = 25000;
+const ONLINE_FRAZEO_PAUSE = 6000;
 const ONLINE_SPRINT_SECONDS = 60;
 const ONLINE_SPRINT_PENALTY = 2;   // секунд за помилку
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js";
@@ -192,6 +197,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeQrOverl
 
 function logOnline(event, extra = {}) {
   if (!online) return;
+  if (online.game !== "naholosy") extra = { game: online.game, ...extra };
   const data = { mode: online.mode, players: online.players.length, ...extra };
   gtag('event', `online_${event}`, data);
   if (!leaderboardEnabled || !online.isHost) return;
@@ -319,7 +325,8 @@ function renderOnlineStart(mode, joinCode) {
 async function createRoom(mode, name) {
   const code = makeRoomCode();
   const me = { id: ONLINE_ID, name };
-  online = { mode, code, me, isHost: true, phase: "lobby", players: [], rt: null };
+  const game = modesGame === "frazeolohizmy" ? "frazeolohizmy" : "naholosy";
+  online = { mode, game, code, me, isHost: true, phase: "lobby", players: [], rt: null };
   if (ONLINE_MODES[mode].hostPlays) online.players.push(me);
   online.rt = await connectRoom(code, handleMessage);
   logOnline("create");
@@ -328,7 +335,7 @@ async function createRoom(mode, name) {
 
 async function joinRoom(code, name) {
   const me = { id: ONLINE_ID, name };
-  online = { mode: null, code, me, isHost: false, phase: "joining", players: [], rt: null };
+  online = { mode: null, game: "naholosy", code, me, isHost: false, phase: "joining", players: [], rt: null };
   online.rt = await connectRoom(code, handleMessage);
   await new Promise((resolve, reject) => {
     online.joinWait = { resolve, reject, timer: setTimeout(() => reject(new Error("notfound")), 6000) };
@@ -348,7 +355,7 @@ function leaveOnline(silent = false) {
 }
 
 function broadcastState() {
-  emit("state", { mode: online.mode, phase: online.phase, players: online.players, host: online.me.id });
+  emit("state", { mode: online.mode, game: online.game, phase: online.phase, players: online.players, host: online.me.id });
 }
 
 function onlinePlayerName(id) {
@@ -384,6 +391,7 @@ function handleMessage(event, data) {
       online.players = data.players;
       if (!host) {
         online.mode = data.mode;
+        online.game = data.game || "naholosy";
         online.hostId = data.host;
         const inRoom = data.players.some(p => p.id === online.me.id);
         if (online.joinWait && inRoom) {
@@ -415,7 +423,7 @@ function handleMessage(event, data) {
       leaveOnline(true);
       setOnline("Онлайн", el("section", { class: "card online-card" },
         el("p", { class: "online-note" }, "Ведучий закрив кімнату."),
-        el("button", { class: "btn-primary", on: { click: () => showModes("naholosy") } }, "До режимів")));
+        el("button", { class: "btn-primary", on: { click: () => showModes(modesGame) } }, "До режимів")));
       return;
     default:
       if (online.mode === "duel") duelMessage(event, data);
@@ -431,7 +439,7 @@ function renderLobby() {
   const players = el("ul", { class: "online-players" },
     online.players.map(p => el("li", { class: p.id === online.me.id ? "me" : "" }, p.name)));
 
-  const children = [];
+  const children = [el("p", { class: "online-game" }, online.game === "frazeolohizmy" ? "💬 Гра: Фразеологізми" : "🗣️ Гра: Наголоси")];
   if (online.isHost) {
     const link = inviteLink(online.code);
     const share = el("button", { class: "btn-secondary", on: { click: () => shareInvite(link) } }, "📨 Надіслати");
@@ -484,7 +492,8 @@ function renderLobby() {
 }
 
 function shareInvite(link) {
-  const what = online.mode === "class" ? "гри в наголоси для класу" : online.mode === "duel" ? "онлайн-дуелі в наголоси" : "спринту в наголоси";
+  const what = online.game === "frazeolohizmy" ? "онлайн-дуелі у фразеологізми"
+    : online.mode === "class" ? "гри в наголоси для класу" : online.mode === "duel" ? "онлайн-дуелі в наголоси" : "спринту в наголоси";
   const text = `Приєднуйся до ${what}! Код кімнати: ${online.code}`;
   track('online_share', { mode: online.mode });
   const tgApp = tgWebApp();
@@ -538,8 +547,39 @@ function orderFor(idx, round) {
 
 // ================== ⚔️ Онлайн-дуель ==================
 
+function duelLimit() {
+  return online.game === "frazeolohizmy" ? ONLINE_FRAZEO_LIMIT : ONLINE_DUEL_LIMIT;
+}
+
+// Фразеологізми: речення з пропуском і варіанти-вирази
+function frazeoOnlineQuestion(card, onPick) {
+  const [before, after] = card.text.split("___");
+  const gap = el("span", { class: "address-gap" }, "…");
+  const sentence = el("p", { class: "frazeo-sentence" }, before, gap, after);
+  const box = el("div", { class: "answers frazeo-answers" });
+  card.options.forEach(phrase => {
+    const btn = el("button", { class: "answer frazeo-answer" }, phrase);
+    btn.dataset.word = phrase;
+    btn.addEventListener("click", () => onPick(phrase, btn, box));
+    box.appendChild(btn);
+  });
+  const meaning = el("div");
+  return { sentence, gap, box, meaning };
+}
+
+function frazeoOnlineReveal(view, card, picked) {
+  view.gap.textContent = card.answer;
+  view.gap.classList.add(picked === card.answer ? "filled-ok" : "filled-fix");
+  view.meaning.innerHTML = "";
+  view.meaning.appendChild(el("p", { class: "frazeo-meaning" }, el("b", {}, card.answer), ` — ${card.meaning}`));
+  if (picked && picked !== card.answer) {
+    view.meaning.appendChild(el("p", { class: "frazeo-meaning frazeo-meaning-wrong" }, el("b", {}, picked), ` — ${frazeoMeaning(picked)}`));
+  }
+}
+
 function startDuelHost() {
-  online.duel = { order: seededShuffle(naholosyData.map((_, i) => i), seededRandom(online.seed)), round: 0, scores: {}, answers: {} };
+  const pool = online.game === "frazeolohizmy" ? frazeoSentences : naholosyData;
+  online.duel = { order: seededShuffle(pool.map((_, i) => i), seededRandom(online.seed)), round: 0, scores: {}, answers: {} };
   online.players.forEach(p => { online.duel.scores[p.id] = 0; });
   nextDuelQuestion();
 }
@@ -549,9 +589,15 @@ function nextDuelQuestion() {
   d.round++;
   d.answers = {};
   const idx = d.order[(d.round - 1) % d.order.length];
-  emit("q", { round: d.round, idx, order: orderFor(idx, d.round), scores: d.scores });
+  if (online.game === "frazeolohizmy") {
+    // Варіанти добирає ведучий і надсилає всім — щоб у гравців були однакові
+    const card = makeFrazeoCard(frazeoSentences[idx]);
+    emit("q", { round: d.round, card: { text: card.text, answer: card.answer, meaning: card.meaning, options: card.options }, scores: d.scores });
+  } else {
+    emit("q", { round: d.round, idx, order: orderFor(idx, d.round), scores: d.scores });
+  }
   clearTimeout(online.timer);
-  online.timer = setTimeout(resolveDuelRound, ONLINE_DUEL_LIMIT + 1500);
+  online.timer = setTimeout(resolveDuelRound, duelLimit() + 1500);
 }
 
 function resolveDuelRound() {
@@ -564,7 +610,7 @@ function resolveDuelRound() {
   if (winner) d.scores[winner]++;
   emit("r", { round: d.round, answers: d.answers, winner, scores: d.scores });
   const done = winner && d.scores[winner] >= ONLINE_DUEL_TARGET;
-  online.timer = setTimeout(() => done ? endDuel() : nextDuelQuestion(), 2600);
+  online.timer = setTimeout(() => done ? endDuel() : nextDuelQuestion(), online.game === "frazeolohizmy" ? ONLINE_FRAZEO_PAUSE : 2600);
 }
 
 function endDuel(reason = "") {
@@ -580,10 +626,11 @@ function duelScoreLine(scores) {
 
 function duelMessage(event, data) {
   if (event === "q") {
-    const q = naholosyData[data.idx];
-    online.current = { round: data.round, q, shownAt: performance.now(), answered: false };
+    const frazeo = Boolean(data.card);
+    const q = frazeo ? { correct: data.card.answer } : naholosyData[data.idx];
+    online.current = { round: data.round, q, card: data.card, shownAt: performance.now(), answered: false };
     const status = el("p", { class: "feedback" }, "Хто швидше?");
-    const box = wordButtons(q, data.order, (word, btn, answers) => {
+    const onPick = (word, btn, answers) => {
       if (online.current.answered || online.current.round !== data.round) return;
       online.current.answered = true;
       const ms = Math.round(performance.now() - online.current.shownAt);
@@ -592,7 +639,19 @@ function duelMessage(event, data) {
       Array.from(answers.children).forEach(b => { if (b !== btn) b.classList.add("dim"); });
       status.textContent = `Твій час: ${formatSeconds(ms)}. Чекаємо суперника…`;
       emit("a", { round: data.round, id: online.me.id, word, ok, ms });
-    });
+    };
+    if (frazeo) {
+      const view = frazeoOnlineQuestion(data.card, onPick);
+      online.current.box = view.box;
+      online.current.view = view;
+      online.current.status = status;
+      setOnline(ONLINE_MODES.duel.title, duelScoreLine(data.scores),
+        el("section", { class: "card" },
+          el("p", { class: "question" }, `Речення ${data.round} · до ${ONLINE_DUEL_TARGET} очок`),
+          view.sentence, view.meaning, view.box, status));
+      return;
+    }
+    const box = wordButtons(q, data.order, onPick);
     online.current.box = box;
     online.current.status = status;
     setOnline(ONLINE_MODES.duel.title, duelScoreLine(data.scores),
@@ -610,6 +669,7 @@ function duelMessage(event, data) {
     if (!cur || cur.round !== data.round) return;
     const mine = data.answers[online.me.id];
     markAnswers(cur.box, cur.q, mine && mine.word);
+    if (cur.card) frazeoOnlineReveal(cur.view, cur.card, mine && mine.word);
     const parts = online.players.map(p => {
       const a = data.answers[p.id];
       const who = p.id === online.me.id ? "Ти" : p.name;
@@ -913,8 +973,9 @@ function showOnlineResults(title, rows, note = "", podium = false) {
 }
 
 function exitOnline() {
+  const game = online ? online.game : modesGame;
   leaveOnline();
-  showModes("naholosy");
+  showModes(game === "frazeolohizmy" ? "frazeolohizmy" : "naholosy");
 }
 
 // ---------- Події ----------

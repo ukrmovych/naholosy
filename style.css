@@ -2639,3 +2639,18 @@ footer {
 .duel-lead:has(.address-gap) {
   overflow-wrap: anywhere;
 }
+
+.frazeo-next {
+  display: block;
+  width: auto;
+  margin: 10px 0 0 auto;
+  padding: 8px 18px;
+  font-size: 16px;
+}
+
+.online-game {
+  margin: 0;
+  color: var(--orange);
+  font-size: 16px;
+  text-align: center;
+}
