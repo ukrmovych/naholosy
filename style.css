@@ -2674,3 +2674,19 @@ footer {
 .class-frazeo .frazeo-meaning {
   font-size: clamp(15px, 1.6vw, 20px);
 }
+
+/* Повернутися в онлайн-гру після випадкового виходу */
+.rejoin-btn {
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: 2px solid var(--green);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--green) 18%, var(--surface));
+  font-size: 17px;
+  animation: fade-in 0.3s ease-out;
+}
+
+.rejoin-btn b {
+  letter-spacing: 2px;
+}

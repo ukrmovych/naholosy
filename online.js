@@ -46,6 +46,75 @@ let supabaseClient = null;
 // Ідентифікатор гравця в онлайн-грі — свій для кожної вкладки/підключення
 const ONLINE_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
+// ---------- Повернення в гру ----------
+// Учень вийшов (назад, закрив браузер, зник інтернет) — телефон пам'ятає кімнату й «місце»
+// в ній; при повторному вході з тим самим кодом ведучий упізнає його й пускає грати далі.
+const SEAT_KEY = "online_seat";
+const SEAT_TTL = 3 * 60 * 60 * 1000; // 3 години
+
+function getSeat() {
+  try {
+    const seat = JSON.parse(storageGet(SEAT_KEY) || "null");
+    return seat && Date.now() - seat.at < SEAT_TTL ? seat : null;
+  } catch (e) { return null; }
+}
+
+function saveSeat(code, id, name) {
+  storageSet(SEAT_KEY, JSON.stringify({ code, id, name, at: Date.now() }));
+}
+
+function clearSeat() {
+  storageSet(SEAT_KEY, "");
+  renderRejoin();
+}
+
+function playerIdFor(code) {
+  const seat = getSeat();
+  return seat && seat.code === code ? seat.id : ONLINE_ID;
+}
+
+// Кнопка «Повернутися в гру» в меню
+function renderRejoin() {
+  const btn = $("btn-rejoin");
+  if (!btn) return;
+  const seat = getSeat();
+  btn.hidden = !seat || Boolean(online);
+  if (seat) $("rejoin-code").textContent = seat.code;
+}
+
+async function rejoinSeat() {
+  const seat = getSeat();
+  if (!seat) return renderRejoin();
+  showScreen("online");
+  setOnline("Повертаємось у гру", el("section", { class: "card online-card" },
+    el("p", { class: "online-note" }, `Підключаюся до кімнати ${seat.code}…`)));
+  try {
+    await joinRoom(seat.code, seat.name);
+  } catch (e) {
+    clearSeat();
+    setOnline("Онлайн", el("section", { class: "card online-card" },
+      el("p", { class: "online-note" }, e.message === "notfound"
+        ? "Цієї кімнати вже немає: гра, мабуть, закінчилась."
+        : "Не вдалося повернутися в гру. Перевір інтернет або введи код ще раз."),
+      el("button", { class: "btn-primary", on: { click: showMenu } }, "У меню")));
+  }
+}
+
+// Під час гри — попередження перед закриттям (і в Telegram, і в браузері)
+function setCloseGuard(on) {
+  const tg = tgWebApp();
+  try {
+    if (tg && tg.initData) on ? tg.enableClosingConfirmation() : tg.disableClosingConfirmation();
+  } catch (e) { /* старий Telegram */ }
+}
+
+window.addEventListener("beforeunload", e => {
+  if (online && online.phase === "playing") {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+
 // ---------- Допоміжне ----------
 
 function el(tag, props = {}, ...children) {
@@ -347,13 +416,14 @@ async function createRoom(mode, name) {
 }
 
 async function joinRoom(code, name) {
-  const me = { id: ONLINE_ID, name };
+  const me = { id: playerIdFor(code), name };
   online = { mode: null, game: "naholosy", code, me, isHost: false, phase: "joining", players: [], rt: null };
   online.rt = await connectRoom(code, handleMessage);
   await new Promise((resolve, reject) => {
     online.joinWait = { resolve, reject, timer: setTimeout(() => reject(new Error("notfound")), 6000) };
     online.rt.send("join", me);
   }).catch(err => { leaveOnline(true); throw err; });
+  saveSeat(code, me.id, name);
   track('online_join', { mode: online.mode });
 }
 
@@ -365,6 +435,8 @@ function leaveOnline(silent = false) {
   if (!silent) online.rt.send(online.isHost ? "closed" : "leave", { id: online.me.id });
   try { online.rt.leave(); } catch (e) { /* вже відключено */ }
   online = null;
+  setCloseGuard(false);
+  renderRejoin();
 }
 
 function broadcastState() {
@@ -381,16 +453,46 @@ function onlinePlayerName(id) {
 function handleMessage(event, data) {
   if (!online) return;
   const host = online.isHost;
+  // Повідомлення лише для одного гравця (наприклад, коли він повертається в гру)
+  if (data && data.to && data.to !== online.me.id) return;
+  if (host && data && data.id && event !== "join" && event !== "leave") {
+    const p = online.players.find(x => x.id === data.id);
+    if (p && p.away) p.away = false;
+  }
 
   switch (event) {
     case "join": {
       if (!host) return;
       const m = ONLINE_MODES[online.mode];
-      if (online.players.some(p => p.id === data.id)) { broadcastState(); return; }
-      if (online.phase !== "lobby") { online.rt.send("reject", { id: data.id, reason: "started" }); return; }
+      const known = online.players.find(p => p.id === data.id);
+      if (known) {
+        // Повернувся гравець, який уже був у кімнаті
+        known.away = false;
+        broadcastState();
+        syncPlayer(data.id);
+        updateClassAnswered();
+        return;
+      }
+      if (online.phase !== "lobby") {
+        if (online.mode !== "class") { online.rt.send("reject", { id: data.id, reason: "started" }); return; }
+        // Гра для класу: той самий учень з іншого браузера — упізнаємо за ім'ям
+        const sameName = online.players.find(p => p.away && p.name.toLowerCase() === String(data.name).toLowerCase());
+        if (sameName) {
+          renamePlayerId(sameName.id, data.id);
+          sameName.away = false;
+          broadcastState();
+          syncPlayer(data.id);
+          updateClassAnswered();
+          return;
+        }
+      }
       if (online.players.length >= m.max) { online.rt.send("reject", { id: data.id, reason: "full" }); return; }
       online.players.push({ id: data.id, name: data.name });
+      // Запізнився на гру для класу — заходить з 0 балів
+      if (online.cls) online.cls.scores[data.id] = 0;
       broadcastState();
+      syncPlayer(data.id);
+      updateClassAnswered();
       return;
     }
     case "reject":
@@ -418,11 +520,21 @@ function handleMessage(event, data) {
       if (data.phase === "lobby") {
         online.phase = "lobby";
         renderLobby();
+      } else if (!host && online.phase !== "results") {
+        // Гра йде: щоб вихід іншого гравця не повертав екран у лобі
+        online.phase = "playing";
       }
       return;
     }
     case "leave": {
       const leaving = online.players.find(p => p.id === data.id);
+      if (host && online.mode === "class" && online.phase !== "lobby" && leaving) {
+        // Учень від'єднався посеред гри — лишаємо його бали й місце, він може повернутися
+        leaving.away = true;
+        broadcastState();
+        updateClassAnswered();
+        return;
+      }
       online.players = online.players.filter(p => p.id !== data.id);
       if (host) {
         if (online.phase === "lobby") broadcastState();
@@ -434,6 +546,7 @@ function handleMessage(event, data) {
     case "closed":
       if (host) return;
       leaveOnline(true);
+      clearSeat();
       setOnline("Онлайн", el("section", { class: "card online-card" },
         el("p", { class: "online-note" }, "Ведучий закрив кімнату."),
         el("button", { class: "btn-primary", on: { click: () => showModes(modesGame) } }, "До режимів")));
@@ -522,6 +635,7 @@ function shareInvite(link) {
 
 function startOnlineGame() {
   closeQrOverlay();
+  setCloseGuard(true);
   online.seed = Math.floor(Math.random() * 1e9);
   online.phase = "playing";
   online.startedAt = Date.now();
@@ -862,6 +976,51 @@ function renderSprintResults() {
 
 // ================== 🏫 Гра для класу ==================
 
+// Учень (по)вернувся в кімнату — надсилаємо лише йому те, що зараз на екрані
+function syncPlayer(id) {
+  if (!online || !online.isHost) return;
+  const c = online.cls;
+  if (online.mode !== "class" || !c) return;
+  if (c.lastEnd) { emit("end", { ...c.lastEnd, to: id }); return; }
+  if (!c.lastQ) return;
+  const mine = c.answers[id];
+  emit("q", { ...c.lastQ, to: id, elapsed: Date.now() - c.lastQ.sentAt, answered: mine ? mine.word : null });
+  if (c.resolved && c.lastR) emit("r", { ...c.lastR, to: id });
+}
+
+// Учень зайшов з іншого браузера під тим самим ім'ям — переносимо бали на новий ідентифікатор
+function renamePlayerId(oldId, newId) {
+  const p = online.players.find(x => x.id === oldId);
+  if (p) p.id = newId;
+  const c = online.cls;
+  if (!c) return;
+  if (oldId in c.scores) { c.scores[newId] = c.scores[oldId]; delete c.scores[oldId]; }
+  if (c.answers[oldId]) { c.answers[newId] = c.answers[oldId]; delete c.answers[oldId]; }
+}
+
+// Учень повернувся, а відповідь на це питання вже дав — показуємо її, вдруге не приймаємо
+function markAlreadyAnswered(box, status, word) {
+  online.current.answered = true;
+  Array.from(box.children).forEach(b => b.classList.add(b.dataset.word === word ? "picked" : "dim"));
+  status.textContent = "Відповідь прийнято! Чекаємо інших…";
+}
+
+function activePlayers() {
+  return online.players.filter(p => !p.away);
+}
+
+function updateClassAnswered() {
+  if (!online || !online.cls || !online.current || !online.current.answeredEl) return;
+  const n = activePlayers().filter(p => online.cls.answers[p.id]).length;
+  const away = online.players.length - activePlayers().length;
+  online.current.answeredEl.textContent = `Відповіли: ${n} з ${activePlayers().length}` + (away ? ` · від'єдналися: ${away}` : "");
+}
+
+function endClassGame(scores) {
+  online.cls.lastEnd = { scores };
+  emit("end", online.cls.lastEnd);
+}
+
 function classLimit() {
   return isFrazeoOnline() ? ONLINE_FRAZEO_CLASS : 15000;
 }
@@ -884,10 +1043,13 @@ function nextClassQuestion() {
   const idx = c.order[c.round - 1];
   if (isFrazeoOnline()) {
     const card = makeFrazeoCard(frazeoSentences[idx]);
-    emit("q", { round: c.round, total: c.total, card: { text: card.text, answer: card.answer, meaning: card.meaning, options: card.options }, limit: classLimit() });
+    c.lastQ = { round: c.round, total: c.total, card: { text: card.text, answer: card.answer, meaning: card.meaning, options: card.options }, limit: classLimit() };
   } else {
-    emit("q", { round: c.round, total: c.total, idx, order: orderFor(idx, c.round), limit: classLimit() });
+    c.lastQ = { round: c.round, total: c.total, idx, order: orderFor(idx, c.round), limit: classLimit() };
   }
+  c.lastQ.sentAt = Date.now();
+  c.lastR = null;
+  emit("q", c.lastQ);
   clearTimeout(online.timer);
   online.timer = setTimeout(resolveClassRound, classLimit() + 1000);
 }
@@ -905,14 +1067,15 @@ function resolveClassRound() {
     gained[p.id] = a && a.ok ? 500 + Math.round(500 * Math.max(0, 1 - a.ms / classLimit())) : 0;
     c.scores[p.id] += gained[p.id];
   });
-  emit("r", { round: c.round, total: c.total, gained, scores: c.scores, answers: c.answers });
+  c.lastR = { round: c.round, total: c.total, gained, scores: c.scores, answers: c.answers };
+  emit("r", c.lastR);
 }
 
 // Гра для класу у фразеологізми: учитель бачить речення й варіанти, учні відповідають
 function classFrazeoQuestion(data) {
   const card = data.card;
   const q = { correct: card.answer };
-  online.current = { round: data.round, q, card, shownAt: performance.now(), answered: false };
+  online.current = { round: data.round, q, card, shownAt: performance.now() - (data.elapsed || 0), answered: false };
   const head = el("p", { class: "question" }, `Речення ${data.round} з ${data.total}`);
   const timer = el("div", { class: "class-timer" }, el("span", { class: "class-timer-fill" }));
   const status = el("p", { class: "feedback" }, "");
@@ -930,12 +1093,14 @@ function classFrazeoQuestion(data) {
   online.current.status = status;
   if (online.isHost) {
     view.box.querySelectorAll("button").forEach(b => { b.disabled = true; });
-    const answered = el("p", { class: "online-hint" }, `Відповіли: 0 з ${online.players.length}`);
+    const answered = el("p", { class: "online-hint" });
     online.current.answeredEl = answered;
+    updateClassAnswered();
     setOnline(modeTitle("class"), el("section", { class: "card class-frazeo" }, head, timer, view.sentence, view.meaning, view.box, answered,
       el("button", { class: "btn-secondary", on: { click: resolveClassRound } }, "Показати відповідь")));
   } else {
     setOnline(modeTitle("class"), el("section", { class: "card" }, head, timer, view.sentence, view.meaning, view.box, status));
+    if (data.answered) markAlreadyAnswered(view.box, status, data.answered);
   }
   const fill = timer.firstChild;
   clearInterval(online.ticker);
@@ -958,14 +1123,15 @@ function classMessage(event, data) {
   if (event === "q") {
     const q = naholosyData[data.idx];
     const order = data.order;
-    online.current = { round: data.round, q, shownAt: performance.now(), answered: false };
+    online.current = { round: data.round, q, shownAt: performance.now() - (data.elapsed || 0), answered: false };
     const head = el("p", { class: "question" }, `Слово ${data.round} з ${data.total}`);
     const timer = el("div", { class: "class-timer" }, el("span", { class: "class-timer-fill" }));
 
     if (online.isHost) {
       // Учитель: великі варіанти (без натискання), таймер, скільки відповіли
-      const answered = el("p", { class: "online-hint" }, `Відповіли: 0 з ${online.players.length}`);
+      const answered = el("p", { class: "online-hint" });
       online.current.answeredEl = answered;
+      updateClassAnswered();
       const words = el("div", { class: "answers class-words" }, order.map(w => {
         const b = el("div", { class: "answer" });
         b.dataset.word = w;
@@ -989,6 +1155,7 @@ function classMessage(event, data) {
       online.current.box = box;
       online.current.status = status;
       setOnline(modeTitle("class"), el("section", { class: "card" }, head, timer, box, status));
+      if (data.answered) markAlreadyAnswered(box, status, data.answered);
     }
     // смужка часу
     const fill = timer.firstChild;
@@ -1003,9 +1170,8 @@ function classMessage(event, data) {
   if (event === "a") {
     if (!online.isHost || !online.cls || data.round !== online.cls.round) return;
     online.cls.answers[data.id] = { ok: data.ok, ms: data.ms, word: data.word };
-    const n = Object.keys(online.cls.answers).length;
-    if (online.current && online.current.answeredEl) online.current.answeredEl.textContent = `Відповіли: ${n} з ${online.players.length}`;
-    if (online.players.every(p => online.cls.answers[p.id])) resolveClassRound();
+    updateClassAnswered();
+    if (activePlayers().every(p => online.cls.answers[p.id])) resolveClassRound();
     return;
   }
   if (event === "r") {
@@ -1021,7 +1187,7 @@ function classMessage(event, data) {
       const okCount = Object.values(data.answers).filter(a => a.ok).length;
       const top = el("ol", { class: "leaders-list class-top" }, ranking.slice(0, 5).map(p =>
         el("li", {}, el("span", { class: "name" }, p.name), el("span", { class: "points" }, p.score))));
-      const next = el("button", { class: "btn-primary", on: { click: () => last ? emit("end", { scores: data.scores }) : nextClassQuestion() } },
+      const next = el("button", { class: "btn-primary", on: { click: () => last ? endClassGame(data.scores) : nextClassQuestion() } },
         last ? "🏁 Підсумки" : cur.card ? "Наступне речення →" : "Наступне слово →");
       cur.box.parentNode.append(
         el("p", { class: "online-hint" }, `Правильно відповіли: ${okCount} з ${online.players.length}`),
@@ -1053,6 +1219,8 @@ function classMessage(event, data) {
 
 function showOnlineResults(title, rows, note = "", podium = false) {
   online.phase = "results";
+  setCloseGuard(false);
+  if (!online.isHost) storageSet(SEAT_KEY, ""); // гра закінчилась — повертатися нікуди
   const list = el("ol", { class: "leaders-list online-results" + (podium ? " podium" : "") },
     rows.map(([name, value, id]) => el("li", { class: id === online.me.id ? "me" : "" },
       el("span", { class: "name" }, name), el("span", { class: "points" }, value))));
@@ -1082,6 +1250,8 @@ document.querySelectorAll(".online-mode-btn").forEach(b => {
   b.addEventListener("click", () => openOnline(b.dataset.mode));
 });
 $("btn-online-join").addEventListener("click", () => openOnline(null));
+$("btn-rejoin").addEventListener("click", rejoinSeat);
+renderRejoin();
 $("btn-online-back").addEventListener("click", exitOnline);
 window.addEventListener("beforeunload", () => leaveOnline());
 
@@ -1107,7 +1277,9 @@ function openInviteFromLink() {
   const code = (fromUrl || fromTg || "").toUpperCase();
   if (!/^[A-Z0-9]{5}$/.test(code)) return false;
   track('online_invite_open', { source: fromTg ? "telegram" : "link" });
-  openOnline(null, code);
+  const seat = getSeat();
+  if (seat && seat.code === code) rejoinSeat(); // уже грав у цій кімнаті — одразу назад
+  else openOnline(null, code);
   return true;
 }
 

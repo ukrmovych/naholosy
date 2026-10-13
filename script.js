@@ -580,6 +580,7 @@ function showMenu() {
   questionToken++;
   $("celebrate").hidden = true;
   renderBestScores();
+  if (typeof renderRejoin === "function") renderRejoin(); // «Повернутися в гру» (online.js)
   showScreen("menu");
 }
 
