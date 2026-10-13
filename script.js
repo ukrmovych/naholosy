@@ -813,13 +813,19 @@ function makeFrazeoCard(row, forDuel = false) {
   const [id, text] = row;
   const ph = FRAZEO_BY_ID[id];
   const cfg = forDuel ? FRAZEO_DUEL : pickOne(FRAZEO_KINDS);
-  const pool = frazeoPhrases.filter(o => o.cl !== ph.cl);
+  // Лише варіанти того самого граматичного типу, щоб відповідь не можна було вгадати за формою:
+  // дієслівні — з дієслівними, «як…» — з «як…», цитати («ні пари з вуст») — з цитатами й «як…»
+  const sameType = ph.t === "yak" ? o => o.t === "yak"
+    : ph.t === "clause" ? o => o.t === "yak" || o.t === "clause"
+    : o => !o.t;
+  const pool = frazeoPhrases.filter(o => o.cl !== ph.cl && sameType(o));
   const family = pool.filter(o => o.fam === ph.fam);
   const others = pool.filter(o => o.fam !== ph.fam);
   shuffleArray(family);
   shuffleArray(others);
   const picked = family.slice(0, cfg.family);
-  others.forEach(o => { if (picked.length < cfg.options - 1) picked.push(o); });
+  // Добираємо до потрібної кількості: спершу з інших «родин», потім — з тієї самої
+  [...others, ...family.slice(cfg.family)].forEach(o => { if (picked.length < cfg.options - 1) picked.push(o); });
   const options = [ph.p, ...picked.slice(0, cfg.options - 1).map(o => o.p)];
   shuffleArray(options);
   return { id, text, fill: ph.p, answer: ph.p, meaning: ph.m, options };
