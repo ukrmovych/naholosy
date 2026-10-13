@@ -321,7 +321,6 @@ let currentQuestion = null;
 let lock = false;
 let remainingQuestions = [];
 let klychnyiAsked = 0; // скільки питань «Кличного» вже було в цій грі (для рівнів)
-let frazeoAsked = 0;   // те саме для «Фразеологізмів»
 let questionToken = 0;
 let seenSentenceIds = [];
 let sentencePrefetch = null;
@@ -543,7 +542,6 @@ function startGame(gameType) {
     : gameType === "frazeolohizmy" ? frazeoQueue()
     : [];
   klychnyiAsked = 0;
-  frazeoAsked = 0;
   showScreen("game");
   $("test-note").hidden = gameType === "naholosy";
   $("test-note").textContent = gameType === "klychnyi" || gameType === "frazeolohizmy"
@@ -658,10 +656,8 @@ function nextQuestion() {
   } else if (currentGame === "frazeolohizmy") {
     if (remainingQuestions.length === 0) {
       remainingQuestions = frazeoQueue();
-      frazeoAsked = 0;
     }
-    frazeoAsked++;
-    currentQuestion = makeFrazeoCard(remainingQuestions.shift(), frazeoLevel(frazeoAsked));
+    currentQuestion = makeFrazeoCard(remainingQuestions.shift());
     renderFrazeo();
   }
 }
@@ -785,23 +781,19 @@ function renderKlychnyi() {
 }
 
 // ---------- Фразеологізми ----------
-// Картка: речення з пропуском і 3–5 фразеологізмів. Що вищий рівень, то більше варіантів
-// і то більше серед них «родичів» правильного (зі спільним словом: руки, бити, грати…),
-// як у завданнях НМТ. Фразеологізми зі схожим значенням (cl) ніколи не стоять разом.
+// Картка: речення з пропуском і 3–5 фразеологізмів. Картки різної складності йдуть
+// вперемішку: у складніших більше «родичів» правильного (зі спільним словом: руки, бити,
+// грати…), як у завданнях НМТ. Фразеологізми зі схожим значенням (cl) ніколи не стоять разом.
 
 const FRAZEO_BY_ID = typeof frazeoPhrases !== "undefined"
   ? Object.fromEntries(frazeoPhrases.map(ph => [ph.id, ph]))
   : {};
-const FRAZEO_LEVELS = [
-  { upTo: 40, name: "легкий", options: 3, family: 0 },
-  { upTo: 90, name: "середній", options: 4, family: 2 },
-  { upTo: Infinity, name: "як на НМТ", options: 5, family: 4 }
+const FRAZEO_KINDS = [
+  { options: 3, family: 0 },
+  { options: 4, family: 2 },
+  { options: 5, family: 4 }
 ];
 const FRAZEO_DUEL = { options: 3, family: 1 };
-
-function frazeoLevel(asked) {
-  return FRAZEO_LEVELS.findIndex(l => asked <= l.upTo);
-}
 
 // Спершу по одному реченню на кожен фразеологізм, потім решта — усе вперемішку
 function frazeoQueue() {
@@ -817,10 +809,10 @@ function frazeoQueue() {
   return [...first, ...rest];
 }
 
-function makeFrazeoCard(row, level) {
-  const [id, text, fill] = row;
+function makeFrazeoCard(row, forDuel = false) {
+  const [id, text] = row;
   const ph = FRAZEO_BY_ID[id];
-  const cfg = level === "duel" ? FRAZEO_DUEL : FRAZEO_LEVELS[level];
+  const cfg = forDuel ? FRAZEO_DUEL : pickOne(FRAZEO_KINDS);
   const pool = frazeoPhrases.filter(o => o.cl !== ph.cl);
   const family = pool.filter(o => o.fam === ph.fam);
   const others = pool.filter(o => o.fam !== ph.fam);
@@ -830,7 +822,7 @@ function makeFrazeoCard(row, level) {
   others.forEach(o => { if (picked.length < cfg.options - 1) picked.push(o); });
   const options = [ph.p, ...picked.slice(0, cfg.options - 1).map(o => o.p)];
   shuffleArray(options);
-  return { id, text, fill: fill || ph.p, answer: ph.p, meaning: ph.m, options, level };
+  return { id, text, fill: ph.p, answer: ph.p, meaning: ph.m, options };
 }
 
 function frazeoMeaning(phrase) {
@@ -840,12 +832,8 @@ function frazeoMeaning(phrase) {
 
 function renderFrazeo() {
   const card = currentQuestion;
-  const level = FRAZEO_LEVELS[card.level];
   questionEl.textContent = "Добери фразеологізм, що підходить за значенням";
-  hintEl.textContent = `Рівень: ${level.name} (${card.level + 1} з ${FRAZEO_LEVELS.length}) · клавіші 1–${card.options.length}`;
-  if (card.level > 0 && frazeoAsked === FRAZEO_LEVELS[card.level - 1].upTo + 1) {
-    setFeedback(`🎉 Новий рівень: ${level.name}! Тепер ${level.options} варіантів`, "good");
-  }
+  hintEl.textContent = `Підказка: можна відповідати клавішами 1–${card.options.length}`;
 
   sentenceEl.hidden = false;
   sentenceEl.innerHTML = "";
@@ -1237,7 +1225,7 @@ function showModes(game = modesGame) {
   $("marathon-desc").textContent = isNaholosy
     ? `Усі ${TOTAL_WORDS} слова · 3 життя · турнірна таблиця`
     : isFrazeo
-      ? `${FRAZEO_TOTAL} речень, як у НМТ · від легких до складних · 3 життя`
+      ? `${FRAZEO_TOTAL} речень, як у НМТ · 3–5 варіантів · 3 життя`
       : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
   $("marathon-best").dataset.best = game;
   $("groups-panel").hidden = !isNaholosy;
@@ -1624,7 +1612,7 @@ function setDuelStatus(i, text, kind) {
 // Питання дуелі: варіанти, правильні відповіді, (для кличного) початок речення
 function makeDuelRound(question) {
   if (duel.game === "frazeolohizmy") {
-    const card = makeFrazeoCard(question, "duel");
+    const card = makeFrazeoCard(question, true);
     return {
       lead: card.text,
       fill: card.fill,
