@@ -59,6 +59,13 @@ tr:last-child td { border-bottom: 0; }
 .note { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font-size: 14px; color: var(--muted); margin-top: 10px; }
 .views { display: flex; gap: 6px; margin: 0 0 12px; }
 .views button { font-size: 17px; padding: 8px 16px; }
+.cl-game { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 0; }
+.cl-game summary { cursor: pointer; padding: 12px 14px; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.cl-game summary::-webkit-details-marker { display: none; }
+.cl-game summary b { font-size: 17px; }
+.cl-game[open] summary { border-bottom: 1px solid var(--line); }
+.cl-game .panel { border: 0; border-radius: 0 0 16px 16px; }
+.cl-actions { display: flex; gap: 8px; padding: 0 14px 12px; flex-wrap: wrap; }
 .fb-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 6px 0 12px; }
 .fb-tools label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; cursor: pointer; }
 .fb-tools input { width: 18px; height: 18px; accent-color: var(--orange); }
@@ -96,6 +103,7 @@ tr:last-child td { border-bottom: 0; }
     <div class="views" id="views">
       <button type="button" data-view="stats" class="on">📊 Статистика</button>
       <button type="button" data-view="feedback">💬 Відгуки <span id="fb-count"></span></button>
+      <button type="button" data-view="classes">🏫 Класи <span id="cl-count"></span></button>
     </div>
     <div id="stats-view">
     <div class="periods" id="periods">
@@ -115,6 +123,10 @@ tr:last-child td { border-bottom: 0; }
         <span id="fb-summary" class="muted small"></span>
       </div>
       <div id="fb-list" class="fb-list"></div>
+    </div>
+    <div id="classes-view" hidden>
+      <p class="muted small">Ігри для класу: підсумки кожної гри з нікнеймами учнів, датою й часом. Натисни на гру, щоб побачити результати.</p>
+      <div id="cl-list" class="fb-list"></div>
     </div>
   </main>
 
@@ -160,7 +172,7 @@ async function fetchStats() {
 const ROLE_NAMES = { student: "🎒 учень/учениця", teacher: "👩‍🏫 вчитель/ка", parent: "👨‍👩‍👧 батьки", other: "✨ інше" };
 const RATING_EMOJI = ["", "😕", "😐", "🙂", "😃", "🤩"];
 let feedback = null;
-let view = store.get("stats_view") === "feedback" ? "feedback" : "stats";
+let view = ["feedback", "classes"].includes(store.get("stats_view")) ? store.get("stats_view") : "stats";
 
 async function fetchFeedback() {
   const res = await fetch(`${CFG.url}/rest/v1/rpc/get_feedback`, {
@@ -225,12 +237,78 @@ function renderFeedback() {
   }));
 }
 
+// ---------- Ігри для класу ----------
+let classGames = null;
+
+async function loadClasses() {
+  try {
+    const res = await fetch(`${CFG.url}/rest/v1/rpc/get_class_results`, {
+      method: "POST",
+      headers: { apikey: CFG.anonKey, Authorization: `Bearer ${CFG.anonKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_password: password })
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(res.status === 404 || text.includes("get_class_results") ? "nosql" : "network");
+    classGames = JSON.parse(text);
+    $("cl-count").textContent = classGames.length ? `(${classGames.length})` : "";
+    renderClasses();
+  } catch (err) {
+    $("cl-list").innerHTML = err.message === "nosql"
+      ? '<p class="note">У Supabase ще немає таблиці результатів: запусти class-results.sql (див. STATS.md).</p>'
+      : '<p class="note">Не вдалося завантажити результати. Перевір інтернет.</p>';
+  }
+}
+
+function classCsv(g) {
+  const when = new Date(g.started_at || g.ended_at).toLocaleString("uk-UA");
+  const rows = [["Гра", GAME_NAMES[g.game] || g.game], ["Кімната", g.room], ["Дата", when],
+    ["Питань", `${g.rounds} з ${g.rounds_planned}${g.early ? " (завершено достроково)" : ""}`], [],
+    ["Місце", "Ім'я", "Бали", "Правильних відповідей", "Відповідей"],
+    ...g.players.map(p => [p.place, p.name, p.score, p.correct, p.answered])];
+  return rows.map(r => r.join(";")).join("\n");
+}
+
+function renderClasses() {
+  if (!classGames) return;
+  if (!classGames.length) {
+    $("cl-list").innerHTML = '<p class="note">Ігор для класу ще не було. Підсумки з\'являться тут після першої завершеної гри.</p>';
+    return;
+  }
+  $("cl-list").innerHTML = classGames.map((g, i) => {
+    const start = new Date(g.started_at || g.ended_at);
+    const mins = g.started_at ? Math.max(1, Math.round((new Date(g.ended_at) - start) / 60000)) : null;
+    const best = g.players[0];
+    return `<details class="cl-game">
+      <summary>
+        <b>${start.toLocaleDateString("uk-UA", { day: "numeric", month: "long" })}, ${start.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}</b>
+        <span>${esc(GAME_NAMES[g.game] || g.game)}</span>
+        <span class="muted small">кімната ${esc(g.room)} · учнів: ${g.players.length} · питань: ${g.rounds} з ${g.rounds_planned}${g.early ? " (достроково)" : ""}${mins ? ` · ${mins} хв` : ""}</span>
+        ${best ? `<span class="muted small">🏆 ${esc(best.name)} — ${num(best.score)}</span>` : ""}
+      </summary>
+      <div class="panel"><table>
+        <tr><th>Місце</th><th>Ім'я</th><th>Бали</th><th>Правильних</th><th>Відповідей</th></tr>
+        ${g.players.map(p => `<tr><td>${p.place}</td><td>${esc(p.name)}</td><td>${num(p.score)}</td><td>${num(p.correct)} з ${num(g.rounds)}</td><td>${num(p.answered)}</td></tr>`).join("")}
+      </table></div>
+      <div class="cl-actions"><button type="button" data-csv="${i}">⬇️ Завантажити таблицю</button></div>
+    </details>`;
+  }).join("");
+  $("cl-list").querySelectorAll("[data-csv]").forEach(b => b.addEventListener("click", () => {
+    const g = classGames[Number(b.dataset.csv)];
+    const blob = new Blob(["\ufeff" + classCsv(g)], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `klas-${g.room}-${(g.started_at || g.ended_at).slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  }));
+}
+
 function setView(v) {
   view = v;
   store.set("stats_view", v);
   document.querySelectorAll("#views button").forEach(b => b.classList.toggle("on", b.dataset.view === v));
   $("stats-view").hidden = v !== "stats";
   $("feedback-view").hidden = v !== "feedback";
+  $("classes-view").hidden = v !== "classes";
 }
 
 function showLogin(message = "") {
@@ -245,6 +323,7 @@ async function load() {
   $("dash").hidden = false;
   setView(view);
   loadFeedback();
+  loadClasses();
   document.querySelectorAll("#periods [data-days]").forEach(b => b.classList.toggle("on", Number(b.dataset.days) === days));
   $("status").textContent = "Завантажую…";
   try {

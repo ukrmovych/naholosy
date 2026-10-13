@@ -730,9 +730,9 @@ function klychnyiQueue(levels = KLYCHNYI_LEVELS) {
 
 // Паралельні форми записано через «|» (Олеже|Олегу): у питанні показуємо одну з них,
 // а після відповіді підказуємо, що інша теж правильна
-function resolveKlychnyi(row) {
+function resolveKlychnyi(row, rand = Math.random) {
   const forms = row[2].split("|");
-  const vocative = pickOne(forms);
+  const vocative = pickOne(forms, rand);
   const resolved = [row[0], row[1], vocative, ...row.slice(3)];
   resolved.alts = forms.filter(f => f !== vocative);
   return resolved;
@@ -740,10 +740,10 @@ function resolveKlychnyi(row) {
 
 // Варіанти відповіді: кличний, називний і неправильні форми (без повторів —
 // у IV відміні кличний збігається з називним)
-function klychnyiOptions(row) {
+function klychnyiOptions(row, rand = Math.random) {
   const [, nominative, vocative, ...wrong] = row;
   const options = [...new Set([vocative, nominative, ...wrong])];
-  shuffleArray(options);
+  shuffleArray(options, rand);
   return options;
 }
 
@@ -1272,12 +1272,13 @@ function showModes(game = modesGame) {
   $("marathon-best").dataset.best = game;
   $("groups-panel").hidden = !isNaholosy;
   // Онлайн-режими: у «Наголосах» і «Фразеологізмах»
-  $("online-panel").hidden = !isNaholosy && !isFrazeo;
+  $("online-panel").hidden = false;
   $("online-num").textContent = isNaholosy ? "4" : "3";
   $("online-desc").textContent = "Кожен на своєму телефоні: дуель, спринт, гра для класу";
   $("online-duel-desc").textContent = isFrazeo
     ? "Удвох. Однакове речення — хто правильно й швидше добере фразеологізм, тому бал"
-    : "Удвох. Однакове слово — хто правильно й швидше, тому бал";
+    : isNaholosy ? "Удвох. Однакове слово — хто правильно й швидше, тому бал"
+      : "Удвох. Однакове звертання — хто правильно й швидше, тому бал";
   $("online-sprint-title").textContent = isFrazeo ? "⏱ Спринт 2 хвилини" : "⏱ Спринт 60 секунд";
   $("online-sprint-desc").textContent = isFrazeo
     ? "2–10 гравців. Хто добере більше фразеологізмів за 2 хвилини"

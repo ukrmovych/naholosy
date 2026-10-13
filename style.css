@@ -2690,3 +2690,47 @@ footer {
 .rejoin-btn b {
   letter-spacing: 2px;
 }
+
+/* Гра для класу: учитель від'єднався / розподіл відповідей / завершення */
+.host-away {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--orange) 18%, var(--surface));
+  border: 2px solid var(--orange);
+  font-size: 15px;
+  text-align: center;
+}
+
+.answer.with-count {
+  position: relative;
+  overflow: hidden;
+  padding-right: 64px;
+}
+
+.answer.with-count::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--share, 0%);
+  background: rgba(255, 255, 255, 0.10);
+  pointer-events: none;
+}
+
+.answer-count {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.class-end {
+  margin-top: 6px;
+  opacity: 0.85;
+}
