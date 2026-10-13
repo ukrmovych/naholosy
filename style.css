@@ -2654,3 +2654,23 @@ footer {
   font-size: 16px;
   text-align: center;
 }
+
+/* Гра для класу у фразеологізми: екран учителя (проєктор) */
+.class-frazeo .frazeo-sentence {
+  margin: 8px 0 4px;
+  font-size: clamp(20px, 2.6vw, 34px);
+}
+
+.class-frazeo .frazeo-answer {
+  font-size: clamp(16px, 1.8vw, 24px);
+  padding: 10px 14px;
+}
+
+.class-frazeo .frazeo-answer:disabled:not(.dim) {
+  opacity: 1;
+  cursor: default;
+}
+
+.class-frazeo .frazeo-meaning {
+  font-size: clamp(15px, 1.6vw, 20px);
+}

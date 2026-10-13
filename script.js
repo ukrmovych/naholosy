@@ -252,7 +252,7 @@ const DELAYS = {
   naholosy: [600, 2000],
   leksychna: [1000, 3000],
   klychnyi: [600, 2200],
-  frazeolohizmy: [4000, 6500] // час прочитати значення фразеологізму (є й кнопка «Далі →»)
+  frazeolohizmy: [3000, 4500] // час прочитати значення фразеологізму (є й кнопка «Далі →»)
 };
 
 // Бета-режим: ігри в розробці відкриваються лише за посиланням …/?beta (або …/beta/)
@@ -425,9 +425,9 @@ function renderBestScores() {
 
 // ---------- Допоміжне ----------
 
-function shuffleArray(array) {
+function shuffleArray(array, rand = Math.random) {
   for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rand() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
 }
@@ -682,8 +682,8 @@ const KLYCHNYI_NAMES = {
   f: ["Маріє", "Олено", "Ганно", "Оксано", "Наталіє", "Ірино", "Галино", "Софіє"]
 };
 
-function pickOne(list) {
-  return list[Math.floor(Math.random() * list.length)];
+function pickOne(list, rand = Math.random) {
+  return list[Math.floor(rand() * list.length)];
 }
 
 function klychnyiPrefix(frame) {
@@ -829,10 +829,11 @@ function frazeoFits(ph, req = "") {
   return (!aspect || ph.a === aspect) && (ph.o || [""]).includes(object);
 }
 
-function makeFrazeoCard(row, forDuel = false) {
+// rand — своє джерело випадковості (в онлайн-спринті однакове в усіх гравців)
+function makeFrazeoCard(row, forDuel = false, rand = Math.random) {
   const [id, text, req = ""] = row;
   const ph = FRAZEO_BY_ID[id];
-  const cfg = forDuel ? FRAZEO_DUEL : pickOne(FRAZEO_KINDS);
+  const cfg = forDuel ? FRAZEO_DUEL : pickOne(FRAZEO_KINDS, rand);
   // Лише варіанти того самого граматичного типу, щоб відповідь не можна було вгадати за формою:
   // дієслівні — з дієслівними, «як…» — з «як…», цитати («ні пари з вуст») — з цитатами й «як…»
   const sameType = ph.t === "yak" ? o => o.t === "yak"
@@ -841,13 +842,13 @@ function makeFrazeoCard(row, forDuel = false) {
   const pool = frazeoPhrases.filter(o => o.cl !== ph.cl && sameType(o));
   const family = pool.filter(o => o.fam === ph.fam);
   const others = pool.filter(o => o.fam !== ph.fam);
-  shuffleArray(family);
-  shuffleArray(others);
+  shuffleArray(family, rand);
+  shuffleArray(others, rand);
   const picked = family.slice(0, cfg.family);
   // Добираємо до потрібної кількості: спершу з інших «родин», потім — з тієї самої
   [...others, ...family.slice(cfg.family)].forEach(o => { if (picked.length < cfg.options - 1) picked.push(o); });
   const options = [ph.p, ...picked.slice(0, cfg.options - 1).map(o => o.p)];
-  shuffleArray(options);
+  shuffleArray(options, rand);
   return { id, text, fill: ph.p, answer: ph.p, meaning: ph.m, options };
 }
 
@@ -1260,17 +1261,17 @@ function showModes(game = modesGame) {
       : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
   $("marathon-best").dataset.best = game;
   $("groups-panel").hidden = !isNaholosy;
-  // Онлайн: у «Наголосах» — усі три режими, у «Фразеологізмах» — поки лише дуель
+  // Онлайн-режими: у «Наголосах» і «Фразеологізмах»
   $("online-panel").hidden = !isNaholosy && !isFrazeo;
   $("online-num").textContent = isNaholosy ? "4" : "3";
-  $("online-desc").textContent = isNaholosy
-    ? "Кожен на своєму телефоні: дуель, спринт, гра для класу"
-    : "Онлайн-дуель: кожен на своєму телефоні";
-  document.querySelectorAll('.online-mode-btn[data-mode="sprint"], .online-mode-btn[data-mode="class"]')
-    .forEach(b => { b.hidden = isFrazeo; });
+  $("online-desc").textContent = "Кожен на своєму телефоні: дуель, спринт, гра для класу";
   $("online-duel-desc").textContent = isFrazeo
     ? "Удвох. Однакове речення — хто правильно й швидше добере фразеологізм, тому бал"
     : "Удвох. Однакове слово — хто правильно й швидше, тому бал";
+  $("online-sprint-title").textContent = isFrazeo ? "⏱ Спринт 2 хвилини" : "⏱ Спринт 60 секунд";
+  $("online-sprint-desc").textContent = isFrazeo
+    ? "2–10 гравців. Хто добере більше фразеологізмів за 2 хвилини"
+    : "2–10 гравців. Хто дасть більше правильних відповідей за хвилину";
   $("duel-num").textContent = isNaholosy ? "3" : "2";
   $("duel-desc").textContent = `Один екран, 2–4 гравці: хто перший ${isNaholosy ? "натисне правильний наголос" : isFrazeo ? "добере фразеологізм" : "натисне правильну форму"}`;
 
