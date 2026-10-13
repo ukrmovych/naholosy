@@ -809,15 +809,23 @@ function frazeoQueue() {
   return [...first, ...rest];
 }
 
+// Чи стає фразеологізм у речення граматично: вид дієслова й доповнення («кому?», «кого?»…)
+function frazeoFits(ph, req = "") {
+  const tokens = req.split(",").filter(Boolean);
+  const aspect = tokens.find(t => t === "i" || t === "p");
+  const object = tokens.find(t => t !== "i" && t !== "p") || "";
+  return (!aspect || ph.a === aspect) && (ph.o || [""]).includes(object);
+}
+
 function makeFrazeoCard(row, forDuel = false) {
-  const [id, text] = row;
+  const [id, text, req = ""] = row;
   const ph = FRAZEO_BY_ID[id];
   const cfg = forDuel ? FRAZEO_DUEL : pickOne(FRAZEO_KINDS);
   // Лише варіанти того самого граматичного типу, щоб відповідь не можна було вгадати за формою:
   // дієслівні — з дієслівними, «як…» — з «як…», цитати («ні пари з вуст») — з цитатами й «як…»
   const sameType = ph.t === "yak" ? o => o.t === "yak"
     : ph.t === "clause" ? o => o.t === "yak" || o.t === "clause"
-    : o => !o.t;
+    : o => !o.t && frazeoFits(o, req);
   const pool = frazeoPhrases.filter(o => o.cl !== ph.cl && sameType(o));
   const family = pool.filter(o => o.fam === ph.fam);
   const others = pool.filter(o => o.fam !== ph.fam);
