@@ -255,8 +255,17 @@ const DELAYS = {
   frazeolohizmy: [3000, 4500] // час прочитати значення фразеологізму (є й кнопка «Далі →»)
 };
 
-// Бета-режим: ігри в розробці відкриваються лише за посиланням …/?beta (або …/beta/)
-const BETA = new URLSearchParams(location.search).has("beta");
+// Бета-режим: ігри в розробці відкриваються лише за посиланням …/?beta, …/?b, …/beta/
+// або в Telegram: t.me/ukrmovych_bot/battle?startapp=b (start_param приходить в адресі)
+const BETA = (() => {
+  const query = new URLSearchParams(location.search);
+  if (query.has("beta") || query.has("b")) return true;
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const tgData = hash.get("tgWebAppData");
+  const start = query.get("tgWebAppStartParam") || hash.get("tgWebAppStartParam")
+    || (tgData ? new URLSearchParams(tgData).get("start_param") : "") || "";
+  return start === "b" || start === "beta";
+})();
 // ---------- Статистика ----------
 // Кожна подія йде в Google Analytics, а важливі — ще й у таблицю game_events
 // у Supabase (її показує сторінка …/stats/, див. STATS.md)
