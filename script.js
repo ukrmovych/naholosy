@@ -1719,7 +1719,10 @@ function nextDuelRound() {
         leadEl.append(`${lead} `, gap, "!");
       }
     }
-    words.forEach((word, k) => {
+    // Кожна частина екрана — зі своїм порядком варіантів, щоб не підглядали
+    const paneWords = [...words];
+    shuffleArray(paneWords);
+    paneWords.forEach((word, k) => {
       const btn = document.createElement("button");
       btn.className = "answer duel-answer";
       btn.dataset.word = word;

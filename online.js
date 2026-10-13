@@ -533,9 +533,12 @@ function startOnlineGame() {
 }
 
 // Слово з варіантами (спільне для всіх режимів)
+// Порядок варіантів у кожного гравця свій (випадковий) — щоб не підглядали в сусіда
 function wordButtons(q, order, onPick) {
   const box = el("div", { class: "answers" });
-  order.forEach(word => {
+  const shown = [...order];
+  shuffleArray(shown);
+  shown.forEach(word => {
     const btn = el("button", { class: "answer" });
     btn.dataset.word = word;
     renderStressWord(btn, word);
@@ -571,7 +574,9 @@ function frazeoOnlineQuestion(card, onPick) {
   const gap = el("span", { class: "address-gap" }, "…");
   const sentence = el("p", { class: "frazeo-sentence" }, before, gap, after);
   const box = el("div", { class: "answers frazeo-answers" });
-  card.options.forEach(phrase => {
+  const shown = [...card.options];
+  shuffleArray(shown); // у кожного гравця свій порядок варіантів
+  shown.forEach(phrase => {
     const btn = el("button", { class: "answer frazeo-answer" }, phrase);
     btn.dataset.word = phrase;
     btn.addEventListener("click", () => onPick(phrase, btn, box));
