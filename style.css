@@ -2582,3 +2582,60 @@ footer {
   font-weight: 400;
   text-align: center;
 }
+
+/* ---------- Фразеологізми ---------- */
+
+.frazeo-sentence {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.frazeo-sentence .address-gap {
+  min-width: 90px;
+}
+
+.frazeo-meaning {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.frazeo-meaning b {
+  color: var(--green);
+}
+
+.frazeo-meaning-wrong b {
+  color: var(--red);
+}
+
+.frazeo-answers {
+  gap: 8px;
+}
+
+.frazeo-answer {
+  min-height: 0;
+  padding: 12px 14px;
+  font-size: 18px;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.frazeo-was {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.duel-lead.frazeo-lead,
+.duel-lead:has(.address-gap) {
+  overflow-wrap: anywhere;
+}

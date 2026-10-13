@@ -251,7 +251,8 @@ const TOTAL_WORDS = naholosyData.length;
 const DELAYS = {
   naholosy: [600, 2000],
   leksychna: [1000, 3000],
-  klychnyi: [600, 2200]
+  klychnyi: [600, 2200],
+  frazeolohizmy: [1400, 3600]
 };
 
 // Бета-режим: ігри в розробці відкриваються лише за посиланням …/?beta (або …/beta/)
@@ -278,6 +279,7 @@ function track(name, params = {}) {
 }
 
 const KLYCHNYI_TOTAL = typeof klychnyiData !== "undefined" ? klychnyiData.length : 0;
+const FRAZEO_TOTAL = typeof frazeoSentences !== "undefined" ? frazeoSentences.length : 0;
 
 const PRAISE = ["Правильно!", "Так тримати!", "Супер!", "Чудово!", "Влучно!", "Є!"];
 
@@ -291,7 +293,7 @@ const GAMES = [
   { id: "leksychna", name: "Лексична помилка", icon: "🔎", status: "beta" },
   { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: BETA ? "beta" : "soon" },
   { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon" },
-  { id: "frazeolohizmy", name: "Фразеологізми", icon: "💬", status: "soon" },
+  { id: "frazeolohizmy", name: "Фразеологізми", icon: "💬", status: BETA ? "beta" : "soon" },
   { id: "inshomovni", name: "Іншомовні слова", icon: "🌍", status: "soon" }
 ];
 
@@ -319,6 +321,7 @@ let currentQuestion = null;
 let lock = false;
 let remainingQuestions = [];
 let klychnyiAsked = 0; // скільки питань «Кличного» вже було в цій грі (для рівнів)
+let frazeoAsked = 0;   // те саме для «Фразеологізмів»
 let questionToken = 0;
 let seenSentenceIds = [];
 let sentencePrefetch = null;
@@ -393,7 +396,7 @@ function renderMenu() {
     btn.addEventListener("click", () => {
       if (game.status === "soon") {
         showSoon(game);
-      } else if (game.id === "naholosy" || game.id === "klychnyi") {
+      } else if (game.id === "naholosy" || game.id === "klychnyi" || game.id === "frazeolohizmy") {
         showModes(game.id);
       } else {
         startGame(game.id);
@@ -465,11 +468,12 @@ function updateUI() {
     progressEl.hidden = false;
     progressFill.style.width = `${Math.min(score / TOTAL_WORDS, 1) * 100}%`;
     progressEl.classList.toggle("done", score >= TOTAL_WORDS);
-  } else if (currentGame === "klychnyi") {
-    scoreEl.textContent = score >= KLYCHNYI_TOTAL ? `${score} 🏆` : `${score}/${KLYCHNYI_TOTAL}`;
+  } else if (currentGame === "klychnyi" || currentGame === "frazeolohizmy") {
+    const total = currentGame === "klychnyi" ? KLYCHNYI_TOTAL : FRAZEO_TOTAL;
+    scoreEl.textContent = score >= total ? `${score} 🏆` : `${score}/${total}`;
     progressEl.hidden = false;
-    progressFill.style.width = `${Math.min(score / KLYCHNYI_TOTAL, 1) * 100}%`;
-    progressEl.classList.toggle("done", score >= KLYCHNYI_TOTAL);
+    progressFill.style.width = `${Math.min(score / total, 1) * 100}%`;
+    progressEl.classList.toggle("done", score >= total);
   } else {
     scoreEl.textContent = score;
     progressEl.hidden = true;
@@ -536,14 +540,16 @@ function startGame(gameType) {
 
   remainingQuestions = gameType === "naholosy" ? [...naholosyData]
     : gameType === "klychnyi" ? klychnyiQueue()
+    : gameType === "frazeolohizmy" ? frazeoQueue()
     : [];
   klychnyiAsked = 0;
+  frazeoAsked = 0;
   showScreen("game");
   $("test-note").hidden = gameType === "naholosy";
-  $("test-note").textContent = gameType === "klychnyi"
+  $("test-note").textContent = gameType === "klychnyi" || gameType === "frazeolohizmy"
     ? "🧪 Бета-версія тренажера. Помітили неточність — напишіть @ukr_movych."
     : "🧪 Розділ працює в тестовому режимі: деякі речення ще потребують доопрацювання.";
-  hintEl.textContent = gameType === "naholosy" || gameType === "klychnyi"
+  hintEl.textContent = ["naholosy", "klychnyi", "frazeolohizmy"].includes(gameType)
     ? "Підказка: можна відповідати клавішами 1, 2, 3"
     : "";
   nextQuestion();
@@ -621,6 +627,7 @@ function nextQuestion() {
   questionToken++;
   lock = false;
   answersEl.innerHTML = "";
+  answersEl.classList.remove("frazeo-answers");
   sentenceEl.innerHTML = "";
   setFeedback("");
 
@@ -648,6 +655,14 @@ function nextQuestion() {
     currentQuestion = resolveKlychnyi(remainingQuestions.shift());
     klychnyiAsked++;
     renderKlychnyi();
+  } else if (currentGame === "frazeolohizmy") {
+    if (remainingQuestions.length === 0) {
+      remainingQuestions = frazeoQueue();
+      frazeoAsked = 0;
+    }
+    frazeoAsked++;
+    currentQuestion = makeFrazeoCard(remainingQuestions.shift(), frazeoLevel(frazeoAsked));
+    renderFrazeo();
   }
 }
 
@@ -764,6 +779,121 @@ function renderKlychnyi() {
           sentenceEl.appendChild(note);
         }
       }, { plain: true, prefix, chosen: word, correct: [vocative, ...alts] });
+    };
+    answersEl.appendChild(btn);
+  });
+}
+
+// ---------- Фразеологізми ----------
+// Картка: речення з пропуском і 3–5 фразеологізмів. Що вищий рівень, то більше варіантів
+// і то більше серед них «родичів» правильного (зі спільним словом: руки, бити, грати…),
+// як у завданнях НМТ. Фразеологізми зі схожим значенням (cl) ніколи не стоять разом.
+
+const FRAZEO_BY_ID = typeof frazeoPhrases !== "undefined"
+  ? Object.fromEntries(frazeoPhrases.map(ph => [ph.id, ph]))
+  : {};
+const FRAZEO_LEVELS = [
+  { upTo: 40, name: "легкий", options: 3, family: 0 },
+  { upTo: 90, name: "середній", options: 4, family: 2 },
+  { upTo: Infinity, name: "як на НМТ", options: 5, family: 4 }
+];
+const FRAZEO_DUEL = { options: 3, family: 1 };
+
+function frazeoLevel(asked) {
+  return FRAZEO_LEVELS.findIndex(l => asked <= l.upTo);
+}
+
+// Спершу по одному реченню на кожен фразеологізм, потім решта — усе вперемішку
+function frazeoQueue() {
+  const first = [];
+  const rest = [];
+  const seen = new Set();
+  const all = [...frazeoSentences];
+  shuffleArray(all);
+  all.forEach(row => {
+    if (seen.has(row[0])) rest.push(row);
+    else { seen.add(row[0]); first.push(row); }
+  });
+  return [...first, ...rest];
+}
+
+function makeFrazeoCard(row, level) {
+  const [id, text, fill] = row;
+  const ph = FRAZEO_BY_ID[id];
+  const cfg = level === "duel" ? FRAZEO_DUEL : FRAZEO_LEVELS[level];
+  const pool = frazeoPhrases.filter(o => o.cl !== ph.cl);
+  const family = pool.filter(o => o.fam === ph.fam);
+  const others = pool.filter(o => o.fam !== ph.fam);
+  shuffleArray(family);
+  shuffleArray(others);
+  const picked = family.slice(0, cfg.family);
+  others.forEach(o => { if (picked.length < cfg.options - 1) picked.push(o); });
+  const options = [ph.p, ...picked.slice(0, cfg.options - 1).map(o => o.p)];
+  shuffleArray(options);
+  return { id, text, fill: fill || ph.p, answer: ph.p, meaning: ph.m, options, level };
+}
+
+function frazeoMeaning(phrase) {
+  const ph = frazeoPhrases.find(o => o.p === phrase);
+  return ph ? ph.m : "";
+}
+
+function renderFrazeo() {
+  const card = currentQuestion;
+  const level = FRAZEO_LEVELS[card.level];
+  questionEl.textContent = "Добери фразеологізм, що підходить за значенням";
+  hintEl.textContent = `Рівень: ${level.name} (${card.level + 1} з ${FRAZEO_LEVELS.length}) · клавіші 1–${card.options.length}`;
+  if (card.level > 0 && frazeoAsked === FRAZEO_LEVELS[card.level - 1].upTo + 1) {
+    setFeedback(`🎉 Новий рівень: ${level.name}! Тепер ${level.options} варіантів`, "good");
+  }
+
+  sentenceEl.hidden = false;
+  sentenceEl.innerHTML = "";
+  const line = document.createElement("p");
+  line.className = "frazeo-sentence";
+  const [before, after] = card.text.split("___");
+  const gap = document.createElement("span");
+  gap.className = "address-gap";
+  gap.textContent = "…";
+  line.append(before, gap, after);
+  sentenceEl.appendChild(line);
+
+  answersEl.classList.add("frazeo-answers");
+  card.options.forEach(phrase => {
+    const btn = document.createElement("button");
+    btn.className = "answer frazeo-answer";
+    btn.dataset.word = phrase;
+    btn.textContent = phrase;
+    btn.onclick = () => {
+      const isCorrect = phrase === card.answer;
+      handleAnswer(isCorrect, () => {
+        gap.textContent = card.fill;
+        gap.classList.add(isCorrect ? "filled-ok" : "filled-fix");
+        Array.from(answersEl.children).forEach(b => {
+          if (b.dataset.word === card.answer) {
+            b.classList.add("correct");
+            if (!isCorrect) b.classList.add("blink");
+          } else if (b !== btn) {
+            b.classList.add("dim");
+          }
+        });
+        if (!isCorrect) btn.classList.add("wrong");
+        // Значення — щоб запам'ятати, а не лише вгадати
+        const note = document.createElement("p");
+        note.className = "frazeo-meaning";
+        const b = document.createElement("b");
+        b.textContent = card.answer;
+        note.append(b, ` — ${card.meaning}`);
+        sentenceEl.appendChild(note);
+        if (!isCorrect) {
+          const wrong = document.createElement("p");
+          wrong.className = "frazeo-meaning frazeo-meaning-wrong";
+          const w = document.createElement("b");
+          w.textContent = phrase;
+          wrong.append(w, ` — ${frazeoMeaning(phrase)}`);
+          sentenceEl.appendChild(wrong);
+        }
+      }, { frazeo: true, text: card.text.replace("___", card.fill), chosen: phrase });
     };
     answersEl.appendChild(btn);
   });
@@ -951,6 +1081,7 @@ function gameOver() {
 
   $("over-score").textContent = currentGame === "naholosy" ? `${score}/${TOTAL_WORDS}`
     : currentGame === "klychnyi" ? `${score}/${KLYCHNYI_TOTAL}`
+    : currentGame === "frazeolohizmy" ? `${score}/${FRAZEO_TOTAL}`
     : score;
   $("over-best").textContent = isRecord && score > 0
     ? "🎉 Новий рекорд!"
@@ -981,6 +1112,15 @@ function renderMistakes(items = mistakes, list = $("mistakes-list"), section = $
         p.appendChild(document.createTextNode(" "));
       });
       li.appendChild(p);
+    } else if (m.frazeo) {
+      // Фразеологізми: речення з правильним фразеологізмом і що означає обраний
+      const right = document.createElement("span");
+      right.className = "right plain-right";
+      right.textContent = m.text;
+      const was = document.createElement("span");
+      was.className = "was frazeo-was";
+      was.textContent = m.chosen;
+      li.append(right, was);
     } else if (m.plain) {
       // Кличний відмінок: обрана форма -> правильна
       const was = document.createElement("span");
@@ -1092,16 +1232,19 @@ function showModes(game = modesGame) {
   modesGame = game;
 
   const isNaholosy = game === "naholosy";
-  $("modes-title").textContent = isNaholosy ? "Наголоси" : "Кличний відмінок";
+  const isFrazeo = game === "frazeolohizmy";
+  $("modes-title").textContent = isNaholosy ? "Наголоси" : isFrazeo ? "Фразеологізми" : "Кличний відмінок";
   $("marathon-desc").textContent = isNaholosy
     ? `Усі ${TOTAL_WORDS} слова · 3 життя · турнірна таблиця`
-    : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
+    : isFrazeo
+      ? `${FRAZEO_TOTAL} речень, як у НМТ · від легких до складних · 3 життя`
+      : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
   $("marathon-best").dataset.best = game;
   $("groups-panel").hidden = !isNaholosy;
   // Онлайн-режими поки що лише в бета-версії (…/?beta)
   $("online-panel").hidden = !isNaholosy;
   $("duel-num").textContent = isNaholosy ? "3" : "2";
-  $("duel-desc").textContent = `Один екран, 2–4 гравці: хто перший натисне ${isNaholosy ? "правильний наголос" : "правильну форму"}`;
+  $("duel-desc").textContent = `Один екран, 2–4 гравці: хто перший ${isNaholosy ? "натисне правильний наголос" : isFrazeo ? "добере фразеологізм" : "натисне правильну форму"}`;
 
   if (isNaholosy) renderGroups();
   setOpenPanel(storageGet("modes_open") || "", false);
@@ -1480,6 +1623,16 @@ function setDuelStatus(i, text, kind) {
 
 // Питання дуелі: варіанти, правильні відповіді, (для кличного) початок речення
 function makeDuelRound(question) {
+  if (duel.game === "frazeolohizmy") {
+    const card = makeFrazeoCard(question, "duel");
+    return {
+      lead: card.text,
+      fill: card.fill,
+      words: card.options,
+      correct: [card.answer],
+      render: (btn, word) => { btn.textContent = word; }
+    };
+  }
   if (duel.game === "klychnyi") {
     question = resolveKlychnyi(question);
     return {
@@ -1502,7 +1655,9 @@ function makeDuelRound(question) {
 function nextDuelRound() {
   if (duel.queue.length === 0) {
     // У дуелі «Кличного» — лише перші 3 рівні: найуживаніші слова
-    duel.queue = duel.game === "klychnyi" ? klychnyiData.slice(0, 3 * KLYCHNYI_LEVEL_SIZE) : [...naholosyData];
+    duel.queue = duel.game === "klychnyi" ? klychnyiData.slice(0, 3 * KLYCHNYI_LEVEL_SIZE)
+      : duel.game === "frazeolohizmy" ? [...frazeoSentences]
+      : [...naholosyData];
     shuffleArray(duel.queue);
   }
   duel.question = duel.queue.shift();
@@ -1527,7 +1682,13 @@ function nextDuelRound() {
       const gap = document.createElement("span");
       gap.className = "address-gap";
       gap.textContent = "…";
-      leadEl.append(`${lead} `, gap, "!");
+      if (lead.includes("___")) {
+        // Речення з пропуском усередині (фразеологізми)
+        const [before, after] = lead.split("___");
+        leadEl.append(before, gap, after);
+      } else {
+        leadEl.append(`${lead} `, gap, "!");
+      }
     }
     words.forEach((word, k) => {
       const btn = document.createElement("button");
@@ -1549,6 +1710,24 @@ function nextDuelRound() {
   }
   updateDuelScores();
   fitDuelText();
+  fitDuelPanes();
+}
+
+// Фразеологізми: довге речення + 3 вирази можуть не влізти в чверть телефона —
+// тоді пропорційно зменшуємо вміст частини, доки все не вміститься
+function fitDuelPanes() {
+  if (!duel || duel.game !== "frazeolohizmy") return;
+  document.querySelectorAll(".duel-pane").forEach(pane => {
+    const parts = [...pane.children].filter(c => !c.hidden);
+    parts.forEach(c => { c.style.zoom = ""; });
+    pane.style.justifyContent = "flex-start"; // так переповнення видно в scrollHeight
+    let zoom = 1;
+    while (pane.scrollHeight > pane.clientHeight + 1 && zoom > 0.45) {
+      zoom -= 0.05;
+      parts.forEach(c => { c.style.zoom = zoom.toFixed(2); });
+    }
+    pane.style.justifyContent = "";
+  });
 }
 
 // Довгі слова у вузьких частинах екрана: зменшуємо шрифт, доки слово не влізе
@@ -1583,6 +1762,7 @@ window.addEventListener("resize", () => {
   if (duel && !screens.duel.hidden) {
     checkDuelOrientation();
     fitDuelText();
+    fitDuelPanes();
   }
 });
 
@@ -1593,7 +1773,7 @@ function duelCorrectWords() {
 function revealDuelAnswer(blink) {
   const correct = duelCorrectWords();
   document.querySelectorAll(".duel-lead .address-gap").forEach(gap => {
-    gap.textContent = correct[0];
+    gap.textContent = duel.round.fill || correct[0];
     gap.classList.add("filled-fix");
   });
   document.querySelectorAll(".duel-answer").forEach(b => {
@@ -1921,7 +2101,7 @@ document.querySelectorAll(".tab").forEach(tab => {
 
 // Клавіші 1–4 для вибору варіанта в «Наголосах»
 document.addEventListener("keydown", e => {
-  if (screens.game.hidden || !["naholosy", "klychnyi"].includes(currentGame) || !$("celebrate").hidden) return;
+  if (screens.game.hidden || !["naholosy", "klychnyi", "frazeolohizmy"].includes(currentGame) || !$("celebrate").hidden) return;
   if (e.target.tagName === "INPUT") return;
   const btn = answersEl.children[Number(e.key) - 1];
   if (btn) btn.click();
