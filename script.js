@@ -1973,7 +1973,7 @@ window.addEventListener("load", () => track("visit", {
 // Відгук пишеться в таблицю feedback у Supabase (feedback.sql),
 // читати їх можна на сторінці …/stats/ (з паролем)
 
-screens.feedback = $("feedback");
+screens.feedback = $("feedback-screen");
 
 const feedbackState = { rating: 0, role: "" };
 
