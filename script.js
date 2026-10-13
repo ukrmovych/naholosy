@@ -318,6 +318,7 @@ let currentGame = "";
 let currentQuestion = null;
 let lock = false;
 let remainingQuestions = [];
+let klychnyiAsked = 0; // скільки питань «Кличного» вже було в цій грі (для рівнів)
 let questionToken = 0;
 let seenSentenceIds = [];
 let sentencePrefetch = null;
@@ -534,8 +535,9 @@ function startGame(gameType) {
   });
 
   remainingQuestions = gameType === "naholosy" ? [...naholosyData]
-    : gameType === "klychnyi" ? [...klychnyiData]
+    : gameType === "klychnyi" ? klychnyiQueue()
     : [];
+  klychnyiAsked = 0;
   showScreen("game");
   $("test-note").hidden = gameType === "naholosy";
   $("test-note").textContent = gameType === "klychnyi"
@@ -640,10 +642,11 @@ function nextQuestion() {
     loadSentence();
   } else if (currentGame === "klychnyi") {
     if (remainingQuestions.length === 0) {
-      remainingQuestions = [...klychnyiData];
+      remainingQuestions = klychnyiQueue();
+      klychnyiAsked = 0;
     }
-    const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
-    currentQuestion = remainingQuestions.splice(randomIndex, 1)[0];
+    currentQuestion = resolveKlychnyi(remainingQuestions.shift());
+    klychnyiAsked++;
     renderKlychnyi();
   }
 }
@@ -661,6 +664,7 @@ function pickOne(list) {
 }
 
 function klychnyiPrefix(frame) {
+  if (frame.startsWith("@")) return frame.slice(1); // своє формулювання для слова
   switch (frame) {
     case "pf": return "Шановна пані";
     case "sm": return "Шановний";
@@ -675,6 +679,32 @@ function klychnyiPrefix(frame) {
   }
 }
 
+// Рівні: слова у klychnyi-data.js упорядковані від найважливіших (ЗНО/НМТ, найуживаніші)
+// до найрідкісніших. Кожні 100 слів — рівень; усередині рівня порядок випадковий,
+// тож перші 100 питань у будь-кого — з однакового переліку найпоширеніших слів.
+const KLYCHNYI_LEVEL_SIZE = 100;
+const KLYCHNYI_LEVELS = Math.ceil(KLYCHNYI_TOTAL / KLYCHNYI_LEVEL_SIZE);
+
+function klychnyiQueue(levels = KLYCHNYI_LEVELS) {
+  const queue = [];
+  for (let i = 0; i < levels; i++) {
+    const level = klychnyiData.slice(i * KLYCHNYI_LEVEL_SIZE, (i + 1) * KLYCHNYI_LEVEL_SIZE);
+    shuffleArray(level);
+    queue.push(...level);
+  }
+  return queue;
+}
+
+// Паралельні форми записано через «|» (Олеже|Олегу): у питанні показуємо одну з них,
+// а після відповіді підказуємо, що інша теж правильна
+function resolveKlychnyi(row) {
+  const forms = row[2].split("|");
+  const vocative = pickOne(forms);
+  const resolved = [row[0], row[1], vocative, ...row.slice(3)];
+  resolved.alts = forms.filter(f => f !== vocative);
+  return resolved;
+}
+
 // Варіанти відповіді: кличний, називний і неправильні форми (без повторів —
 // у IV відміні кличний збігається з називним)
 function klychnyiOptions(row) {
@@ -686,8 +716,14 @@ function klychnyiOptions(row) {
 
 function renderKlychnyi() {
   const [frame, , vocative] = currentQuestion;
+  const alts = currentQuestion.alts || [];
   const prefix = klychnyiPrefix(frame);
   questionEl.textContent = "Обери правильну форму звертання";
+  const level = Math.min(Math.ceil(klychnyiAsked / KLYCHNYI_LEVEL_SIZE), KLYCHNYI_LEVELS);
+  hintEl.textContent = `Рівень ${level} з ${KLYCHNYI_LEVELS} · відповідати можна клавішами 1, 2, 3`;
+  if (klychnyiAsked > 1 && klychnyiAsked % KLYCHNYI_LEVEL_SIZE === 1) {
+    setFeedback(`🎉 Рівень ${level}! Далі слова рідші`, "good");
+  }
 
   // «Шановний пане ___!»
   sentenceEl.hidden = false;
@@ -721,7 +757,13 @@ function renderKlychnyi() {
           }
         });
         if (!isCorrect) btn.classList.add("wrong");
-      }, { plain: true, prefix, chosen: word, correct: [vocative] });
+        if (alts.length) {
+          const note = document.createElement("p");
+          note.className = "address-alt";
+          note.textContent = `Також правильно: ${alts.join(", ")}`;
+          sentenceEl.appendChild(note);
+        }
+      }, { plain: true, prefix, chosen: word, correct: [vocative, ...alts] });
     };
     answersEl.appendChild(btn);
   });
@@ -949,7 +991,7 @@ function renderMistakes(items = mistakes, list = $("mistakes-list"), section = $
       arrow.textContent = "→";
       const right = document.createElement("span");
       right.className = "right plain-right";
-      right.textContent = `${m.prefix} ${m.correct[0]}!`;
+      right.textContent = `${m.prefix} ${m.correct.join(" / ")}!`;
       li.append(was, arrow, right);
     } else {
       // Наголоси: обране слово -> правильне
@@ -1439,6 +1481,7 @@ function setDuelStatus(i, text, kind) {
 // Питання дуелі: варіанти, правильні відповіді, (для кличного) початок речення
 function makeDuelRound(question) {
   if (duel.game === "klychnyi") {
+    question = resolveKlychnyi(question);
     return {
       lead: klychnyiPrefix(question[0]),
       words: klychnyiOptions(question),
@@ -1458,7 +1501,8 @@ function makeDuelRound(question) {
 
 function nextDuelRound() {
   if (duel.queue.length === 0) {
-    duel.queue = duel.game === "klychnyi" ? [...klychnyiData] : [...naholosyData];
+    // У дуелі «Кличного» — лише перші 3 рівні: найуживаніші слова
+    duel.queue = duel.game === "klychnyi" ? klychnyiData.slice(0, 3 * KLYCHNYI_LEVEL_SIZE) : [...naholosyData];
     shuffleArray(duel.queue);
   }
   duel.question = duel.queue.shift();
