@@ -31,7 +31,7 @@ Supabase → **Project Settings → Realtime** (або **Realtime → Settings**
 
 1. Напиши [@BotFather](https://t.me/BotFather) → `/newapp` → обери **@ukrmovych_bot**.
 2. Назва, опис, картинка 640×360 (можна будь-яку з логотипом).
-3. **Web App URL**: адреса гри (наприклад `https://ukrmovych.github.io/naholosy/`).
+3. **Web App URL**: адреса гри (наприклад `https://ukrmovych.duckdns.org/gym/`).
 4. **Short name**: наприклад `game` → вийде посилання `https://t.me/ukrmovych_bot/game`.
 5. Встав його в [`leaderboard-config.js`](leaderboard-config.js) у поле `telegramAppLink` (або надішли мені).
 
