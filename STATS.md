@@ -1,6 +1,6 @@
 # Статистика і відгуки без Google Analytics
 
-Сторінка: **https://ukrmovych.github.io/naholosy/stats/** (захищена паролем, у пошуковиках не з'являється).
+Сторінка: **https://ukrmovych.duckdns.org/gym/stats/** (захищена паролем, у пошуковиках не з'являється).
 
 ## Що зробити один раз
 
