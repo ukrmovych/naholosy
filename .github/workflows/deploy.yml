@@ -1,0 +1,32 @@
+# Викладання гри на власний сервер: https://ukrmovych.duckdns.org/gym/
+# Після кожного оновлення main файли гри копіюються в /var/www/gym.
+# Секрети репозиторію: SERVER_HOST (IP сервера) і SERVER_SSH_KEY (ключ, який може лише записувати файли гри).
+# Поки секретів немає — нічого не робить.
+name: Викладання на сервер
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ secrets.SERVER_HOST }}
+      KEY: ${{ secrets.SERVER_SSH_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Копіювання файлів гри
+        run: |
+          if [ -z "$HOST" ] || [ -z "$KEY" ]; then echo "Сервер ще не налаштовано — пропускаю."; exit 0; fi
+          mkdir -p ~/.ssh && printf '%s\n' "$KEY" | tr -d '\r' > ~/.ssh/k && chmod 600 ~/.ssh/k
+          rsync -rlz --delete --exclude='.git*' --exclude='*.sql' --exclude='*.md' \
+            -e "ssh -i $HOME/.ssh/k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" ./ deploy@"$HOST":./
+      - name: Перевірка
+        run: |
+          [ -n "$HOST" ] || exit 0
+          for i in 1 2 3 4; do c=$(curl -s -o /dev/null -w '%{http_code}' https://ukrmovych.duckdns.org/gym/ || true); echo "https://ukrmovych.duckdns.org/gym/ → $c"; [ "$c" = 200 ] && exit 0; sleep 10; done
+          echo "::warning::Гра поки не відповідає 200."
