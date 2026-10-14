@@ -22,7 +22,11 @@ jobs:
       - name: Копіювання файлів гри
         run: |
           if [ -z "$HOST" ] || [ -z "$KEY" ]; then echo "Сервер ще не налаштовано — пропускаю."; exit 0; fi
-          mkdir -p ~/.ssh && printf '%s\n' "$KEY" | tr -d '\r' > ~/.ssh/k && chmod 600 ~/.ssh/k
+          mkdir -p ~/.ssh
+          # ключ можна вставити як є (багаторядковий) або одним рядком base64 — так його не зламати копіюванням
+          if printf '%s' "$KEY" | grep -q 'BEGIN'; then printf '%s\n' "$KEY" | tr -d '\r' > ~/.ssh/k
+          else printf '%s' "$KEY" | tr -d ' \r\n' | base64 -d > ~/.ssh/k; fi
+          chmod 600 ~/.ssh/k
           rsync -rlz --delete --exclude='.git*' --exclude='*.sql' --exclude='*.md' \
             -e "ssh -i $HOME/.ssh/k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" ./ deploy@"$HOST":./
       - name: Перевірка
