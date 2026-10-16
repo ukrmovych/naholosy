@@ -2734,3 +2734,240 @@ footer {
   margin-top: 6px;
   opacity: 0.85;
 }
+
+/* ================== Приємні анімації відповідей (усі ігри) ================== */
+
+/* Натискання: кнопка пружно «втискається» */
+.answer {
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease,
+    background-color 0.2s ease, border-color 0.2s ease, opacity 0.25s ease;
+}
+
+.answer:active {
+  transform: translateY(3px) scale(0.96);
+}
+
+/* Нове питання: варіанти з'являються один за одним */
+.answers > .answer {
+  animation: answer-in 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.answers > .answer:nth-child(2) { animation-delay: 0.05s; }
+.answers > .answer:nth-child(3) { animation-delay: 0.1s; }
+.answers > .answer:nth-child(4) { animation-delay: 0.15s; }
+.answers > .answer:nth-child(5) { animation-delay: 0.2s; }
+
+@keyframes answer-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Правильна відповідь: «пружний» поп + світіння */
+.answer.correct:not(.blink),
+.answers > .answer.correct:not(.blink) {
+  position: relative;
+  animation: correct-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.answer.correct:not(.blink)::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 3px solid var(--green);
+  animation: correct-ring 0.7s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes correct-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.07); }
+  65% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+@keyframes correct-ring {
+  from { opacity: 0.9; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.12); }
+}
+
+/* Помилка: виразніше «трусне» */
+.answers > .answer.wrong,
+.answer.wrong {
+  animation: wrong-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes wrong-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px) rotate(-1deg); }
+  40%, 60% { transform: translateX(7px) rotate(1deg); }
+}
+
+/* Іскорки навколо правильної відповіді */
+.sparkle {
+  position: fixed;
+  z-index: 60;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: sparkle-fly 0.7s ease-out forwards;
+}
+
+.sparkle.star {
+  width: auto;
+  height: auto;
+  background: none !important;
+  font-size: 16px;
+  line-height: 1;
+}
+
+@keyframes sparkle-fly {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.4); }
+}
+
+/* Рахунок підстрибує, коли росте */
+.score.bump {
+  animation: score-bump 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes score-bump {
+  40% { transform: scale(1.25); }
+}
+
+/* ================== Рівні «Кличного» ================== */
+
+.level-line {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.level-up {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  z-index: 70;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 18px 26px;
+  border: 3px solid var(--orange);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), 0 0 calc(30px * var(--power, 1)) rgba(255, 121, 0, 0.45);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: level-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  text-align: center;
+}
+
+.level-up.out {
+  animation: level-out 0.45s ease-in forwards;
+}
+
+.level-up-emoji {
+  font-size: calc(40px * var(--power, 1));
+  line-height: 1.1;
+  animation: level-emoji 1s ease-in-out infinite alternate;
+}
+
+.level-up-title {
+  color: var(--orange);
+  font-size: calc(30px * var(--power, 1));
+  line-height: 1.1;
+}
+
+.level-up-sub {
+  font-size: 18px;
+}
+
+.level-up.big {
+  border-width: 4px;
+  background: linear-gradient(135deg, rgba(255, 121, 0, 0.35), rgba(76, 175, 80, 0.25)), var(--surface);
+}
+
+@keyframes level-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(-6deg); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes level-out {
+  to { opacity: 0; transform: translate(-50%, -70%) scale(0.85); }
+}
+
+@keyframes level-emoji {
+  from { transform: rotate(-8deg) scale(1); }
+  to { transform: rotate(8deg) scale(1.15); }
+}
+
+body.level-flash::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 121, 0, 0.35), transparent 65%);
+  pointer-events: none;
+  animation: level-flash 1.2s ease-out forwards;
+}
+
+@keyframes level-flash {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Фінал: кнопки складаються в «ТИ МОЛОДЕЦЬ» */
+.answers > .answer.assemble-hide,
+.answer.assemble-hide {
+  animation: none;
+  opacity: 0.08;
+  transform: scale(0.92);
+}
+
+.assemble {
+  position: fixed;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.assemble-word {
+  white-space: nowrap;
+}
+
+.assemble-letter {
+  display: inline-block;
+  color: var(--orange);
+  font-size: clamp(30px, 10vw, 60px);
+  line-height: 1.1;
+  text-shadow: 0 4px 0 #8a3f00, 0 0 24px rgba(255, 121, 0, 0.6);
+  transition: transform 0.75s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease;
+}
+
+.assemble-space {
+  display: inline-block;
+  width: 0.4em;
+  font-size: clamp(34px, 11vw, 64px);
+}
+
+.assemble.in .assemble-letter {
+  animation: letter-wave 1s ease-in-out 0.9s infinite alternate;
+}
+
+.assemble.out .assemble-letter {
+  transition: transform 0.5s ease-in, opacity 0.5s ease-in;
+  transform: scale(1.6) !important;
+  opacity: 0 !important;
+}
+
+@keyframes letter-wave {
+  to { transform: translateY(-6px) scale(1.05); }
+}

@@ -53,6 +53,11 @@ function G() {
   return ONLINE_GAMES[gameKey()];
 }
 
+// Правильні відповіді картки (у «Кличному» буває дві: Олеже / Олегу)
+function cardCorrect(card) {
+  return [card.answer, ...(card.alts || [])];
+}
+
 // Картка для надсилання гравцям (лише потрібні поля)
 function onlineCard(idx, rand) {
   const c = G().makeCard(G().pool()[idx], rand);
@@ -777,6 +782,7 @@ function markAnswers(box, q, picked) {
   const correct = correctWords(q);
   Array.from(box.children).forEach(b => {
     b.classList.remove("dim", "picked");
+    if (correct.includes(b.dataset.word) && b.dataset.word === picked) sparkleAt(b);
     if (correct.includes(b.dataset.word)) b.classList.add("correct");
     else if (b.dataset.word === picked) b.classList.add("wrong");
     else b.classList.add("dim");
@@ -812,16 +818,19 @@ function frazeoOnlineQuestion(card, onPick) {
 }
 
 function frazeoOnlineReveal(view, card, picked) {
-  view.gap.textContent = card.answer;
-  view.gap.classList.add(picked === card.answer ? "filled-ok" : "filled-fix");
+  const right = cardCorrect(card);
+  const ok = right.includes(picked);
+  view.gap.textContent = ok ? picked : card.answer;
+  view.gap.classList.add(ok ? "filled-ok" : "filled-fix");
   view.meaning.innerHTML = "";
   if (card.meaning) {
     view.meaning.appendChild(el("p", { class: "frazeo-meaning" }, el("b", {}, card.answer), ` — ${card.meaning}`));
     if (picked && picked !== card.answer && gameKey() === "frazeolohizmy") {
       view.meaning.appendChild(el("p", { class: "frazeo-meaning frazeo-meaning-wrong" }, el("b", {}, picked), ` — ${frazeoMeaning(picked)}`));
     }
-  } else if (card.alts && card.alts.length) {
-    view.meaning.appendChild(el("p", { class: "address-alt" }, `Також правильно: ${card.alts.join(", ")}`));
+  } else if (right.length > 1) {
+    const others = right.filter(w => w !== (ok ? picked : card.answer));
+    view.meaning.appendChild(el("p", { class: "address-alt" }, `Також правильно: ${others.join(", ")}`));
   }
 }
 
@@ -874,7 +883,7 @@ function duelScoreLine(scores) {
 function duelMessage(event, data) {
   if (event === "q") {
     const frazeo = Boolean(data.card);
-    const q = frazeo ? { correct: data.card.answer } : naholosyData[data.idx];
+    const q = frazeo ? { correct: cardCorrect(data.card) } : naholosyData[data.idx];
     online.current = { round: data.round, q, card: data.card, shownAt: performance.now(), answered: false };
     const status = el("p", { class: "feedback" }, "Хто швидше?");
     const onPick = (word, btn, answers) => {
@@ -1028,8 +1037,8 @@ function renderSprintFrazeo() {
   const view = frazeoOnlineQuestion(card, (word, btn, answers) => {
     if (s.finished || s.locked) return;
     s.locked = true;
-    const ok = word === card.answer;
-    markAnswers(answers, { correct: card.answer }, word);
+    const ok = cardCorrect(card).includes(word);
+    markAnswers(answers, { correct: cardCorrect(card) }, word);
     if (!ok) frazeoOnlineReveal(view, card, word);
     else view.gap.textContent = card.answer;
     if (ok) s.correct++;
@@ -1261,7 +1270,7 @@ function resolveClassRound() {
 // Гра для класу у фразеологізми: учитель бачить речення й варіанти, учні відповідають
 function classFrazeoQuestion(data) {
   const card = data.card;
-  const q = { correct: card.answer };
+  const q = { correct: cardCorrect(card) };
   online.current = { round: data.round, q, card, shownAt: performance.now() - (data.elapsed || 0), answered: false };
   const head = el("p", { class: "question" }, `${G().unit} ${data.round} з ${data.total}`);
   const timer = el("div", { class: "class-timer" }, el("span", { class: "class-timer-fill" }));
@@ -1273,7 +1282,7 @@ function classFrazeoQuestion(data) {
     btn.classList.add("picked");
     Array.from(answers.children).forEach(b => { if (b !== btn) b.classList.add("dim"); });
     status.textContent = "Відповідь прийнято! Чекаємо інших…";
-    emit("a", { round: data.round, id: online.me.id, word, ok: word === card.answer, ms });
+    emit("a", { round: data.round, id: online.me.id, word, ok: cardCorrect(card).includes(word), ms });
   });
   online.current.view = view;
   online.current.box = view.box;

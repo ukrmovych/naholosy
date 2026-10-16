@@ -330,6 +330,7 @@ let currentQuestion = null;
 let lock = false;
 let remainingQuestions = [];
 let klychnyiAsked = 0; // скільки питань «Кличного» вже було в цій грі (для рівнів)
+let klychnyiFinished = false;
 let questionToken = 0;
 let seenSentenceIds = [];
 let sentencePrefetch = null;
@@ -488,8 +489,11 @@ function updateUI() {
     progressEl.hidden = false;
     progressFill.style.width = `${Math.min(score / TOTAL_WORDS, 1) * 100}%`;
     progressEl.classList.toggle("done", score >= TOTAL_WORDS);
-  } else if (currentGame === "klychnyi" || currentGame === "frazeolohizmy") {
-    const total = currentGame === "klychnyi" ? KLYCHNYI_TOTAL : FRAZEO_TOTAL;
+  } else if (currentGame === "klychnyi") {
+    // у «Кличному» лінія прогресу — у межах рівня (updateKlychnyiLevelUI)
+    scoreEl.textContent = score;
+  } else if (currentGame === "frazeolohizmy") {
+    const total = FRAZEO_TOTAL;
     scoreEl.textContent = score >= total ? `${score} 🏆` : `${score}/${total}`;
     progressEl.hidden = false;
     progressFill.style.width = `${Math.min(score / total, 1) * 100}%`;
@@ -563,6 +567,7 @@ function startGame(gameType) {
     : gameType === "frazeolohizmy" ? frazeoQueue()
     : [];
   klychnyiAsked = 0;
+  $("level-line").hidden = true;
   showScreen("game");
   $("test-note").hidden = gameType === "naholosy";
   $("test-note").textContent = gameType === "klychnyi" || gameType === "frazeolohizmy"
@@ -595,6 +600,13 @@ function handleAnswer(isCorrect, highlight, mistake) {
   });
 
   highlight();
+  if (isCorrect) {
+    // іскорки від правильної відповіді й «стрибок» рахунку
+    sparkleAt(document.querySelector("#game .answer.correct, #game .correct"));
+    scoreEl.classList.remove("bump");
+    void scoreEl.offsetWidth;
+    scoreEl.classList.add("bump");
+  }
 
   const [okDelay, badDelay] = DELAYS[currentGame];
 
@@ -669,10 +681,12 @@ function nextQuestion() {
     loadSentence();
   } else if (currentGame === "klychnyi") {
     if (remainingQuestions.length === 0) {
+      // пройшов усі рівні — фінал «ти молодець», і все спочатку
+      if (klychnyiAsked >= KLYCHNYI_TOTAL) klychnyiFinished = true;
       remainingQuestions = klychnyiQueue();
       klychnyiAsked = 0;
     }
-    currentQuestion = resolveKlychnyi(remainingQuestions.shift());
+    currentQuestion = remainingQuestions.shift();
     klychnyiAsked++;
     renderKlychnyi();
   } else if (currentGame === "frazeolohizmy") {
@@ -715,21 +729,49 @@ function klychnyiPrefix(frame) {
 // Рівні: слова у klychnyi-data.js упорядковані від найважливіших (ЗНО/НМТ, найуживаніші)
 // до найрідкісніших. Кожні 100 слів — рівень; усередині рівня порядок випадковий,
 // тож перші 100 питань у будь-кого — з однакового переліку найпоширеніших слів.
-const KLYCHNYI_LEVEL_SIZE = 100;
-const KLYCHNYI_LEVELS = Math.ceil(KLYCHNYI_TOTAL / KLYCHNYI_LEVEL_SIZE);
+// Рівні: 1 — слова 1–15, 2 — 16–35, 3 — 36–55, 4 — 56–75, 5 — 76–100, далі по 25 слів.
+// Рівень короткий, щоб нагорода (новий рівень) була часто, а не раз на 100 слів.
+const KLYCHNYI_LEVEL_BOUNDS = (() => {
+  const b = [0, 15, 35, 55, 75, 100];
+  while (b[b.length - 1] < KLYCHNYI_TOTAL) b.push(Math.min(b[b.length - 1] + 25, KLYCHNYI_TOTAL));
+  return b;
+})();
+const KLYCHNYI_LEVELS = KLYCHNYI_LEVEL_BOUNDS.length - 1;
+const KLYCHNYI_ONLINE_POOL = 300; // дуелі й онлайн — лише найуживаніші слова
 
-function klychnyiQueue(levels = KLYCHNYI_LEVELS) {
+// n — номер питання в грі (з 1) → рівень (з 1)
+function klychnyiLevelOf(n) {
+  for (let i = 1; i < KLYCHNYI_LEVEL_BOUNDS.length; i++) if (n <= KLYCHNYI_LEVEL_BOUNDS[i]) return i;
+  return KLYCHNYI_LEVELS;
+}
+
+function klychnyiQueue() {
   const queue = [];
-  for (let i = 0; i < levels; i++) {
-    const level = klychnyiData.slice(i * KLYCHNYI_LEVEL_SIZE, (i + 1) * KLYCHNYI_LEVEL_SIZE);
+  for (let i = 1; i <= KLYCHNYI_LEVELS; i++) {
+    const level = klychnyiData.slice(KLYCHNYI_LEVEL_BOUNDS[i - 1], KLYCHNYI_LEVEL_BOUNDS[i]);
     shuffleArray(level);
     queue.push(...level);
   }
   return queue;
 }
 
-// Паралельні форми записано через «|» (Олеже|Олегу): у питанні показуємо одну з них,
-// а після відповіді підказуємо, що інша теж правильна
+// Прогрес у межах рівня: лінія, підпис «ще N до рівня …»
+// done — скільки відповідей уже дано; рівень — той, у якому поточне питання
+function updateKlychnyiLevelUI(done) {
+  const level = klychnyiLevelOf(Math.max(1, klychnyiAsked));
+  const start = KLYCHNYI_LEVEL_BOUNDS[level - 1];
+  const end = KLYCHNYI_LEVEL_BOUNDS[level];
+  const inLevel = Math.min(done, end) - start;
+  progressEl.hidden = false;
+  progressFill.style.width = `${Math.max(0, inLevel / (end - start)) * 100}%`;
+  progressEl.classList.toggle("done", inLevel >= end - start);
+  const left = end - start - inLevel;
+  $("level-line").hidden = false;
+  $("level-line").textContent = level === KLYCHNYI_LEVELS
+    ? `🏁 Останній рівень ${level}! Ще ${left} — і ти пройшов усе`
+    : `Рівень ${level} з ${KLYCHNYI_LEVELS} · ще ${left} до рівня ${level + 1}`;
+}
+
 function resolveKlychnyi(row, rand = Math.random) {
   const forms = row[2].split("|");
   const vocative = pickOne(forms, rand);
@@ -740,23 +782,36 @@ function resolveKlychnyi(row, rand = Math.random) {
 
 // Варіанти відповіді: кличний, називний і неправильні форми (без повторів —
 // у IV відміні кличний збігається з називним)
+// Усі правильні форми слова (паралельні — через «|», напр. Олеже|Олегу)
+function klychnyiForms(row) {
+  return [...new Set([...row[2].split("|"), ...(row.alts || [])])];
+}
+
+// Варіанти відповіді: усі правильні форми + називний + неправильні.
+// Слова на -а — завжди 4 варіанти з різними закінченнями: Оксана, Оксано, Оксану, Оксане.
 function klychnyiOptions(row, rand = Math.random) {
-  const [, nominative, vocative, ...wrong] = row;
-  const options = [...new Set([vocative, nominative, ...wrong])];
+  const [, nominative, , ...wrong] = row;
+  const forms = klychnyiForms(row);
+  let options;
+  const stem = nominative.slice(0, -1);
+  if (nominative.endsWith("а") && forms.every(f => f.startsWith(stem))) {
+    options = [...new Set([...forms, ...["а", "о", "у", "е"].map(e => stem + e)])];
+  } else {
+    options = [...new Set([...forms, nominative, ...wrong])];
+  }
   shuffleArray(options, rand);
   return options;
 }
 
 function renderKlychnyi() {
-  const [frame, , vocative] = currentQuestion;
-  const alts = currentQuestion.alts || [];
+  const [frame] = currentQuestion;
+  const forms = klychnyiForms(currentQuestion);
   const prefix = klychnyiPrefix(frame);
   questionEl.textContent = "Обери правильну форму звертання";
-  const level = Math.min(Math.ceil(klychnyiAsked / KLYCHNYI_LEVEL_SIZE), KLYCHNYI_LEVELS);
-  hintEl.textContent = `Рівень ${level} з ${KLYCHNYI_LEVELS} · відповідати можна клавішами 1, 2, 3`;
-  if (klychnyiAsked > 1 && klychnyiAsked % KLYCHNYI_LEVEL_SIZE === 1) {
-    setFeedback(`🎉 Рівень ${level}! Далі слова рідші`, "good");
-  }
+  hintEl.textContent = "Підказка: можна відповідати клавішами 1–4";
+  updateKlychnyiLevelUI(klychnyiAsked - 1);
+  const level = klychnyiLevelOf(klychnyiAsked);
+  const newLevel = klychnyiAsked > 1 && klychnyiAsked - 1 === KLYCHNYI_LEVEL_BOUNDS[level - 1];
 
   // «Шановний пане ___!»
   sentenceEl.hidden = false;
@@ -777,12 +832,12 @@ function renderKlychnyi() {
     btn.textContent = word;
 
     btn.onclick = () => {
-      const isCorrect = word === vocative;
+      const isCorrect = forms.includes(word);
       handleAnswer(isCorrect, () => {
-        gap.textContent = vocative;
+        gap.textContent = isCorrect ? word : forms.join(" / ");
         gap.classList.add(isCorrect ? "filled-ok" : "filled-fix");
         Array.from(answersEl.children).forEach(b => {
-          if (b.dataset.word === vocative) {
+          if (forms.includes(b.dataset.word)) {
             b.classList.add("correct");
             if (!isCorrect) b.classList.add("blink");
           } else if (b !== btn) {
@@ -790,16 +845,26 @@ function renderKlychnyi() {
           }
         });
         if (!isCorrect) btn.classList.add("wrong");
-        if (alts.length) {
+        const others = forms.filter(f => f !== word);
+        if (forms.length > 1 && others.length) {
           const note = document.createElement("p");
           note.className = "address-alt";
-          note.textContent = `Також правильно: ${alts.join(", ")}`;
+          note.textContent = `${isCorrect ? "Також правильно" : "Правильно"}: ${others.join(", ")}`;
           sentenceEl.appendChild(note);
         }
-      }, { plain: true, prefix, chosen: word, correct: [vocative, ...alts] });
+        updateKlychnyiLevelUI(klychnyiAsked);
+      }, { plain: true, prefix, chosen: word, correct: forms });
     };
     answersEl.appendChild(btn);
   });
+
+  // Новий рівень — привітання (що вищий рівень, то яскравіше)
+  if (newLevel) celebrateLevel(level);
+  // ТИМЧАСОВО в беті: показати фінальне «ти молодець» уже після рівня 1
+  if ((newLevel && level === 2 && BETA) || (klychnyiAsked === 1 && klychnyiFinished)) {
+    klychnyiFinished = false;
+    setTimeout(() => assembleWord("ТИ МОЛОДЕЦЬ"), newLevel ? 2600 : 600);
+  }
 }
 
 // ---------- Фразеологізми ----------
@@ -1079,12 +1144,12 @@ function celebrate() {
   launchConfetti();
 }
 
-function launchConfetti() {
+function launchConfetti(count = 120) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const box = $("confetti");
   const colors = ["#FF7900", "#4CAF50", "#ffffff", "#e6c200", "#d96700"];
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < count; i++) {
     const piece = document.createElement("i");
     piece.style.left = `${Math.random() * 100}%`;
     piece.style.background = colors[i % colors.length];
@@ -1095,6 +1160,116 @@ function launchConfetti() {
     box.appendChild(piece);
   }
   setTimeout(() => { box.innerHTML = ""; }, 5500);
+}
+
+// ---------- Іскорки від правильної відповіді ----------
+function sparkleAt(target, count = 14) {
+  if (!target || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const r = target.getBoundingClientRect();
+  const colors = ["#FF7900", "#4CAF50", "#ffffff", "#e6c200"];
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement("i");
+    const star = i % 4 === 0;
+    p.className = "sparkle" + (star ? " star" : "");
+    if (star) p.textContent = "✦";
+    p.style.left = `${r.left + r.width / 2 + (Math.random() - 0.5) * r.width * 0.6}px`;
+    p.style.top = `${r.top + r.height / 2}px`;
+    p.style.background = colors[i % colors.length];
+    p.style.color = colors[i % colors.length];
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 40 + Math.random() * 60;
+    p.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+    p.style.setProperty("--dy", `${Math.sin(angle) * dist - 20}px`);
+    p.style.animationDelay = `${Math.random() * 0.08}s`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 900);
+  }
+}
+
+// ---------- Новий рівень ----------
+// Що вищий рівень, то яскравіше: більше конфеті, більший напис, на кожному 5-му — спалах
+const LEVEL_CHEERS = [
+  [2, "🎉", ["Перший рівень пройдено!", "Так тримати!"]],
+  [5, "💪", ["Ти в ударі!", "Ще один рівень підкорено!", "Чудовий темп!"]],
+  [10, "🔥", ["Вогонь!", "Ти справжній знавець!", "Ніщо тебе не зупинить!"]],
+  [20, "🚀", ["Неймовірно!", "Злітаєш до вершини!", "Це рівень профі!"]],
+  [30, "🏆", ["Легенда!", "Таких — одиниці!", "Майже вершина!"]],
+  [Infinity, "👑", ["Король кличного!", "Абсолютний рекорд!", "Ти пройшов майже все!"]]
+];
+
+function celebrateLevel(level) {
+  const [, emoji, phrases] = LEVEL_CHEERS.find(([upTo]) => level <= upTo);
+  const milestone = level % 5 === 0 || level === KLYCHNYI_LEVELS;
+  const box = document.createElement("div");
+  box.className = "level-up" + (milestone ? " big" : "");
+  box.style.setProperty("--power", Math.min(1 + level / 12, 3).toFixed(2));
+  const icon = document.createElement("div");
+  icon.className = "level-up-emoji";
+  icon.textContent = milestone ? emoji.repeat(Math.min(3, 1 + Math.floor(level / 10))) : emoji;
+  const title = document.createElement("div");
+  title.className = "level-up-title";
+  title.textContent = `Рівень ${level}!`;
+  const sub = document.createElement("div");
+  sub.className = "level-up-sub";
+  sub.textContent = pickOne(phrases);
+  box.append(icon, title, sub);
+  document.body.appendChild(box);
+  if (milestone) document.body.classList.add("level-flash");
+  launchConfetti(Math.min(40 + level * 12, 320));
+  const ms = 1500 + Math.min(level, 25) * 40 + (milestone ? 600 : 0);
+  setTimeout(() => { box.classList.add("out"); document.body.classList.remove("level-flash"); }, ms);
+  setTimeout(() => box.remove(), ms + 500);
+}
+
+// Фінал: кнопки відповідей на 3 секунди «складаються» в слова «ТИ МОЛОДЕЦЬ»
+function assembleWord(text, ms = 3000) {
+  const buttons = Array.from(answersEl.children);
+  if (!buttons.length) return;
+  const area = answersEl.getBoundingClientRect();
+  const wasLocked = lock;
+  lock = true;
+  buttons.forEach(b => b.classList.add("assemble-hide"));
+  const overlay = document.createElement("div");
+  overlay.className = "assemble";
+  overlay.style.left = `${area.left}px`;
+  overlay.style.top = `${area.top}px`;
+  overlay.style.width = `${area.width}px`;
+  overlay.style.height = `${area.height}px`;
+  const letters = [];
+  // кожне слово — окремим рядком, щоб не розривалось
+  text.split(" ").forEach(wordText => {
+    const word = document.createElement("span");
+    word.className = "assemble-word";
+    [...wordText].forEach(ch => {
+      const span = document.createElement("span");
+      span.className = "assemble-letter";
+      span.textContent = ch;
+      word.appendChild(span);
+      letters.push(span);
+    });
+    overlay.appendChild(word);
+  });
+  document.body.appendChild(overlay);
+  // кожна літера вилітає з випадкової кнопки
+  letters.forEach((span, i) => {
+    const from = buttons[i % buttons.length].getBoundingClientRect();
+    const r = span.getBoundingClientRect();
+    const dx = from.left + Math.random() * from.width - (r.left + r.width / 2);
+    const dy = from.top + Math.random() * from.height - (r.top + r.height / 2);
+    span.style.transform = `translate(${dx}px, ${dy}px) scale(0.3) rotate(${Math.random() * 360 - 180}deg)`;
+    span.style.opacity = "0";
+    span.style.transitionDelay = `${i * 40}ms`;
+  });
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    overlay.classList.add("in");
+    letters.forEach(span => { span.style.transform = ""; span.style.opacity = "1"; });
+  }));
+  launchConfetti(220);
+  setTimeout(() => {
+    overlay.classList.add("out");
+    buttons.forEach(b => b.classList.remove("assemble-hide"));
+  }, ms);
+  setTimeout(() => { overlay.remove(); lock = wasLocked; }, ms + 600);
 }
 
 // ---------- Кінець гри ----------
@@ -1110,7 +1285,7 @@ function gameOver() {
   if (isRecord) storageSet(`best_${currentGame}`, String(score));
 
   $("over-score").textContent = currentGame === "naholosy" ? `${score}/${TOTAL_WORDS}`
-    : currentGame === "klychnyi" ? `${score}/${KLYCHNYI_TOTAL}`
+    : currentGame === "klychnyi" ? `${score} · рівень ${klychnyiLevelOf(Math.max(1, klychnyiAsked))}`
     : currentGame === "frazeolohizmy" ? `${score}/${FRAZEO_TOTAL}`
     : score;
   $("over-best").textContent = isRecord && score > 0
@@ -1674,11 +1849,10 @@ function makeDuelRound(question) {
     };
   }
   if (duel.game === "klychnyi") {
-    question = resolveKlychnyi(question);
     return {
       lead: klychnyiPrefix(question[0]),
       words: klychnyiOptions(question),
-      correct: [question[2]],
+      correct: klychnyiForms(question),
       render: (btn, word) => { btn.textContent = word; }
     };
   }
@@ -1695,7 +1869,7 @@ function makeDuelRound(question) {
 function nextDuelRound() {
   if (duel.queue.length === 0) {
     // У дуелі «Кличного» — лише перші 3 рівні: найуживаніші слова
-    duel.queue = duel.game === "klychnyi" ? klychnyiData.slice(0, 3 * KLYCHNYI_LEVEL_SIZE)
+    duel.queue = duel.game === "klychnyi" ? klychnyiData.slice(0, KLYCHNYI_ONLINE_POOL)
       : duel.game === "frazeolohizmy" ? [...frazeoSentences]
       : [...naholosyData];
     shuffleArray(duel.queue);
@@ -1834,6 +2008,7 @@ function duelTap(i, word, btn) {
 
   if (duelCorrectWords().includes(word)) {
     duel.resolved = true;
+    sparkleAt(btn, 18);
     const slot = scoreSlot(i);
     duel.scores[slot]++;
     updateDuelScores();
