@@ -304,7 +304,8 @@ const GAMES = [
   { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: BETA ? "beta" : "soon", pro: true },
   { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon", pro: true },
   { id: "frazeolohizmy", name: "Фразеологізми", icon: "💬", status: BETA ? "beta" : "soon", pro: true },
-  { id: "inshomovni", name: "Іншомовні слова", icon: "🌍", status: "soon", pro: true }
+  { id: "inshomovni", name: "Іншомовні слова", icon: "🌍", status: "soon", pro: true },
+  { id: "nmttest", name: "Рандомний тест НМТ", icon: "🎲", status: BETA ? "beta" : "soon", pro: true }
 ];
 
 const $ = id => document.getElementById(id);
@@ -413,6 +414,8 @@ function renderMenu() {
         showSoon(game);
       } else if (PRO_ENABLED && game.pro && !isPro) {
         showPro(game);
+      } else if (game.id === "nmttest") {
+        startNmtTest(); // nmt-test.js
       } else if (game.id === "naholosy" || game.id === "klychnyi" || game.id === "frazeolohizmy") {
         showModes(game.id);
       } else {

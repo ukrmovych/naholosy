@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261017c">
+<link rel="stylesheet" href="style.css?v=20261017d">
 </head>
 <body>
 
@@ -153,6 +153,22 @@
     </p>
 
     <p id="hint" class="hint"></p>
+  </main>
+
+  <!-- Рандомний тест НМТ (PRO): логіка — nmt-test.js -->
+  <main id="nmttest" class="screen" hidden>
+    <header class="top-bar">
+      <button id="btn-nmt-menu" class="icon-btn" aria-label="В меню">‹ Меню</button>
+      <span id="nmt-score" class="score nmt-score">0 з 0</span>
+    </header>
+    <section class="card nmt-card">
+      <span id="nmt-topic" class="nmt-topic"></span>
+      <div id="nmt-question" class="nmt-question"></div>
+      <div id="nmt-answers" class="answers"></div>
+      <p id="nmt-feedback" class="feedback" aria-live="polite"></p>
+      <button id="btn-nmt-next" class="btn-primary" hidden>Наступне завдання →</button>
+      <a id="nmt-source" class="nmt-source" href="#" target="_blank" rel="noopener"></a>
+    </section>
   </main>
 
   <!-- Наголоси: вибір режиму -->
@@ -418,11 +434,13 @@
     </a>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261017c"></script>
-  <script src="klychnyi-data.js?v=20261017c"></script>
-  <script src="frazeo-data.js?v=20261017c"></script>
-  <script src="script.js?v=20261017c"></script>
-  <script src="online.js?v=20261017c"></script>
+  <script src="leaderboard-config.js?v=20261017d"></script>
+  <script src="klychnyi-data.js?v=20261017d"></script>
+  <script src="frazeo-data.js?v=20261017d"></script>
+  <script src="script.js?v=20261017d"></script>
+  <script src="online.js?v=20261017d"></script>
+  <script src="nmt-test-data.js?v=20261017d"></script>
+  <script src="nmt-test.js?v=20261017d"></script>
 
 </body>
 </html>
