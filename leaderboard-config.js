@@ -7,6 +7,6 @@ window.LEADERBOARD_CONFIG = {
   // Пряме посилання на мініапку з @BotFather (див. ONLINE.md), наприклад "https://t.me/ukrmovych_bot/game".
   // Поки порожнє — друзі приєднуються до онлайн-ігор за кодом кімнати.
   telegramAppLink: "https://t.me/ukrmovych_bot/battle",
-  // Сторінка PRO-підписки в Base by mono. Поки порожнє — кнопки «Оформити PRO» не видно.
-  proLink: ""
+  // Сторінка підписки «Спільнота Укрмовича» в Base by mono. Порожнє — кнопки підписки не видно.
+  proLink: "https://base.monobank.ua/sp/DG8NzmnGCQV3An"
 };

@@ -64,7 +64,7 @@ tr:last-child td { border-bottom: 0; }
 .login button { width: 100%; padding: 12px; font-size: 17px; }
 .error { color: var(--red); min-height: 1.4em; }
 .note { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font-size: 14px; color: var(--muted); margin-top: 10px; }
-.views { display: flex; gap: 6px; margin: 0 0 12px; }
+.views { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
 .views button { font-size: 17px; padding: 8px 16px; }
 .cl-game { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 0; }
 .cl-game summary { cursor: pointer; padding: 12px 14px; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
@@ -83,6 +83,7 @@ tr:last-child td { border-bottom: 0; }
 .fb-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--muted); font-size: 13px; }
 .fb-meta b { color: var(--text); font-weight: 600; }
 .fb-meta .tag { background: var(--surface-2); border-radius: 999px; padding: 2px 8px; }
+.fb-meta a.tag { color: inherit; }
 .fb-meta .tag.ok { color: var(--green); }
 .fb-meta .tag.no { color: var(--red); }
 .fb-meta button { margin-left: auto; padding: 4px 12px; font-size: 13px; }
@@ -111,6 +112,7 @@ tr:last-child td { border-bottom: 0; }
       <button type="button" data-view="stats" class="on">📊 Статистика</button>
       <button type="button" data-view="feedback">💬 Відгуки <span id="fb-count"></span></button>
       <button type="button" data-view="classes">🏫 Класи <span id="cl-count"></span></button>
+      <button type="button" data-view="pro">🦆 PRO <span id="pro-count"></span></button>
     </div>
     <div id="stats-view">
     <div class="periods" id="periods">
@@ -142,6 +144,10 @@ tr:last-child td { border-bottom: 0; }
     <div id="classes-view" hidden>
       <p class="muted small">Ігри для класу: підсумки кожної гри з нікнеймами учнів, датою й часом. Натисни на гру, щоб побачити результати.</p>
       <div id="cl-list" class="fb-list"></div>
+    </div>
+    <div id="pro-view" hidden>
+      <p class="muted small">Звернення «Підписка є, а доступу немає». Перевір підписку в Base і схвали заявку в каналі «НМТ-качки» (Учасники → Заявки на вступ). Потім познач звернення вирішеним.</p>
+      <div id="pro-list" class="fb-list"></div>
     </div>
   </main>
 
@@ -352,6 +358,62 @@ function renderClasses() {
   }));
 }
 
+// ---------- Звернення PRO ----------
+let proIssues = null;
+
+async function proRpc(name, args) {
+  const res = await fetch(`${CFG.url}/rest/v1/rpc/${name}`, {
+    method: "POST",
+    headers: { apikey: CFG.anonKey, Authorization: `Bearer ${CFG.anonKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_password: password, ...args })
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(res.status === 404 || text.includes(name) ? "nosql" : "network");
+  return text ? JSON.parse(text) : null;
+}
+
+async function loadProIssues() {
+  try {
+    proIssues = await proRpc("get_pro_issues", {});
+    const open = proIssues.filter(x => !x.resolved).length;
+    $("pro-count").textContent = open ? `(${open})` : "";
+    renderProIssues();
+  } catch (err) {
+    $("pro-list").innerHTML = err.message === "nosql"
+      ? '<p class="note">У Supabase ще немає таблиці звернень (pro-issues.sql).</p>'
+      : '<p class="note">Не вдалося завантажити звернення. Перевір інтернет.</p>';
+  }
+}
+
+function renderProIssues() {
+  if (!proIssues) return;
+  if (!proIssues.length) {
+    $("pro-list").innerHTML = '<p class="note">Звернень немає — усі підписники отримали доступ 🎉</p>';
+    return;
+  }
+  $("pro-list").innerHTML = proIssues.map(x => `<article class="fb${x.resolved ? "" : " pub"}">
+    ${x.message ? `<p class="fb-text">${esc(x.message)}</p>` : ""}
+    <div class="fb-meta">
+      <b>${esc(x.name || "без імені")}</b>
+      ${x.username ? `<a class="tag" href="https://t.me/${encodeURIComponent(x.username)}" target="_blank" rel="noopener">@${esc(x.username)}</a>` : ""}
+      <span class="tag">id ${x.tg_user_id}</span>
+      <span>${new Date(x.created_at).toLocaleString("uk-UA", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</span>
+      <span class="tag ${x.resolved ? "ok" : "no"}">${x.resolved ? "✓ вирішено" : "чекає"}</span>
+      <button type="button" data-resolve="${x.id}" data-to="${!x.resolved}">${x.resolved ? "Повернути" : "✓ Вирішено"}</button>
+    </div>
+  </article>`).join("");
+  $("pro-list").querySelectorAll("[data-resolve]").forEach(b => b.addEventListener("click", async () => {
+    b.disabled = true;
+    try {
+      await proRpc("set_pro_issue_resolved", { p_id: Number(b.dataset.resolve), p_resolved: b.dataset.to === "true" });
+      await loadProIssues();
+    } catch (err) {
+      b.disabled = false;
+      b.textContent = "Помилка, ще раз";
+    }
+  }));
+}
+
 function setView(v) {
   view = v;
   store.set("stats_view", v);
@@ -359,6 +421,7 @@ function setView(v) {
   $("stats-view").hidden = v !== "stats";
   $("feedback-view").hidden = v !== "feedback";
   $("classes-view").hidden = v !== "classes";
+  $("pro-view").hidden = v !== "pro";
 }
 
 function showLogin(message = "") {
@@ -374,6 +437,7 @@ async function load() {
   setView(view);
   loadFeedback();
   loadClasses();
+  loadProIssues();
   document.querySelectorAll("#periods [data-preset]").forEach(b => b.classList.toggle("on", b.dataset.preset === preset));
   $("from").value = range.from;
   $("to").value = range.to;

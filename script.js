@@ -272,7 +272,7 @@ const BETA = (() => {
 const STATS_EVENTS = new Set([
   "game_start", "game_over", "all_words_done", "training_start", "training_done",
   "duel_start", "duel_end", "soon_click", "leaderboard_submit",
-  "online_join", "online_share", "online_invite_open", "pro_click"
+  "online_join", "online_share", "online_invite_open", "pro_click", "pro_report"
 ]);
 
 function track(name, params = {}) {
@@ -468,14 +468,17 @@ function showPro(game) {
   const link = LB.proLink || "";
   $("pro-title").textContent = `${game.icon} ${game.name}`;
   $("pro-text").textContent = inTelegram
-    ? "Ця гра входить у PRO-підписку. Після оформлення тебе додадуть у закритий канал, і всі PRO-ігри відкриються."
-    : "PRO-ігри відкриваються в Telegram-мініапці @ukrmovych_bot. Відкрий гру там.";
+    ? "Цей тренажер — для Спільноти Укрмовича. Підпишись — і тебе додадуть у закритий канал «НМТ-качки», а всі тренажери відкриються!"
+    : "Тренажери Спільноти Укрмовича відкриваються в Telegram-мініапці @ukrmovych_bot. Відкрий гру там.";
   const buy = $("btn-pro-buy");
   buy.hidden = inTelegram ? !link : !LB.telegramAppLink;
-  buy.textContent = inTelegram ? "Оформити PRO" : "Відкрити в Telegram";
+  buy.textContent = inTelegram ? "🦆 Приєднатися до Спільноти" : "Відкрити в Telegram";
   buy.href = inTelegram ? link : (LB.telegramAppLink + "?startapp=b");
   $("btn-pro-check").hidden = !inTelegram;
-  $("pro-status").textContent = inTelegram && !link ? "Підписка відкриється зовсім скоро!" : "";
+  $("btn-pro-help").hidden = !inTelegram;
+  $("pro-help").hidden = true;
+  $("pro-done").hidden = true;
+  $("pro-status").textContent = inTelegram && !link ? "Спільнота відкриється зовсім скоро!" : "";
   $("pro").hidden = false;
   $("btn-pro-close").focus();
 }
@@ -2427,15 +2430,56 @@ $("btn-pro-close").addEventListener("click", () => { $("pro").hidden = true; });
 $("pro").addEventListener("click", e => {
   if (e.target === $("pro")) $("pro").hidden = true;
 });
-$("btn-pro-buy").addEventListener("click", e => {
+// Посилання з вікна PRO: t.me — усередині Telegram, решта — у браузері
+function openProLink(e) {
   const tg = window.Telegram && Telegram.WebApp;
-  const href = $("btn-pro-buy").href;
+  const href = e.currentTarget.href;
   if (tg && tg.initData && /^https:\/\/t\.me\//.test(href) && typeof tg.openTelegramLink === "function") {
     e.preventDefault();
     tg.openTelegramLink(href);
   } else if (tg && tg.initData && typeof tg.openLink === "function") {
     e.preventDefault();
     tg.openLink(href);
+  }
+}
+$("btn-pro-buy").addEventListener("click", openProLink);
+$("btn-pro-join").addEventListener("click", openProLink);
+$("btn-pro-help").addEventListener("click", () => {
+  $("btn-pro-help").hidden = true;
+  $("pro-help").hidden = false;
+  $("pro-help-text").focus();
+});
+// «Підписка є, а доступу немає»: функція pro-check повідомляє власника й дає посилання-заявку в канал
+$("btn-pro-report").addEventListener("click", async () => {
+  const btn = $("btn-pro-report");
+  btn.disabled = true;
+  $("pro-status").textContent = "Надсилаю…";
+  try {
+    const res = await fetch(`${LB.url}/functions/v1/pro-check`, {
+      method: "POST",
+      headers: { apikey: LB.anonKey, Authorization: `Bearer ${LB.anonKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: telegramInitData(), report: $("pro-help-text").value })
+    });
+    const data = await res.json();
+    if (data.pro) {
+      isPro = true;
+      storageSet("pro_status", "1");
+      renderMenu();
+      $("pro-status").textContent = "Доступ уже є — тренажери відкрито! 🎉";
+      setTimeout(() => { $("pro").hidden = true; }, 1500);
+      return;
+    }
+    if (!data.reported) throw new Error("not reported");
+    track("pro_report");
+    $("pro-status").textContent = "";
+    $("pro-help").hidden = true;
+    $("pro-done").hidden = false;
+    $("btn-pro-join").hidden = !data.invite;
+    if (data.invite) $("btn-pro-join").href = data.invite;
+  } catch (err) {
+    $("pro-status").textContent = "Не вдалося надіслати. Напиши Укрмовичу в Telegram: @ukr_movych";
+  } finally {
+    btn.disabled = false;
   }
 });
 $("btn-pro-check").addEventListener("click", async () => {
