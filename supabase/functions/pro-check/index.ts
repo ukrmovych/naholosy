@@ -9,9 +9,9 @@
 // тим ботом, який є там адміном (підходить будь-який із двох).
 // Запит {setup:true} показує, чи є кожен бот адміном у каналі;
 // якщо PRO_CHAT_ID порожній — у яких каналах боти щось бачили.
-// Запит {initData, report:"текст"} — «підписка є, а доступу немає»: учень отримує посилання-заявку
-// в канал, звернення пишеться в таблицю pro_issues (pro-issues.sql), а власнику каналу приходить
-// повідомлення від бота (якщо власник колись писав цьому ботові).
+// Запит {initData, report:"текст"} — «підписка є, а доступу немає»: звернення пишеться в таблицю
+// pro_issues (pro-issues.sql), а власнику каналу приходить повідомлення від бота
+// (якщо власник колись писав цьому ботові). Власник сам зв'язується з учнем.
 // Цей файл — копія того, що викладено в Supabase (викладає Claude через конектор).
 
 const TOKENS = ["TELEGRAM_BOT_TOKEN", "UKR_MOVYCH_BOT_TOKEN"]
@@ -94,7 +94,15 @@ Deno.serve(async req => {
     for (const token of TOKENS) {
       const me = await tgApi(token, "getMe");
       const member = me.ok ? await tgApi(token, "getChatMember", { chat_id: PRO_CHAT_ID, user_id: String(me.result.id) }) : me;
-      bots.push({ bot: me.ok ? me.result.username : "?", status: member.ok ? member.result.status : member.description });
+      // Вебхук (напр. SendPulse): лише чи є він і на якому сайті — без повної адреси
+      const hook = await tgApi(token, "getWebhookInfo");
+      const url = hook.ok ? hook.result.url : "";
+      bots.push({
+        bot: me.ok ? me.result.username : "?",
+        status: member.ok ? member.result.status : member.description,
+        webhook: url ? new URL(url).host : "",
+        webhook_error: hook.ok ? hook.result.last_error_message || "" : ""
+      });
     }
     return reply({ chat: PRO_CHAT_ID, bots });
   }
@@ -134,24 +142,15 @@ const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 async function report(user: TgUser, message: string) {
   const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || "Без імені";
 
-  // Повторне натискання протягом 30 хв — те саме посилання, без нового повідомлення власнику
+  // Повторне звернення протягом 30 хв — без нового повідомлення власнику
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-  const recent = await db(`pro_issues?select=invite_link&tg_user_id=eq.${user.id}&created_at=gte.${since}&order=created_at.desc&limit=1`);
-  if (recent && recent[0] && recent[0].invite_link) return { pro: false, reported: true, invite: recent[0].invite_link };
-
-  // Посилання-заявка: учень просить вступити, власник схвалює, перевіривши підписку
-  let invite = "";
-  for (const token of TOKENS) {
-    const link = await tgApi(token, "createChatInviteLink", {
-      chat_id: PRO_CHAT_ID, creates_join_request: "true", name: `Заявка: ${name}`.slice(0, 32)
-    });
-    if (link.ok) { invite = link.result.invite_link; break; }
-  }
+  const recent = await db(`pro_issues?select=id&tg_user_id=eq.${user.id}&created_at=gte.${since}&limit=1`);
+  if (recent && recent.length) return { pro: false, reported: true };
 
   await db("pro_issues", {
     method: "POST",
     headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ tg_user_id: user.id, username: user.username || null, name, message: message || null, invite_link: invite || null })
+    body: JSON.stringify({ tg_user_id: user.id, username: user.username || null, name, message: message || null })
   });
 
   // Повідомлення власнику каналу
@@ -159,7 +158,7 @@ async function report(user: TgUser, message: string) {
   const who = `<a href="tg://user?id=${user.id}">${esc(name)}</a>${user.username ? ` (@${esc(user.username)})` : ""}`;
   const text = `🆘 <b>Підписка є, а доступу до PRO немає</b>\n\n${who}\nid: <code>${user.id}</code>`
     + (message ? `\n\n💬 ${esc(message)}` : "")
-    + `\n\nПеревір підписку в Base. Учень отримав посилання-заявку в канал — схвали заявку в «НМТ-качках» (Учасники → Заявки на вступ).`;
+    + `\n\nПеревір підписку в Base і зв'яжися з учнем — йому обіцяно відповідь протягом 24 годин.`;
   for (const token of TOKENS) {
     const admins = await tgApi(token, "getChatAdministrators", { chat_id: PRO_CHAT_ID });
     const owner = admins.ok && admins.result.find((a: { status: string }) => a.status === "creator");
@@ -168,5 +167,5 @@ async function report(user: TgUser, message: string) {
     if (sent.ok) { notified = true; break; }
   }
 
-  return { pro: false, reported: true, invite, notified };
+  return { pro: false, reported: true, notified };
 }

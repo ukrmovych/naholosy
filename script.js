@@ -475,7 +475,8 @@ function showPro(game) {
   buy.textContent = inTelegram ? "🦆 Приєднатися до Спільноти" : "Відкрити в Telegram";
   buy.href = inTelegram ? link : (LB.telegramAppLink + "?startapp=b");
   $("btn-pro-check").hidden = !inTelegram;
-  $("btn-pro-help").hidden = !inTelegram;
+  $("btn-pro-help").hidden = true; // з'являється лише після невдалої перевірки
+  $("pro").classList.remove("pro-form");
   $("pro-help").hidden = true;
   $("pro-done").hidden = true;
   $("pro-status").textContent = inTelegram && !link ? "Спільнота відкриється зовсім скоро!" : "";
@@ -2443,11 +2444,15 @@ function openProLink(e) {
   }
 }
 $("btn-pro-buy").addEventListener("click", openProLink);
-$("btn-pro-join").addEventListener("click", openProLink);
+// Форма звернення: решту вікна ховаємо, щоб поле було вгорі й клавіатура його не закривала
 $("btn-pro-help").addEventListener("click", () => {
-  $("btn-pro-help").hidden = true;
+  $("pro").classList.add("pro-form");
+  $("pro-status").textContent = "";
   $("pro-help").hidden = false;
-  $("pro-help-text").focus();
+  $("pro").scrollTop = 0;
+});
+$("pro-help-text").addEventListener("focus", () => {
+  setTimeout(() => $("pro-help-text").scrollIntoView({ block: "center" }), 350);
 });
 // «Підписка є, а доступу немає»: функція pro-check повідомляє власника й дає посилання-заявку в канал
 $("btn-pro-report").addEventListener("click", async () => {
@@ -2465,6 +2470,8 @@ $("btn-pro-report").addEventListener("click", async () => {
       isPro = true;
       storageSet("pro_status", "1");
       renderMenu();
+      $("pro").classList.remove("pro-form");
+      $("pro-help").hidden = true;
       $("pro-status").textContent = "Доступ уже є — тренажери відкрито! 🎉";
       setTimeout(() => { $("pro").hidden = true; }, 1500);
       return;
@@ -2474,8 +2481,6 @@ $("btn-pro-report").addEventListener("click", async () => {
     $("pro-status").textContent = "";
     $("pro-help").hidden = true;
     $("pro-done").hidden = false;
-    $("btn-pro-join").hidden = !data.invite;
-    if (data.invite) $("btn-pro-join").href = data.invite;
   } catch (err) {
     $("pro-status").textContent = "Не вдалося надіслати. Напиши Укрмовичу в Telegram: @ukr_movych";
   } finally {
@@ -2486,6 +2491,7 @@ $("btn-pro-check").addEventListener("click", async () => {
   $("pro-status").textContent = "Перевіряю…";
   const ok = await checkPro();
   $("pro-status").textContent = ok ? "PRO відкрито! 🎉" : "Підписку поки не знайдено. Якщо щойно оформив — зачекай хвилинку.";
+  $("btn-pro-help").hidden = ok;
   if (ok) setTimeout(() => { $("pro").hidden = true; }, 1200);
 });
 

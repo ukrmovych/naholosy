@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261017b">
+<link rel="stylesheet" href="style.css?v=20261017c">
 </head>
 <body>
 
@@ -389,21 +389,23 @@
 
   <div id="pro" class="modal" hidden>
     <div class="modal-card">
+      <div class="pro-intro">
       <div class="over-emoji" aria-hidden="true">🦆</div>
       <h2 id="pro-title"></h2>
       <p id="pro-text"></p>
+      </div>
       <a id="btn-pro-buy" class="btn-primary pro-buy" href="#" target="_blank" rel="noopener"></a>
       <button id="btn-pro-check" class="btn-secondary">Я вже в Спільноті ✓</button>
       <p id="pro-status" class="pro-status" aria-live="polite"></p>
-      <button id="btn-pro-help" class="pro-help-link" type="button">Підписка є, а доступу немає?</button>
+      <button id="btn-pro-help" class="pro-help-link" type="button" hidden>Підписка є, а доступу немає?</button>
       <div id="pro-help" class="pro-help" hidden>
+        <h2>Підписка є, а доступу немає?</h2>
         <p>Буває, що Telegram не дає автоматично додати тебе в канал. Напиши Укрмовичу — і тобі відкриють доступ вручну.</p>
         <textarea id="pro-help-text" maxlength="1000" rows="3" placeholder="Що сталося? (необов'язково)"></textarea>
         <button id="btn-pro-report" class="btn-primary">Повідомити Укрмовича</button>
       </div>
       <div id="pro-done" class="pro-help" hidden>
-        <p>Укрмович отримав твоє повідомлення 💛 Натисни кнопку нижче й подай заявку в канал «НМТ-качки» — її схвалять, і всі тренажери відкриються.</p>
-        <a id="btn-pro-join" class="btn-primary pro-buy" href="#" target="_blank" rel="noopener">Подати заявку в канал</a>
+        <p>Дякуємо! Укрмович отримав твоє повідомлення 💛 З тобою зв'яжуться в Telegram якнайшвидше — протягом 24 годин.</p>
       </div>
       <button id="btn-pro-close" class="btn-secondary">Закрити</button>
     </div>
@@ -416,11 +418,11 @@
     </a>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261017b"></script>
-  <script src="klychnyi-data.js?v=20261017b"></script>
-  <script src="frazeo-data.js?v=20261017b"></script>
-  <script src="script.js?v=20261017b"></script>
-  <script src="online.js?v=20261017b"></script>
+  <script src="leaderboard-config.js?v=20261017c"></script>
+  <script src="klychnyi-data.js?v=20261017c"></script>
+  <script src="frazeo-data.js?v=20261017c"></script>
+  <script src="script.js?v=20261017c"></script>
+  <script src="online.js?v=20261017c"></script>
 
 </body>
 </html>

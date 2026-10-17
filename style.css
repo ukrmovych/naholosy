@@ -1018,6 +1018,28 @@ button:focus-visible {
   display: none;
 }
 
+/* Форма звернення: лише вона, вгорі екрана */
+#pro {
+  overflow-y: auto;
+}
+
+#pro.pro-form {
+  align-items: start;
+}
+
+#pro.pro-form .pro-intro,
+#pro.pro-form #btn-pro-buy,
+#pro.pro-form #btn-pro-check,
+#pro.pro-form #btn-pro-help {
+  display: none;
+}
+
+#pro .pro-help h2 {
+  margin: 0 0 10px;
+  font-size: 24px;
+  text-align: center;
+}
+
 .pro-help-link {
   display: block;
   margin: 14px auto 0;
