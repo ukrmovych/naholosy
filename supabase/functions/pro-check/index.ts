@@ -61,15 +61,16 @@ Deno.serve(async req => {
 
   if (!PRO_CHAT_ID) {
     if (!body.setup) return reply({ pro: false, configured: false });
-    // Налаштування: які канали/чати бачать бота адміністратором
+    // Налаштування: у яких каналах/групах бот щось бачив (додавання бота, дописи).
+    // allowed_updates = [] — стандартний набір оновлень, щоб не змінити налаштування бота.
     const chats = new Map<number, string>();
     const errors: string[] = [];
     for (const token of TOKENS) {
-      const updates = await tgApi(token, "getUpdates", { allowed_updates: JSON.stringify(["my_chat_member"]) });
+      const updates = await tgApi(token, "getUpdates", { allowed_updates: "[]" });
       if (!updates.ok) { errors.push(updates.description || "getUpdates failed"); continue; }
       for (const u of updates.result || []) {
-        const m = u.my_chat_member;
-        if (m && m.new_chat_member && m.new_chat_member.status === "administrator") chats.set(m.chat.id, m.chat.title || "");
+        const chat = (u.my_chat_member || u.channel_post || u.edited_channel_post || u.message || {}).chat;
+        if (chat && chat.type !== "private") chats.set(chat.id, chat.title || "");
       }
     }
     return reply({ bots: TOKENS.length, chats: [...chats].map(([id, title]) => ({ id, title })), errors });
