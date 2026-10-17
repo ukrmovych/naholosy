@@ -27,6 +27,12 @@ button { font: inherit; cursor: pointer; border: 2px solid var(--line); backgrou
 button:hover { border-color: var(--orange); }
 button.on { background: var(--orange); border-color: var(--orange); color: #211a14; font-weight: 700; }
 .periods { display: flex; gap: 6px; flex-wrap: wrap; }
+.range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+.range label { display: flex; align-items: center; gap: 6px; }
+.range input { font: inherit; padding: 6px 10px; border-radius: 10px; border: 2px solid var(--line); background: var(--surface); color: var(--text); color-scheme: dark; }
+.range input:focus { outline: none; border-color: var(--orange); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.pct { color: var(--muted); font-size: 13px; margin-left: 6px; }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
@@ -108,12 +114,20 @@ tr:last-child td { border-bottom: 0; }
     </div>
     <div id="stats-view">
     <div class="periods" id="periods">
-      <button type="button" data-days="1">Сьогодні</button>
-      <button type="button" data-days="7">7 днів</button>
-      <button type="button" data-days="30">30 днів</button>
-      <button type="button" data-days="90">90 днів</button>
+      <button type="button" data-preset="today">Сьогодні</button>
+      <button type="button" data-preset="yesterday">Вчора</button>
+      <button type="button" data-preset="7">7 днів</button>
+      <button type="button" data-preset="30">30 днів</button>
+      <button type="button" data-preset="month">Цей місяць</button>
+      <button type="button" data-preset="prevmonth">Минулий місяць</button>
+      <button type="button" data-preset="all">Увесь час</button>
       <button type="button" id="refresh" title="Оновити">↻</button>
     </div>
+    <form class="range" id="range">
+      <label>з <input type="date" id="from" required></label>
+      <label>по <input type="date" id="to" required></label>
+      <button type="submit" class="on">Показати</button>
+    </form>
     <p id="status" class="muted small"></p>
     <div id="content"></div>
     </div>
@@ -148,13 +162,48 @@ const store = {
 };
 
 let password = store.get("stats_password") || "";
-let days = Number(store.get("stats_days")) || 7;
+// Період: дати «з» і «по» (включно) за київським часом
+const kyivDate = (d = new Date()) => d.toLocaleDateString("en-CA", { timeZone: "Europe/Kyiv" });
+const shiftDate = (iso, n) => { const d = new Date(iso + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const daysBetween = (a, b) => Math.round((new Date(b + "T12:00:00Z") - new Date(a + "T12:00:00Z")) / 86400000) + 1;
+let range = (() => { try { return JSON.parse(store.get("stats_range")) || null; } catch { return null; } })();
+let preset = store.get("stats_preset") || "7";
+function presetRange(name) {
+  const today = kyivDate();
+  if (name === "today") return { from: today, to: today };
+  if (name === "yesterday") { const y = shiftDate(today, -1); return { from: y, to: y }; }
+  if (name === "month") return { from: today.slice(0, 8) + "01", to: today };
+  if (name === "prevmonth") {
+    const first = today.slice(0, 8) + "01";
+    const lastPrev = shiftDate(first, -1);
+    return { from: lastPrev.slice(0, 8) + "01", to: lastPrev };
+  }
+  if (name === "all") return { from: "2025-01-01", to: today };
+  return { from: shiftDate(today, -(Number(name) - 1)), to: today };
+}
+if (preset !== "custom" || !range) range = presetRange(preset === "custom" ? "7" : preset);
+let days = daysBetween(range.from, range.to);
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 const num = v => (v === null || v === undefined ? "—" : Number(v).toLocaleString("uk-UA"));
 const pct = (a, b) => (b ? Math.round(a / b * 100) + "%" : "—");
+
+// Нова статистика (stats-v2.sql); якщо її ще немає — стара, за останні N днів
+let rangeMissing = false;
+async function fetchRange() {
+  const res = await fetch(`${CFG.url}/rest/v1/rpc/get_stats_range`, {
+    method: "POST",
+    headers: { apikey: CFG.anonKey, Authorization: `Bearer ${CFG.anonKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_password: password, p_from: range.from, p_to: range.to })
+  });
+  if (res.ok) return res.json();
+  const text = await res.text();
+  if (text.includes("wrong password")) throw new Error("password");
+  if (res.status === 404 || text.includes("get_stats_range")) { rangeMissing = true; return null; }
+  throw new Error("network");
+}
 
 async function fetchStats() {
   const res = await fetch(`${CFG.url}/rest/v1/rpc/get_stats`, {
@@ -325,12 +374,20 @@ async function load() {
   setView(view);
   loadFeedback();
   loadClasses();
-  document.querySelectorAll("#periods [data-days]").forEach(b => b.classList.toggle("on", Number(b.dataset.days) === days));
+  document.querySelectorAll("#periods [data-preset]").forEach(b => b.classList.toggle("on", b.dataset.preset === preset));
+  $("from").value = range.from;
+  $("to").value = range.to;
+  days = daysBetween(range.from, range.to);
   $("status").textContent = "Завантажую…";
   try {
-    const s = await fetchStats();
-    render(s);
-    $("status").textContent = `Оновлено о ${new Date().toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}`;
+    const r = await fetchRange();
+    if (r) renderRange(r);
+    else {
+      // старої функції досить, але лише «останні N днів»
+      render(await fetchStats());
+    }
+    $("status").textContent = `Оновлено о ${new Date().toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}`
+      + (rangeMissing ? " · Щоб бачити будь-який період і більше даних, запусти в Supabase stats-v2.sql (див. STATS.md)" : "");
   } catch (err) {
     if (err.message === "password") {
       store.set("stats_password", null);
@@ -364,6 +421,145 @@ function rows(list) {
 
 function card(value, label) {
   return `<div class="card"><div class="big">${value}</div><div class="label">${label}</div></div>`;
+}
+
+const WEEKDAYS = ["", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
+const LAYOUTS = { table: "📱 на столі", wall: "🖥 на стіні" };
+
+function periodTitle() {
+  const f = d => new Date(d + "T12:00:00").toLocaleDateString("uk-UA", { day: "numeric", month: "long", year: "numeric" });
+  return range.from === range.to ? f(range.from) : `${f(range.from)} — ${f(range.to)}`;
+}
+
+function funnelRows(list) {
+  const top = Math.max(1, list[0].n);
+  return `<div class="rows">${list.map(r => `<div class="row"><span class="name">${esc(r.name)}</span>
+    <span class="track"><span class="fill" style="display:block;width:${r.n / top * 100}%"></span></span>
+    <span class="n">${num(r.n)}</span><span class="pct">${pct(r.n, top)}</span></div>`).join("")}</div>`;
+}
+
+function renderRange(s) {
+  const p = s.players, v = s.visits, f = s.funnel, e = s.engagement;
+  const multi = s.days > 1;
+  const dayLabel = (d, full) => {
+    const dt = new Date(d.day + "T12:00:00");
+    return full ? dt.toLocaleDateString("uk-UA", { weekday: "short", day: "numeric", month: "long" })
+      : dt.toLocaleDateString("uk-UA", { day: "numeric", month: "numeric" });
+  };
+  let html = `<h2>Люди · ${esc(periodTitle())}</h2><div class="cards">
+    ${card(num(p.active), "гравців (пристроїв)")}
+    ${card(num(p.new), "нових")}
+    ${card(num(p.returning), "постійних (грали й раніше)")}
+    ${multi ? card(num(p.multi_day), "заходили у 2+ різні дні") : ""}
+    ${card(pct(p.new_came_back, p.new), "нових повернулися ще раз<br><span class='small'>" + num(p.new_came_back) + " з " + num(p.new) + "</span>")}
+    ${card(num(v.total), `відкриттів гри<br><span class="small">Telegram: ${pct(v.telegram, v.total)} · бета: ${pct(v.beta, v.total)}</span>`)}
+    ${card(num(p.all_time), "гравців за весь час")}
+  </div>`;
+
+  html += `<h2>Воронка</h2><p class="muted small">Скільки гравців дійшли до кожного кроку</p><div class="panel">${funnelRows([
+    { name: "Відкрили гру", n: Math.max(f.visited, f.played) },
+    { name: "Почали гру", n: f.played },
+    { name: "Дограли марафон", n: f.finished },
+    { name: "Записалися в таблицю", n: f.leaderboard }
+  ])}</div>`;
+
+  html += `<h2>Наскільки активно грають</h2><div class="two">
+    <div class="cards">${card(num(e.games), "розпочатих ігор")}${card(num(e.avg_per_player), "ігор на гравця")}</div>
+    <div class="panel"><p class="legend">Скільки ігор зіграв кожен гравець</p>${rows([
+      { name: "1 гра", n: e.g1 }, { name: "2–5 ігор", n: e.g2_5 }, { name: "6–20 ігор", n: e.g6_20 }, { name: "21+ ігор", n: e.g21 }
+    ])}</div></div>`;
+
+  if (multi) {
+    html += `<h2>По днях</h2><div class="panel">
+      <p class="legend">Гравців за день</p>${chart(s.daily, "players", dayLabel)}
+      <p class="legend" style="margin-top:16px">Нових гравців за день</p>${chart(s.daily, "new", dayLabel)}
+      <p class="legend" style="margin-top:16px">Розпочатих ігор за день</p>${chart(s.daily, "games", dayLabel)}</div>`;
+  }
+
+  const games = Object.entries(s.games || {}).filter(([id]) => id !== "null");
+  const played = games.filter(([, g]) => g.players || g.marathons || g.trainings || g.duels);
+  if (played.length) {
+    html += `<h2>Ігри</h2><div class="panel"><table>
+      <tr><th>Гра</th><th>Гравців</th><th>Марафонів</th><th>Дограно</th><th>Сер. рахунок</th><th>Медіана</th><th>Рекорд</th><th>Тренувань</th><th>до кінця</th><th>Дуелей</th><th>Усі слова 🎉</th><th>У таблицю</th></tr>
+      ${played.sort((a, b) => b[1].players - a[1].players).map(([id, g]) => `<tr>
+        <td>${esc(GAME_NAMES[id] || id)}</td><td>${num(g.players)}</td><td>${num(g.marathons)}</td><td>${num(g.finished)}</td>
+        <td>${num(g.avg_score)}</td><td>${num(g.median_score)}</td><td>${num(g.max_score)}</td>
+        <td>${num(g.trainings)}</td><td>${num(g.trainings_done)}</td>
+        <td>${num(g.duels)}</td><td>${num(g.all_words)}</td><td>${num(g.leaderboard)}</td></tr>`).join("")}
+    </table></div>`;
+  }
+
+  const scores = Object.entries(s.scores || {});
+  if (scores.length) {
+    html += `<h2>Результати марафону</h2><p class="muted small">Скільки марафонів закінчилися з таким рахунком</p><div class="two">`
+      + scores.map(([id, b]) => {
+        const items = b.map(x => ({ label: x.from >= 300 ? "300+" : `${x.from}`, n: x.n }));
+        return `<div class="panel"><p class="legend">${esc(GAME_NAMES[id] || id)}</p>${chart(items, "n", (x, full) => full ? `${x.label}–${Number(x.label) + 9 || ""} балів` : x.label)}</div>`;
+      }).join("") + `</div>`;
+  }
+
+  if (s.groups && s.groups.length) {
+    html += `<h2>Групи тренувань</h2><p class="muted small">Скільки разів почали (у дужках — скільки дійшли до кінця)</p>
+      <div class="panel">${rows(s.groups.map(g => ({ name: `${g.group} (${g.done} до кінця)`, n: g.count })))}</div>`;
+  }
+
+  const ds = s.duel_setup || {};
+  const dPlayers = Object.entries(ds.players || {}), dLayout = Object.entries(ds.layout || {}), dTarget = Object.entries(ds.target || {});
+  if (dPlayers.length) {
+    html += `<h2>Дуелі на одному екрані</h2><div class="two">
+      <div class="panel"><p class="legend">Скільки гравців</p>${rows(dPlayers.sort((a, b) => a[0] - b[0]).map(([n, c]) => ({ name: `${n} гравці`, n: c })))}</div>
+      <div class="panel"><p class="legend">Як лежить екран</p>${rows(dLayout.map(([k, c]) => ({ name: LAYOUTS[k] || k, n: c })))}
+        <p class="legend" style="margin-top:12px">До скількох очок</p>${rows(dTarget.sort((a, b) => a[0] - b[0]).map(([k, c]) => ({ name: `до ${k}`, n: c })))}
+        <p class="note">Командами: <b>${num(ds.teams)}</b></p></div></div>`;
+  }
+
+  const ox = s.online_extra || {};
+  if ((s.online && s.online.length) || ox.joins || ox.shares) {
+    html += `<h2>Онлайн-режими</h2><div class="panel"><table>
+      <tr><th>Гра</th><th>Режим</th><th>Створено кімнат</th><th>Почато ігор</th><th>Дограно</th><th>Гравців у сер.</th><th>Найбільша</th></tr>
+      ${(s.online || []).map(o => `<tr><td>${esc(GAME_NAMES[o.game] || o.game)}</td><td>${esc(ONLINE_NAMES[o.mode] || o.mode)}</td>
+        <td>${num(o.created)}</td><td>${num(o.started)}</td><td>${num(o.finished)}</td><td>${num(o.avg_players)}</td><td>${num(o.max_players)}</td></tr>`).join("")}
+    </table>
+    <p class="note">Надіслали запрошення: <b>${num(ox.shares)}</b> · відкрили гру за запрошенням: <b>${num(ox.invites)}</b> · приєдналися до кімнати: <b>${num(ox.joins)}</b></p></div>`;
+  }
+
+  const c = s.classes || {};
+  if (c.games) {
+    html += `<h2>Ігри для класу</h2><div class="cards">
+      ${card(num(c.games), "ігор для класу")}${card(num(c.students), "учнів загалом")}
+      ${card(num(c.avg_students), "учнів у середньому")}${card(num(c.avg_rounds), "питань у середньому")}
+      ${card(num(c.early), "завершено достроково")}</div>
+      <p class="muted small">Деталі кожної гри — у вкладці «🏫 Класи».</p>`;
+  }
+
+  const fbs = s.feedback || {};
+  if (fbs.count) {
+    html += `<h2>Відгуки</h2><div class="cards">${card(num(fbs.count), "відгуків")}${card(num(fbs.avg_rating), "середня оцінка з 5")}${card(num(fbs.publishable), "можна публікувати")}</div>`;
+  }
+
+  const soon = games.filter(([, g]) => g.soon_clicks).sort((a, b) => b[1].soon_clicks - a[1].soon_clicks);
+  if (soon.length) {
+    html += `<h2>Яких ігор чекають</h2><p class="muted small">Скільки разів натиснули на гру з позначкою «скоро»</p>
+      <div class="panel">${rows(soon.map(([id, g]) => ({ name: GAME_NAMES[id] || id, n: g.soon_clicks })))}</div>`;
+  }
+
+  if (s.hours && s.hours.some(h => h.games)) {
+    html += `<h2>Коли грають</h2><div class="two">
+      <div class="panel"><p class="legend">За годиною (київський час)</p>${chart(s.hours, "games", (h, full) => full ? `${h.hour}:00–${h.hour}:59` : String(h.hour))}</div>
+      <div class="panel"><p class="legend">За днем тижня</p>${chart(s.weekdays, "games", w => WEEKDAYS[w.dow])}</div></div>`;
+  }
+
+  const lb = Object.entries(s.leaderboard || {});
+  if (lb.length) {
+    html += `<h2>Турнірна таблиця</h2><div class="panel"><table>
+      <tr><th>Гра</th><th>Гравців у таблиці</th><th>Нових за період</th><th>Найкращий результат</th></tr>
+      ${lb.map(([id, l]) => `<tr><td>${esc(GAME_NAMES[id] || id)}</td><td>${num(l.players)}</td><td>${num(l.new)}</td><td>${num(l.best)}</td></tr>`).join("")}
+    </table></div>`;
+  }
+
+  html += `<p class="note">«Гравець» — це один пристрій (телефон чи браузер). Імен і особистих даних гра не збирає.
+    Статистика рахується з моменту, коли в Supabase запустили <b>stats.sql</b>; давніші дані є лише в Google Analytics.</p>`;
+  $("content").innerHTML = html;
 }
 
 function render(s) {
@@ -463,10 +659,25 @@ $("views").addEventListener("click", e => {
 });
 $("fb-only-pub").addEventListener("change", renderFeedback);
 $("fb-only-good").addEventListener("change", renderFeedback);
+$("range").addEventListener("submit", e => {
+  e.preventDefault();
+  if (!$("from").value || !$("to").value) return;
+  const [a, b] = [$("from").value, $("to").value].sort();
+  range = { from: a, to: b };
+  preset = "custom";
+  store.set("stats_preset", preset);
+  store.set("stats_range", JSON.stringify(range));
+  load();
+});
 $("periods").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (!b) return;
-  if (b.dataset.days) { days = Number(b.dataset.days); store.set("stats_days", String(days)); }
+  if (b.dataset.preset) {
+    preset = b.dataset.preset;
+    range = presetRange(preset);
+    store.set("stats_preset", preset);
+    store.set("stats_range", JSON.stringify(range));
+  }
   load();
 });
 
