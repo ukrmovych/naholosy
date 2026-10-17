@@ -636,6 +636,7 @@ function startGame(gameType) {
     : [];
   klychnyiAsked = 0;
   $("level-line").hidden = true;
+  setPrevCard(null);
   showScreen("game");
   $("test-note").hidden = gameType === "naholosy";
   $("test-note").textContent = gameType === "klychnyi" || gameType === "frazeolohizmy"
@@ -723,8 +724,31 @@ function handleAnswer(isCorrect, highlight, mistake) {
   schedule(lives > 0 ? nextQuestion : gameOver, badDelay);
 }
 
+// ---------- «‹ Попереднє»: подивитися попереднє завдання з відповіддю ----------
+let prevCard = null; // копія картки завдання одразу після відповіді
+
+function setPrevCard(card) {
+  prevCard = card;
+  $("btn-game-prev").hidden = !prevCard;
+}
+
+function showPrevCard() {
+  if (!prevCard) return;
+  const box = $("prev-content");
+  box.innerHTML = "";
+  box.appendChild(prevCard.cloneNode(true));
+  $("prev-modal").hidden = false;
+  $("btn-prev-close").focus();
+}
+
 function nextQuestion() {
   questionToken++;
+  // щойно відповіли — зберігаємо картку, щоб її можна було переглянути
+  if (lock && answersEl.children.length) {
+    const copy = document.querySelector("#game .card").cloneNode(true);
+    copy.querySelectorAll("[id]").forEach(el => el.removeAttribute("id"));
+    setPrevCard(copy);
+  }
   lock = false;
   answersEl.innerHTML = "";
   answersEl.classList.remove("frazeo-answers");
@@ -1613,6 +1637,7 @@ function startTraining(groupIndex) {
   $("test-note").hidden = true;
   hintEl.textContent = "Підказка: можна відповідати клавішами 1, 2, 3";
   updateUI();
+  setPrevCard(null);
   showScreen("game");
   nextQuestion();
 }
@@ -1630,6 +1655,7 @@ function startMistakesRound() {
   training.roundMistakes = [];
   streak = 0;
   updateUI();
+  setPrevCard(null);
   showScreen("game");
   nextQuestion();
 }
@@ -2368,6 +2394,11 @@ $("btn-menu").addEventListener("click", () => {
   else showMenu();
 });
 $("btn-modes-back").addEventListener("click", showMenu);
+$("btn-game-prev").addEventListener("click", showPrevCard);
+$("btn-prev-close").addEventListener("click", () => { $("prev-modal").hidden = true; });
+$("prev-modal").addEventListener("click", e => {
+  if (e.target === $("prev-modal")) $("prev-modal").hidden = true;
+});
 $("btn-duel").addEventListener("click", startDuel);
 $("btn-marathon").addEventListener("click", () => startGame(modesGame));
 $("btn-fix-mistakes").addEventListener("click", startMistakesRound);

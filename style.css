@@ -3076,8 +3076,17 @@ body.level-flash::after {
   line-height: 1.45;
 }
 
-.nmt-question u {
-  text-decoration-thickness: 2px;
+/* Виділені букви (наголос, звуки) — підкреслені й помаранчеві, щоб було видно на жирному шрифті */
+.nmt-question u,
+.nmt-text u {
+  color: #ffb36b;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+}
+
+.answer.correct .nmt-text u,
+.answer.wrong .nmt-text u {
+  color: #fff;
 }
 
 .answer.nmt-answer {
@@ -3131,4 +3140,122 @@ body.level-flash::after {
 
 .nmt-score::before {
   content: '✅ ';
+}
+
+/* «‹ Попереднє» / «До поточного ›» — у всіх тренажерах */
+.btn-back {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.nmt-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.nmt-nav .btn-back:only-child,
+.nmt-nav #btn-nmt-return {
+  margin-left: auto;
+}
+
+.nmt-review {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.nmt-result-title {
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.nmt-result-score {
+  margin: 0;
+  font-size: 22px;
+  text-align: center;
+}
+
+.nmt-result-best {
+  margin: 6px 0 18px;
+  color: var(--orange);
+  font-size: 18px;
+  text-align: center;
+}
+
+.nmt-mistakes-title {
+  margin: 0 0 10px;
+}
+
+.nmt-mistakes {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.nmt-mistake {
+  padding: 14px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.nmt-mistake .nmt-question {
+  margin-bottom: 10px;
+  font-size: 17px;
+}
+
+.nmt-your,
+.nmt-right {
+  margin: 4px 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.nmt-your { color: var(--red); }
+.nmt-right { color: #7fd483; }
+
+.nmt-mistake .nmt-source {
+  margin-top: 8px;
+  text-align: left;
+}
+
+.nmt-no-mistakes {
+  text-align: center;
+  font-size: 18px;
+}
+
+.game-nav {
+  display: flex;
+  margin-top: 12px;
+}
+
+.game-nav:not(:has(:not([hidden]))) {
+  display: none;
+}
+
+#prev-modal {
+  overflow-y: auto;
+}
+
+.prev-modal-card {
+  text-align: left;
+}
+
+.prev-content .card {
+  margin: 0 0 14px;
+  pointer-events: none;
+}
+
+.prev-content .answer {
+  animation: none;
+}
+
+.prev-content .brand-tag {
+  display: none;
 }
