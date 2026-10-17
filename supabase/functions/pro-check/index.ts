@@ -3,15 +3,17 @@
 // і питає в бота, чи є гравець у закритому PRO-каналі (туди додає Base by mono).
 // Секрети функції (Supabase → Edge Functions → Secrets), у репозиторії їх немає:
 //   TELEGRAM_BOT_TOKEN — токен @ukrmovych_bot (через нього відкривається мініапка);
-//   UKR_MOVYCH_BOT_TOKEN — токен @ukr_movych_bot; PRO_CHAT_ID — id закритого каналу.
+//   UKR_MOVYCH_BOT_TOKEN — токен @ukr_movych_bot.
+// PRO_CHAT_ID — id закритого каналу «НМТ-качки» (не секрет: без токена з ним нічого не зробиш).
 // Підпис initData перевіряється токеном того бота, що відкрив гру, а членство в каналі —
 // тим ботом, який є там адміном (підходить будь-який із двох).
-// Поки PRO_CHAT_ID немає, запит {setup:true} показує канали, куди бота додали адміном.
+// Запит {setup:true} показує, чи є кожен бот адміном у каналі;
+// якщо PRO_CHAT_ID порожній — у яких каналах боти щось бачили.
 // Цей файл — копія того, що викладено в Supabase (викладає Claude через конектор).
 
 const TOKENS = ["TELEGRAM_BOT_TOKEN", "UKR_MOVYCH_BOT_TOKEN"]
   .map(name => Deno.env.get(name) || "").filter(Boolean);
-const PRO_CHAT_ID = Deno.env.get("PRO_CHAT_ID") || "";
+const PRO_CHAT_ID = Deno.env.get("PRO_CHAT_ID") || "-1003890052902";
 const MAX_AGE = 24 * 60 * 60; // initData старіша за добу не приймається
 
 const CORS = {
@@ -74,6 +76,17 @@ Deno.serve(async req => {
       }
     }
     return reply({ bots: TOKENS.length, chats: [...chats].map(([id, title]) => ({ id, title })), errors });
+  }
+
+  if (body.setup) {
+    // Перевірка налаштування: хто з ботів адмін у каналі
+    const bots = [];
+    for (const token of TOKENS) {
+      const me = await tgApi(token, "getMe");
+      const member = me.ok ? await tgApi(token, "getChatMember", { chat_id: PRO_CHAT_ID, user_id: String(me.result.id) }) : me;
+      bots.push({ bot: me.ok ? me.result.username : "?", status: member.ok ? member.result.status : member.description });
+    }
+    return reply({ chat: PRO_CHAT_ID, bots });
   }
 
   const userId = await verifiedUserId(body.initData || "");

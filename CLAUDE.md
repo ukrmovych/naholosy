@@ -25,7 +25,7 @@ Push у `main` → GitHub Actions (`.github/workflows/deploy.yml`) копіює 
 
 ## Supabase
 Підключений до Claude як конектор (проєкт «NMT-Gym», id `eecnmjuxbpejqyafvtfj`). SQL Claude запускає сам через `execute_sql`; `apply_migration` зависав, тому великі скрипти — частинами. Пароль статистики ніде не виводити.
-Edge Function `pro-check` (копія — `supabase/functions/pro-check/index.ts`, викладати через `deploy_edge_function`, verify_jwt=false) перевіряє PRO-підписку. Її секрети `TELEGRAM_BOT_TOKEN` (@ukrmovych_bot), `UKR_MOVYCH_BOT_TOKEN` (@ukr_movych_bot) і `PRO_CHAT_ID` власник вводить сам у Supabase — ніде не виводити.
+Edge Function `pro-check` (копія — `supabase/functions/pro-check/index.ts`, викладати через `deploy_edge_function`, verify_jwt=false) перевіряє PRO-підписку. Її секрети `TELEGRAM_BOT_TOKEN` (@ukrmovych_bot), `UKR_MOVYCH_BOT_TOKEN` (@ukr_movych_bot) власник вводить сам у Supabase — ніде не виводити. Id каналу «НМТ-качки» записано в коді функції (`PRO_CHAT_ID`, не секрет). Перевірити налаштування: `select net.http_post(...pro-check, body {"setup":true})` через pg_net, відповідь — у `net._http_response`.
 
 ## PRO-підписка (Base by mono)
 Base додає підписників у закритий Telegram-канал; один із ботів (@ukrmovych_bot або @ukr_movych_bot) — адмін там; `pro-check` перевіряє членство за Telegram initData. Безкоштовно — усе, що в основній версії; PRO — ігри з `pro: true` у `GAMES` (кличний, фразеологізми, числівники, іншомовні…). Поки замочки діють лише в беті (`PRO_ENABLED = BETA`); `?b&pro` — відкрити PRO для перевірки. Посилання на Base — `proLink` у `leaderboard-config.js`. Стан у localStorage — `pro_status`.
