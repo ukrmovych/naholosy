@@ -25,6 +25,10 @@ Push у `main` → GitHub Actions (`.github/workflows/deploy.yml`) копіює 
 
 ## Supabase
 Підключений до Claude як конектор (проєкт «NMT-Gym», id `eecnmjuxbpejqyafvtfj`). SQL Claude запускає сам через `execute_sql`; `apply_migration` зависав, тому великі скрипти — частинами. Пароль статистики ніде не виводити.
+Edge Function `pro-check` (копія — `supabase/functions/pro-check/index.ts`, викладати через `deploy_edge_function`, verify_jwt=false) перевіряє PRO-підписку. Її секрети `TELEGRAM_BOT_TOKEN` і `PRO_CHAT_ID` власник вводить сам у Supabase — ніде не виводити.
+
+## PRO-підписка (Base by mono)
+Base додає підписників у закритий Telegram-канал; бот @ukrmovych_bot — адмін там; `pro-check` перевіряє членство за Telegram initData. Безкоштовно — усе, що в основній версії; PRO — ігри з `pro: true` у `GAMES` (кличний, фразеологізми, числівники, іншомовні…). Поки замочки діють лише в беті (`PRO_ENABLED = BETA`); `?b&pro` — відкрити PRO для перевірки. Посилання на Base — `proLink` у `leaderboard-config.js`. Стан у localStorage — `pro_status`.
 
 ## Правила роботи
 - Після зміни JS/CSS **оновлюй версію `?v=...`** у тегах `<script>`/`<link>` в `index.html` (формат `?v=РРРРММДДa`), інакше в учнів залишиться старий файл у кеші.

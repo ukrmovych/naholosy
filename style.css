@@ -275,6 +275,12 @@ button:focus-visible {
   background: #2f6b33;
 }
 
+.badge-pro {
+  background: linear-gradient(135deg, #f2b705, #e07a10);
+  color: #fff;
+  font-weight: 700;
+}
+
 /* Турнірна таблиця — окремо від ігор */
 .leaders-btn {
   display: flex;
@@ -987,6 +993,28 @@ button:focus-visible {
   font-size: 18px;
   line-height: 1.4;
   color: var(--muted);
+}
+
+/* Вікно PRO-підписки */
+#pro .modal-card > button,
+#pro .pro-buy {
+  display: block;
+  margin-top: 12px;
+}
+
+.pro-buy {
+  color: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+#pro .pro-status {
+  margin: 12px 0 0;
+  font-size: 16px;
+}
+
+#pro .pro-status:empty {
+  display: none;
 }
 
 .confetti {

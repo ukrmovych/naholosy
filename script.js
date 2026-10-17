@@ -272,7 +272,7 @@ const BETA = (() => {
 const STATS_EVENTS = new Set([
   "game_start", "game_over", "all_words_done", "training_start", "training_done",
   "duel_start", "duel_end", "soon_click", "leaderboard_submit",
-  "online_join", "online_share", "online_invite_open"
+  "online_join", "online_share", "online_invite_open", "pro_click"
 ]);
 
 function track(name, params = {}) {
@@ -294,16 +294,17 @@ const PRAISE = ["Правильно!", "Так тримати!", "Супер!", 
 
 // Усі ігри в меню. Нова гра = новий рядок тут.
 // status: "live" — працює, "beta" — працює в тестовому режимі, "soon" — ще немає
+// pro: true — гра для PRO-підписки (поки що замочок діє лише в беті)
 // Підписи на плитках ігор
 const STATUS_LABELS = { beta: "бета", soon: "скоро" };
 
 const GAMES = [
   { id: "naholosy", name: "Наголоси", sub: "Усі, що потрібні для НМТ!", icon: "🗣️", status: "live", featured: true },
   { id: "leksychna", name: "Лексична помилка", icon: "🔎", status: "beta" },
-  { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: BETA ? "beta" : "soon" },
-  { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon" },
-  { id: "frazeolohizmy", name: "Фразеологізми", icon: "💬", status: BETA ? "beta" : "soon" },
-  { id: "inshomovni", name: "Іншомовні слова", icon: "🌍", status: "soon" }
+  { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: BETA ? "beta" : "soon", pro: true },
+  { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon", pro: true },
+  { id: "frazeolohizmy", name: "Фразеологізми", icon: "💬", status: BETA ? "beta" : "soon", pro: true },
+  { id: "inshomovni", name: "Іншомовні слова", icon: "🌍", status: "soon", pro: true }
 ];
 
 const $ = id => document.getElementById(id);
@@ -388,7 +389,12 @@ function renderMenu() {
 
     btn.append(icon, name);
 
-    if (game.status !== "live") {
+    if (PRO_ENABLED && game.pro && game.status !== "soon") {
+      const badge = document.createElement("span");
+      badge.className = "badge badge-pro";
+      badge.textContent = isPro ? "PRO" : "🔒 PRO";
+      btn.appendChild(badge);
+    } else if (game.status !== "live") {
       const badge = document.createElement("span");
       badge.className = `badge badge-${game.status}`;
       badge.textContent = STATUS_LABELS[game.status];
@@ -405,6 +411,8 @@ function renderMenu() {
     btn.addEventListener("click", () => {
       if (game.status === "soon") {
         showSoon(game);
+      } else if (PRO_ENABLED && game.pro && !isPro) {
+        showPro(game);
       } else if (game.id === "naholosy" || game.id === "klychnyi" || game.id === "frazeolohizmy") {
         showModes(game.id);
       } else {
@@ -417,6 +425,59 @@ function renderMenu() {
   // Блок відгуку — одразу під головною грою, щоб його було видно
   list.insertBefore($("btn-feedback"), list.children[1] || null);
   renderBestScores();
+}
+
+// ---------- PRO-підписка ----------
+// Підписка оформлюється в Base by mono: Base додає підписника в закритий Telegram-канал,
+// а функція Supabase «pro-check» перевіряє, чи є гравець у цьому каналі
+// (код — supabase/functions/pro-check/index.ts). Працює лише в Telegram-мініапці.
+// Поки що замочки PRO видно тільки в беті.
+// Для перевірки в беті: …/?b&pro — PRO-ігри відкриті без підписки (лише до запуску PRO для всіх).
+const PRO_ENABLED = BETA && !new URLSearchParams(location.search).has("pro");
+let isPro = storageGet("pro_status") === "1";
+
+function telegramInitData() {
+  const tg = window.Telegram && Telegram.WebApp;
+  return (tg && tg.initData) || "";
+}
+
+async function checkPro() {
+  const initData = telegramInitData();
+  if (!PRO_ENABLED || !initData || !leaderboardEnabled) return isPro;
+  try {
+    const res = await fetch(`${LB.url}/functions/v1/pro-check`, {
+      method: "POST",
+      headers: { apikey: LB.anonKey, Authorization: `Bearer ${LB.anonKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ initData })
+    });
+    const data = await res.json();
+    if (data.configured === false) return isPro; // перевірку ще не налаштовано
+    const was = isPro;
+    isPro = Boolean(data.pro);
+    storageSet("pro_status", isPro ? "1" : "0");
+    if (was !== isPro) renderMenu();
+  } catch (e) {
+    // немає зв'язку — лишаємо збережений стан
+  }
+  return isPro;
+}
+
+function showPro(game) {
+  track("pro_click", { game_type: game.id });
+  const inTelegram = Boolean(telegramInitData());
+  const link = LB.proLink || "";
+  $("pro-title").textContent = `${game.icon} ${game.name}`;
+  $("pro-text").textContent = inTelegram
+    ? "Ця гра входить у PRO-підписку. Після оформлення тебе додадуть у закритий канал, і всі PRO-ігри відкриються."
+    : "PRO-ігри відкриваються в Telegram-мініапці @ukrmovych_bot. Відкрий гру там.";
+  const buy = $("btn-pro-buy");
+  buy.hidden = inTelegram ? !link : !LB.telegramAppLink;
+  buy.textContent = inTelegram ? "Оформити PRO" : "Відкрити в Telegram";
+  buy.href = inTelegram ? link : (LB.telegramAppLink + "?startapp=b");
+  $("btn-pro-check").hidden = !inTelegram;
+  $("pro-status").textContent = inTelegram && !link ? "Підписка відкриється зовсім скоро!" : "";
+  $("pro").hidden = false;
+  $("btn-pro-close").focus();
 }
 
 function showSoon(game) {
@@ -2357,6 +2418,31 @@ function isEditable(target) {
 
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") $("soon").hidden = true;
+});
+
+// PRO: перевіряємо після load, коли довантажився скрипт Telegram
+window.addEventListener("load", () => { checkPro(); });
+
+$("btn-pro-close").addEventListener("click", () => { $("pro").hidden = true; });
+$("pro").addEventListener("click", e => {
+  if (e.target === $("pro")) $("pro").hidden = true;
+});
+$("btn-pro-buy").addEventListener("click", e => {
+  const tg = window.Telegram && Telegram.WebApp;
+  const href = $("btn-pro-buy").href;
+  if (tg && tg.initData && /^https:\/\/t\.me\//.test(href) && typeof tg.openTelegramLink === "function") {
+    e.preventDefault();
+    tg.openTelegramLink(href);
+  } else if (tg && tg.initData && typeof tg.openLink === "function") {
+    e.preventDefault();
+    tg.openLink(href);
+  }
+});
+$("btn-pro-check").addEventListener("click", async () => {
+  $("pro-status").textContent = "Перевіряю…";
+  const ok = await checkPro();
+  $("pro-status").textContent = ok ? "PRO відкрито! 🎉" : "Підписку поки не знайдено. Якщо щойно оформив — зачекай хвилинку.";
+  if (ok) setTimeout(() => { $("pro").hidden = true; }, 1200);
 });
 
 // Відвідування: одна подія на запуск гри (з Telegram чи з сайту).
