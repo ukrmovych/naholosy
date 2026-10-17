@@ -272,13 +272,14 @@ const BETA = (() => {
 const STATS_EVENTS = new Set([
   "game_start", "game_over", "all_words_done", "training_start", "training_done",
   "duel_start", "duel_end", "soon_click", "leaderboard_submit",
-  "online_join", "online_share", "online_invite_open", "pro_click", "pro_report"
+  "online_join", "online_share", "online_invite_open", "pro_click", "pro_report", "brand_click"
 ]);
 
 function track(name, params = {}) {
   if (name !== "visit") gtag('event', name, params); // візити GA рахує сам
   if (name !== "visit" && !STATS_EVENTS.has(name)) return;
   if (typeof leaderboardEnabled === "undefined" || !leaderboardEnabled) return;
+  if (BETA) return; // у статистику — лише основна версія, без бети
   const { game_type: game = null, ...details } = params;
   lbRequest("game_events", {
     method: "POST",
@@ -330,6 +331,7 @@ let mistakes = [];
 let currentGame = "";
 let currentQuestion = null;
 let lock = false;
+let endless = false; // PRO: марафон без обмеження життів (без рекорду й турнірної таблиці)
 let remainingQuestions = [];
 let klychnyiAsked = 0; // скільки питань «Кличного» вже було в цій грі (для рівнів)
 let klychnyiFinished = false;
@@ -572,6 +574,11 @@ function updateUI() {
   }
 
   livesEl.innerHTML = "";
+  if (endless) {
+    livesEl.innerHTML = '<span class="heart">❤️</span><span class="endless-mark">∞</span>';
+    livesEl.setAttribute("aria-label", "Життя без обмежень");
+    return;
+  }
   for (let i = 0; i < MAX_LIVES; i++) {
     const heart = document.createElement("span");
     heart.className = "heart" + (i < lives ? "" : " lost");
@@ -616,19 +623,18 @@ function renderStressWord(container, word) {
 
 // ---------- Хід гри ----------
 
-function startGame(gameType) {
+function startGame(gameType, opts = {}) {
   clearTimeout(nextTimer);
   training = null;
-  $("btn-menu").textContent = "‹ Меню";
+  endless = Boolean(opts.endless);
+  $("btn-menu").textContent = endless ? "Завершити" : "‹ Меню";
   currentGame = gameType;
   score = 0;
   lives = MAX_LIVES;
   streak = 0;
   mistakes = [];
   updateUI();
-  track('game_start', {
-    game_type: gameType
-  });
+  track('game_start', endless ? { game_type: gameType, endless: true } : { game_type: gameType });
 
   remainingQuestions = gameType === "naholosy" ? [...naholosyData]
     : gameType === "klychnyi" ? klychnyiQueue()
@@ -651,6 +657,7 @@ function startGame(gameType) {
 function showMenu() {
   clearTimeout(nextTimer);
   training = null;
+  endless = false;
   questionToken++;
   $("celebrate").hidden = true;
   renderBestScores();
@@ -716,7 +723,7 @@ function handleAnswer(isCorrect, highlight, mistake) {
   }
 
   streak = 0;
-  lives--;
+  if (!endless) lives--;
   mistakes.push(mistake);
   updateUI();
   restartAnimation(livesEl, "hit");
@@ -1373,16 +1380,18 @@ function gameOver() {
   });
 
   const best = getBest(currentGame);
-  const isRecord = score > best;
+  const isRecord = !endless && score > best;
   if (isRecord) storageSet(`best_${currentGame}`, String(score));
 
   $("over-score").textContent = currentGame === "naholosy" ? `${score}/${TOTAL_WORDS}`
     : currentGame === "klychnyi" ? `${score} · рівень ${klychnyiLevelOf(Math.max(1, klychnyiAsked))}`
     : currentGame === "frazeolohizmy" ? `${score}/${FRAZEO_TOTAL}`
     : score;
-  $("over-best").textContent = isRecord && score > 0
-    ? "🎉 Новий рекорд!"
-    : `Рекорд: ${Math.max(best, score)}`;
+  $("over-best").textContent = endless
+    ? "♾ Гра без обмеження життів: рекорд і турнірна таблиця не зараховуються"
+    : isRecord && score > 0
+      ? "🎉 Новий рекорд!"
+      : `Рекорд: ${Math.max(best, score)}`;
 
   renderMistakes();
   prepareSubmitForm();
@@ -1537,6 +1546,7 @@ function showModes(game = modesGame) {
       ? `${FRAZEO_TOTAL} речень, як у НМТ · 3–5 варіантів · 3 життя`
       : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
   $("marathon-best").dataset.best = game;
+  $("btn-marathon-endless").hidden = !(isNaholosy && PRO_ENABLED && isPro);
   $("groups-panel").hidden = !isNaholosy;
   // Онлайн-режими: у «Наголосах» і «Фразеологізмах»
   $("online-panel").hidden = false;
@@ -1616,6 +1626,7 @@ function renderGroups() {
 
 function startTraining(groupIndex) {
   clearTimeout(nextTimer);
+  endless = false;
   const group = GROUPS[groupIndex];
   const queue = [...group.words];
   shuffleArray(queue);
@@ -2297,7 +2308,7 @@ async function submitScore(name, game, value) {
 function prepareSubmitForm() {
   const form = $("submit-form");
   // Турнірна таблиця — лише для ігор, які вже не в бета-версії
-  form.hidden = !leaderboardEnabled || score <= 0 || !["naholosy", "leksychna", "klychnyi"].includes(currentGame);
+  form.hidden = !leaderboardEnabled || score <= 0 || endless || !["naholosy", "leksychna", "klychnyi"].includes(currentGame);
   form.querySelector("button").disabled = false;
   $("player-name").disabled = false;
   $("player-name").value = storageGet("player_name") || "";
@@ -2390,7 +2401,8 @@ $("soon").addEventListener("click", e => {
 });
 $("btn-leaders").addEventListener("click", () => showLeaders("naholosy"));
 $("btn-menu").addEventListener("click", () => {
-  if (training) showModes();
+  if (endless) gameOver(); // «Завершити»: підсумок і помилки
+  else if (training) showModes();
   else showMenu();
 });
 $("btn-modes-back").addEventListener("click", showMenu);
@@ -2401,6 +2413,7 @@ $("prev-modal").addEventListener("click", e => {
 });
 $("btn-duel").addEventListener("click", startDuel);
 $("btn-marathon").addEventListener("click", () => startGame(modesGame));
+$("btn-marathon-endless").addEventListener("click", () => startGame("naholosy", { endless: true }));
 $("btn-fix-mistakes").addEventListener("click", startMistakesRound);
 $("btn-train-next").addEventListener("click", () => startTraining(training.groupIndex + 1));
 $("btn-train-again").addEventListener("click", () => startTraining(training.groupIndex));
@@ -2433,7 +2446,7 @@ document.querySelector('.tab[data-game="klychnyi"]').hidden = !BETA;
 document.addEventListener("click", e => {
   const link = e.target instanceof Element && e.target.closest("[data-tg-link]");
   if (!link) return;
-  gtag('event', 'brand_click', { place: link.className });
+  track("brand_click", { place: link.className });
   const tg = window.Telegram && window.Telegram.WebApp;
   if (tg && tg.initData && typeof tg.openTelegramLink === "function") {
     e.preventDefault();

@@ -510,13 +510,13 @@ function renderRange(s) {
     return full ? dt.toLocaleDateString("uk-UA", { weekday: "short", day: "numeric", month: "long" })
       : dt.toLocaleDateString("uk-UA", { day: "numeric", month: "numeric" });
   };
-  let html = `<h2>Люди · ${esc(periodTitle())}</h2><div class="cards">
+  let html = `<h2>Люди · ${esc(periodTitle())}</h2><p class="muted small">Лише основна версія гри — без бети.</p><div class="cards">
     ${card(num(p.active), "гравців (пристроїв)")}
     ${card(num(p.new), "нових")}
     ${card(num(p.returning), "постійних (грали й раніше)")}
     ${multi ? card(num(p.multi_day), "заходили у 2+ різні дні") : ""}
     ${card(pct(p.new_came_back, p.new), "нових повернулися ще раз<br><span class='small'>" + num(p.new_came_back) + " з " + num(p.new) + "</span>")}
-    ${card(num(v.total), `відкриттів гри<br><span class="small">Telegram: ${pct(v.telegram, v.total)} · бета: ${pct(v.beta, v.total)}</span>`)}
+    ${card(num(v.total), `відкриттів гри<br><span class="small">Telegram: ${pct(v.telegram, v.total)}</span>`)}
     ${card(num(p.all_time), "гравців за весь час")}
   </div>`;
 
@@ -586,6 +586,15 @@ function renderRange(s) {
     </table>
     <p class="note">Надіслали запрошення: <b>${num(ox.shares)}</b> · відкрили гру за запрошенням: <b>${num(ox.invites)}</b> · приєдналися до кімнати: <b>${num(ox.joins)}</b></p></div>`;
   }
+
+  // Переходи за посиланнями @ukr_movych
+  const lk = s.links || {};
+  const LINK_PLACES = { handle: "Головна, під маскотом", "brand-tag": "Картка завдання", "brand-tag brand-tag-bottom": "Турнірна таблиця",
+    "brand-tag brand-tag-soon": "Вікно «скоро»", brand: "Низ сторінки", "duel-brand": "Дуель" };
+  html += `<h2>Переходи на @ukr_movych</h2><div class="cards">
+    ${card(num(lk.ukr_movych || 0), "переходів за посиланнями")}${card(num(lk.players || 0), "гравців перейшли")}</div>
+    ${Object.keys(lk.by_place || {}).length ? `<div class="panel">${rows(Object.entries(lk.by_place).sort((a, b) => b[1] - a[1])
+      .map(([k, n]) => ({ name: LINK_PLACES[k] || k || "інше", n })))}</div>` : ""}`;
 
   const c = s.classes || {};
   if (c.games) {

@@ -3259,3 +3259,13 @@ body.level-flash::after {
 .prev-content .brand-tag {
   display: none;
 }
+
+.endless-start {
+  margin-top: 10px;
+}
+
+.endless-mark {
+  margin-left: 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
