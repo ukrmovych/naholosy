@@ -252,7 +252,8 @@ const DELAYS = {
   naholosy: [600, 2000],
   leksychna: [1000, 3000],
   klychnyi: [600, 2200],
-  frazeolohizmy: [3000, 4500] // час прочитати значення фразеологізму (є й кнопка «Далі →»)
+  frazeolohizmy: [3000, 4500], // час прочитати значення фразеологізму (є й кнопка «Далі →»)
+  chyslivnyky: [2200, 4500]     // час прочитати правило (є й кнопка «Далі →»)
 };
 
 // Бета-режим: ігри в розробці відкриваються лише за посиланням …/?beta, …/?b, …/beta/
@@ -290,6 +291,7 @@ function track(name, params = {}) {
 
 const KLYCHNYI_TOTAL = typeof klychnyiData !== "undefined" ? klychnyiData.length : 0;
 const FRAZEO_TOTAL = typeof frazeoSentences !== "undefined" ? frazeoSentences.length : 0;
+const CHYS_TOTAL = typeof chyslivnykyData !== "undefined" ? chyslivnykyData.length : 0;
 
 const PRAISE = ["Правильно!", "Так тримати!", "Супер!", "Чудово!", "Влучно!", "Є!"];
 
@@ -303,7 +305,7 @@ const GAMES = [
   { id: "naholosy", name: "Наголоси", sub: "Усі, що потрібні для НМТ!", icon: "🗣️", status: "live", featured: true },
   { id: "leksychna", name: "Лексична помилка", icon: "🔎", status: "beta" },
   { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: BETA ? "beta" : "soon", pro: true },
-  { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: "soon", pro: true },
+  { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: BETA ? "beta" : "soon", pro: true },
   { id: "frazeolohizmy", name: "Фразеологізми", icon: "💬", status: BETA ? "beta" : "soon", pro: true },
   { id: "inshomovni", name: "Іншомовні слова", icon: "🌍", status: "soon", pro: true },
   { id: "nmttest", name: "Рандомний тест НМТ", icon: "🎲", status: BETA ? "beta" : "soon", pro: true }
@@ -563,8 +565,8 @@ function updateUI() {
   } else if (currentGame === "klychnyi") {
     // у «Кличному» лінія прогресу — у межах рівня (updateKlychnyiLevelUI)
     scoreEl.textContent = score;
-  } else if (currentGame === "frazeolohizmy") {
-    const total = FRAZEO_TOTAL;
+  } else if (currentGame === "frazeolohizmy" || currentGame === "chyslivnyky") {
+    const total = currentGame === "chyslivnyky" ? CHYS_TOTAL : FRAZEO_TOTAL;
     scoreEl.textContent = score >= total ? `${score} 🏆` : `${score}/${total}`;
     progressEl.hidden = false;
     progressFill.style.width = `${Math.min(score / total, 1) * 100}%`;
@@ -641,16 +643,17 @@ function startGame(gameType, opts = {}) {
   remainingQuestions = gameType === "naholosy" ? [...marathonPool()]
     : gameType === "klychnyi" ? klychnyiQueue()
     : gameType === "frazeolohizmy" ? frazeoQueue()
+    : gameType === "chyslivnyky" ? chysQueue()
     : [];
   klychnyiAsked = 0;
   $("level-line").hidden = true;
   setPrevCard(null);
   showScreen("game");
   $("test-note").hidden = gameType === "naholosy";
-  $("test-note").textContent = gameType === "klychnyi" || gameType === "frazeolohizmy"
+  $("test-note").textContent = ["klychnyi", "frazeolohizmy", "chyslivnyky"].includes(gameType)
     ? "🧪 Бета-версія тренажера. Помітили неточність — напишіть @ukr_movych."
     : "🧪 Розділ працює в тестовому режимі: деякі речення ще потребують доопрацювання.";
-  hintEl.textContent = ["naholosy", "klychnyi", "frazeolohizmy"].includes(gameType)
+  hintEl.textContent = ["naholosy", "klychnyi", "frazeolohizmy", "chyslivnyky"].includes(gameType)
     ? "Підказка: можна відповідати клавішами 1, 2, 3"
     : "";
   nextQuestion();
@@ -796,6 +799,10 @@ function nextQuestion() {
     }
     currentQuestion = makeFrazeoCard(remainingQuestions.shift());
     renderFrazeo();
+  } else if (currentGame === "chyslivnyky") {
+    if (remainingQuestions.length === 0) remainingQuestions = chysQueue();
+    currentQuestion = remainingQuestions.shift();
+    renderChyslivnyky();
   }
 }
 
@@ -1090,6 +1097,72 @@ function renderFrazeo() {
         next.addEventListener("click", skipWait);
         sentenceEl.appendChild(next);
       }, { frazeo: true, text: card.text.replace("___", card.fill), chosen: phrase });
+    };
+    answersEl.appendChild(btn);
+  });
+}
+
+// ---------- Числівники (бета): дані — chyslivnyky-data.js ----------
+function chysQueue() {
+  const all = chyslivnykyData.map(row => ({ ...row, options: [row.a, ...row.w] }));
+  shuffleArray(all);
+  all.forEach(q => shuffleArray(q.options));
+  return all;
+}
+
+function renderChyslivnyky() {
+  const q = currentQuestion;
+  questionEl.textContent = "Обери правильну форму";
+  hintEl.textContent = `Підказка: можна відповідати клавішами 1–${q.options.length}`;
+
+  sentenceEl.hidden = false;
+  sentenceEl.innerHTML = "";
+  const line = document.createElement("p");
+  line.className = "frazeo-sentence";
+  const [before, after] = q.t.split("___");
+  const gap = document.createElement("span");
+  gap.className = "address-gap";
+  gap.textContent = "…";
+  line.append(before, gap, after);
+  sentenceEl.appendChild(line);
+
+  answersEl.classList.add("frazeo-answers");
+  q.options.forEach(form => {
+    const btn = document.createElement("button");
+    btn.className = "answer frazeo-answer";
+    btn.dataset.word = form;
+    btn.textContent = form;
+    btn.onclick = () => {
+      const isCorrect = form === q.a;
+      handleAnswer(isCorrect, () => {
+        gap.textContent = q.a;
+        gap.classList.add(isCorrect ? "filled-ok" : "filled-fix");
+        Array.from(answersEl.children).forEach(b => {
+          if (b.dataset.word === q.a) {
+            b.classList.add("correct");
+            if (!isCorrect) b.classList.add("blink");
+          } else if (b !== btn) {
+            b.classList.add("dim");
+          }
+        });
+        if (!isCorrect) btn.classList.add("wrong");
+        // Правило — щоб запам'ятати, а не лише вгадати
+        const note = document.createElement("p");
+        note.className = "frazeo-meaning";
+        note.textContent = q.r;
+        sentenceEl.appendChild(note);
+        if (q.also) {
+          const alt = document.createElement("p");
+          alt.className = "address-alt";
+          alt.textContent = `Також правильно: ${q.also}`;
+          sentenceEl.appendChild(alt);
+        }
+        const next = document.createElement("button");
+        next.className = "btn-secondary frazeo-next";
+        next.textContent = "Далі →";
+        next.addEventListener("click", skipWait);
+        sentenceEl.appendChild(next);
+      }, { frazeo: true, text: q.t.replace("___", q.a), chosen: form });
     };
     answersEl.appendChild(btn);
   });
@@ -1390,9 +1463,12 @@ function gameOver() {
   $("over-score").textContent = currentGame === "naholosy" ? `${score}/${marathonPool().length}`
     : currentGame === "klychnyi" ? `${score} · рівень ${klychnyiLevelOf(Math.max(1, klychnyiAsked))}`
     : currentGame === "frazeolohizmy" ? `${score}/${FRAZEO_TOTAL}`
+    : currentGame === "chyslivnyky" ? `${score}/${CHYS_TOTAL}`
     : score;
   $("over-best").textContent = endless
     ? "♾ Гра без обмеження життів: рекорд і турнірна таблиця не зараховуються"
+    : marathonTopic
+      ? `${isRecord && score > 0 ? "🎉 Новий рекорд! " : `Рекорд: ${Math.max(best, score)}. `}⭐ ${SPECIAL[marathonTopic].name} — без турнірної таблиці`
     : isRecord && score > 0
       ? "🎉 Новий рекорд!"
       : `Рекорд: ${Math.max(best, score)}`;
@@ -2405,6 +2481,9 @@ $("submit-form").addEventListener("submit", async e => {
     return;
   }
 
+  // спецтеми й гра без обмеження життів у таблицю не йдуть
+  if (marathonTopic || endless) return;
+
   const button = e.target.querySelector("button");
   button.disabled = true;
   setSubmitStatus("Зберігаю…");
@@ -2506,7 +2585,7 @@ document.querySelectorAll(".tab").forEach(tab => {
 
 // Клавіші 1–4 для вибору варіанта в «Наголосах»
 document.addEventListener("keydown", e => {
-  if (screens.game.hidden || !["naholosy", "klychnyi", "frazeolohizmy"].includes(currentGame) || !$("celebrate").hidden) return;
+  if (screens.game.hidden || !["naholosy", "klychnyi", "frazeolohizmy", "chyslivnyky"].includes(currentGame) || !$("celebrate").hidden) return;
   if (e.target.tagName === "INPUT") return;
   const btn = answersEl.children[Number(e.key) - 1];
   if (btn) btn.click();
