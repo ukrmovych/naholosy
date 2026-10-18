@@ -3299,7 +3299,43 @@ body.level-flash::after {
   color: #fff;
 }
 
-.group-tile.topic-tile {
-  grid-column: 1 / -1;
-  border-color: var(--orange);
+.group-tile.topic-tile .group-label {
+  font-size: 15px;
+  white-space: normal;
+  text-align: center;
+}
+
+/* Кількість питань у грі для класу: 10/20/30 або своє число */
+.count-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.count-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 2px solid var(--line);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.count-input {
+  width: 72px;
+  height: 40px;
+  border-radius: 10px;
+  border: 2px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 18px;
+  text-align: center;
+}
+
+.count-max {
+  color: var(--muted);
+  font-size: 14px;
 }

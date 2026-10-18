@@ -1661,9 +1661,10 @@ document.querySelectorAll("#modes .mode-toggle").forEach(btn => {
 function renderGroups() {
   const list = $("group-list");
   list.innerHTML = "";
+  // спецтеми — внизу, після звичайних груп
   const items = [
-    ...TOPIC_GROUPS.map((g, k) => [g, -1 - k]).filter(([g]) => hasTopic(g.topic)),
-    ...GROUPS.map((g, i) => [g, i])
+    ...GROUPS.map((g, i) => [g, i]),
+    ...TOPIC_GROUPS.map((g, k) => [g, -1 - k]).filter(([g]) => hasTopic(g.topic))
   ];
   items.forEach(([group, i]) => {
     const best = Number(storageGet(groupKey(i))) || 0;

@@ -732,12 +732,25 @@ function renderLobby() {
     const enough = online.players.length >= min;
     let settings = null;
     if (online.mode === "class") {
-      online.classRounds = online.classRounds || 10;
-      settings = el("div", { class: "setup-row" }, el("span", { class: "setup-label" }, "Скільки слів"),
-        el("div", { class: "seg" }, [10, 20, 30].map(n => el("button", {
+      // Скільки питань: 10/20/30 або своє число (кнопки − + чи з клавіатури), не більше, ніж є в темі
+      const maxRounds = poolIndices().length;
+      const clamp = n => Math.max(1, Math.min(maxRounds, Math.round(Number(n)) || 1));
+      online.classRounds = clamp(online.classRounds || 10);
+      const setRounds = n => { online.classRounds = clamp(n); renderLobby(); };
+      const input = el("input", {
+        type: "number", min: 1, max: maxRounds, inputmode: "numeric", class: "count-input", value: online.classRounds,
+        on: { change: () => setRounds(input.value), keydown: e => { if (e.key === "Enter") input.blur(); } }
+      });
+      settings = el("div", { class: "setup-row setup-count" }, el("span", { class: "setup-label" }, "Скільки слів"),
+        el("div", { class: "seg" }, [10, 20, 30].filter(n => n <= maxRounds).map(n => el("button", {
           class: online.classRounds === n ? "active" : "",
-          on: { click: () => { online.classRounds = n; renderLobby(); } }
-        }, n))));
+          on: { click: () => setRounds(n) }
+        }, n))),
+        el("div", { class: "count-stepper" },
+          el("button", { class: "count-btn", "aria-label": "Менше", on: { click: () => setRounds(online.classRounds - 1) } }, "−"),
+          input,
+          el("button", { class: "count-btn", "aria-label": "Більше", on: { click: () => setRounds(online.classRounds + 1) } }, "+"),
+          el("span", { class: "count-max" }, `із ${maxRounds}`)));
     }
     const start = el("button", { class: "btn-primary", disabled: !enough, on: { click: startOnlineGame } },
       enough ? "Почати гру" : online.mode === "duel" ? "Чекаємо на суперника…" : online.mode === "class" ? "Чекаємо на учнів…" : "Чекаємо на гравців…");
