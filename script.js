@@ -555,10 +555,11 @@ function updateUI() {
   }
 
   if (currentGame === "naholosy") {
-    scoreEl.textContent = score >= TOTAL_WORDS ? `${score} 🏆` : `${score}/${TOTAL_WORDS}`;
+    const total = marathonPool().length;
+    scoreEl.textContent = score >= total ? `${score} 🏆` : `${score}/${total}`;
     progressEl.hidden = false;
-    progressFill.style.width = `${Math.min(score / TOTAL_WORDS, 1) * 100}%`;
-    progressEl.classList.toggle("done", score >= TOTAL_WORDS);
+    progressFill.style.width = `${Math.min(score / total, 1) * 100}%`;
+    progressEl.classList.toggle("done", score >= total);
   } else if (currentGame === "klychnyi") {
     // у «Кличному» лінія прогресу — у межах рівня (updateKlychnyiLevelUI)
     scoreEl.textContent = score;
@@ -629,14 +630,15 @@ function startGame(gameType, opts = {}) {
   endless = Boolean(opts.endless);
   $("btn-menu").textContent = endless ? "Завершити" : "‹ Меню";
   currentGame = gameType;
+  marathonTopic = gameType === "naholosy" && hasTopic(currentTopic) ? currentTopic : "";
   score = 0;
   lives = MAX_LIVES;
   streak = 0;
   mistakes = [];
   updateUI();
-  track('game_start', endless ? { game_type: gameType, endless: true } : { game_type: gameType });
+  track('game_start', { game_type: gameType, ...(endless ? { endless: true } : {}), ...(marathonTopic ? { topic: marathonTopic } : {}) });
 
-  remainingQuestions = gameType === "naholosy" ? [...naholosyData]
+  remainingQuestions = gameType === "naholosy" ? [...marathonPool()]
     : gameType === "klychnyi" ? klychnyiQueue()
     : gameType === "frazeolohizmy" ? frazeoQueue()
     : [];
@@ -714,7 +716,7 @@ function handleAnswer(isCorrect, highlight, mistake) {
     const praise = PRAISE[Math.floor(Math.random() * PRAISE.length)];
     setFeedback(streak >= 3 ? `${praise} 🔥 ${streak} поспіль` : praise, "good");
 
-    if (currentGame === "naholosy" && score === TOTAL_WORDS) {
+    if (currentGame === "naholosy" && score === marathonPool().length) {
       schedule(celebrate, okDelay);
     } else {
       schedule(nextQuestion, okDelay);
@@ -771,7 +773,7 @@ function nextQuestion() {
     renderNaholosy();
   } else if (currentGame === "naholosy") {
     if (remainingQuestions.length === 0) {
-      remainingQuestions = [...naholosyData];
+      remainingQuestions = [...marathonPool()];
     }
     const randomIndex = Math.floor(Math.random() * remainingQuestions.length);
     currentQuestion = remainingQuestions.splice(randomIndex, 1)[0];
@@ -1238,7 +1240,7 @@ function celebrate() {
     game_type: currentGame
   });
   $("celebrate-text").textContent =
-    `${TOTAL_WORDS} правильних відповідей — це всі слова зі списку! Можна грати далі й ставити рекорд.`;
+    `${marathonPool().length} правильних відповідей — це всі слова зі списку! Можна грати далі й ставити рекорд.`;
   $("celebrate").hidden = false;
   launchConfetti();
 }
@@ -1379,11 +1381,13 @@ function gameOver() {
     final_score: score
   });
 
-  const best = getBest(currentGame);
+  // рекорд спецтеми — окремо (best_topic_<id>), у турнірну таблицю не йде
+  const bestKey = marathonTopic ? `topic_${marathonTopic}` : currentGame;
+  const best = getBest(bestKey);
   const isRecord = !endless && score > best;
-  if (isRecord) storageSet(`best_${currentGame}`, String(score));
+  if (isRecord) storageSet(`best_${bestKey}`, String(score));
 
-  $("over-score").textContent = currentGame === "naholosy" ? `${score}/${TOTAL_WORDS}`
+  $("over-score").textContent = currentGame === "naholosy" ? `${score}/${marathonPool().length}`
     : currentGame === "klychnyi" ? `${score} · рівень ${klychnyiLevelOf(Math.max(1, klychnyiAsked))}`
     : currentGame === "frazeolohizmy" ? `${score}/${FRAZEO_TOTAL}`
     : score;
@@ -1516,8 +1520,41 @@ function buildGroups(data, target = 15, min = 10, max = 19) {
 
 const GROUPS = buildGroups(naholosyData);
 
+// ---------- Спецтеми за посиланням (вебінари) — topics.js ----------
+// Доступ: Telegram-користувачі, які перейшли за посиланням до дедлайну (функція topic-access),
+// а також власник (браузер, де відкрито сторінку статистики з паролем).
+const SPECIAL = window.SPECIAL_TOPICS || {};
+const TOPIC_WORDS = {};
+Object.entries(SPECIAL).forEach(([id, t]) => {
+  TOPIC_WORDS[id] = naholosyData.filter(q => t.match([].concat(q.correct)[0].toLowerCase(), q));
+});
+// Групи тренування для спецтем мають від'ємні номери: -1, -2, …
+const TOPIC_GROUPS = Object.keys(SPECIAL).map(id => ({ topic: id, label: SPECIAL[id].name, icon: SPECIAL[id].icon, words: TOPIC_WORDS[id] }));
+const isOwner = Boolean(storageGet("stats_password"));
+let topicAccess = new Set();
+try { topicAccess = new Set(JSON.parse(storageGet("topic_access") || "[]")); } catch (e) { /* порожньо */ }
+let currentTopic = "";  // вибрана тема для марафону й онлайн-ігор ("" — усі слова)
+let marathonTopic = ""; // тема поточного марафону
+
+// Слова марафону: усі або вибраної спецтеми
+function marathonPool() {
+  return marathonTopic ? TOPIC_WORDS[marathonTopic] : naholosyData;
+}
+
+function hasTopic(id) {
+  return Boolean(SPECIAL[id]) && (isOwner || topicAccess.has(id));
+}
+
+function availableTopics() {
+  return Object.keys(SPECIAL).filter(hasTopic);
+}
+
+function groupAt(i) {
+  return i >= 0 ? GROUPS[i] : TOPIC_GROUPS[-1 - i];
+}
+
 function groupKey(i) {
-  return `train_naholosy_${GROUPS[i].label}`;
+  return `train_naholosy_${groupAt(i).label}`;
 }
 
 // 1 звертання, 2 звертання, 5 звертань
@@ -1530,6 +1567,37 @@ function plural(n, one, few, many) {
 
 // Екран режимів (марафон / групи / дуель) для гри з вибором слів
 let modesGame = "naholosy";
+
+// Вибір слів для марафону й онлайн-ігор: «Усі слова» або спецтема (якщо є доступ)
+function renderTopicPicker() {
+  const box = $("topic-picker");
+  const topics = modesGame === "naholosy" ? availableTopics() : [];
+  if (!topics.includes(currentTopic)) currentTopic = "";
+  box.hidden = !topics.length;
+  box.innerHTML = "";
+  if (topics.length) {
+    const hint = document.createElement("p");
+    hint.className = "topic-hint";
+    hint.textContent = "Слова для марафону й онлайн-ігор:";
+    box.appendChild(hint);
+    [["", "Усі слова"], ...topics.map(id => [id, `${SPECIAL[id].icon} ${SPECIAL[id].name}`])].forEach(([id, text]) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "topic-chip" + (id === currentTopic ? " on" : "");
+      b.textContent = text;
+      b.addEventListener("click", () => { currentTopic = id; renderTopicPicker(); });
+      box.appendChild(b);
+    });
+  }
+  if (modesGame === "naholosy") {
+    const n = currentTopic ? TOPIC_WORDS[currentTopic].length : TOTAL_WORDS;
+    $("marathon-desc").textContent = currentTopic
+      ? `${SPECIAL[currentTopic].name}: ${n} ${plural(n, "слово", "слова", "слів")} · 3 життя · без турнірної таблиці`
+      : `Усі ${TOTAL_WORDS} слова · 3 життя · турнірна таблиця`;
+    $("marathon-best").dataset.best = currentTopic ? `topic_${currentTopic}` : "naholosy";
+    renderBestScores();
+  }
+}
 
 function showModes(game = modesGame) {
   clearTimeout(nextTimer);
@@ -1564,6 +1632,7 @@ function showModes(game = modesGame) {
   $("duel-desc").textContent = `Один екран, 2–4 гравці: хто перший ${isNaholosy ? "натисне правильний наголос" : isFrazeo ? "добере фразеологізм" : "натисне правильну форму"}`;
 
   if (isNaholosy) renderGroups();
+  renderTopicPicker();
   setOpenPanel(storageGet("modes_open") || "", false);
   renderBestScores();
   showScreen("modes");
@@ -1592,7 +1661,11 @@ document.querySelectorAll("#modes .mode-toggle").forEach(btn => {
 function renderGroups() {
   const list = $("group-list");
   list.innerHTML = "";
-  GROUPS.forEach((group, i) => {
+  const items = [
+    ...TOPIC_GROUPS.map((g, k) => [g, -1 - k]).filter(([g]) => hasTopic(g.topic)),
+    ...GROUPS.map((g, i) => [g, i])
+  ];
+  items.forEach(([group, i]) => {
     const best = Number(storageGet(groupKey(i))) || 0;
     const mastered = best >= group.words.length;
 
@@ -1605,9 +1678,10 @@ function renderGroups() {
       btn.style.setProperty("--h", Math.round(45 + 55 * ratio));
     }
 
+    if (group.topic) btn.classList.add("topic-tile");
     const label = document.createElement("span");
     label.className = "group-label";
-    label.textContent = group.label;
+    label.textContent = group.topic ? `${group.icon} ${group.label}` : group.label;
 
     const info = document.createElement("span");
     info.className = "group-info";
@@ -1627,7 +1701,7 @@ function renderGroups() {
 function startTraining(groupIndex) {
   clearTimeout(nextTimer);
   endless = false;
-  const group = GROUPS[groupIndex];
+  const group = groupAt(groupIndex);
   const queue = [...group.words];
   shuffleArray(queue);
 
@@ -1672,7 +1746,7 @@ function startMistakesRound() {
 }
 
 function finishTrainingRound() {
-  const group = GROUPS[training.groupIndex];
+  const group = groupAt(training.groupIndex);
   const wrong = training.roundMistakes;
 
   if (training.round === 1) {
@@ -1687,7 +1761,7 @@ function finishTrainingRound() {
   }
 
   $("train-title").textContent = training.round === 1
-    ? `Група ${group.label}`
+    ? (group.topic ? `${group.icon} ${group.label}` : `Група ${group.label}`)
     : wrong.length === 0 ? "Помилки виправлено 💪" : "Ще трохи!";
 
   if (training.round === 1) {
@@ -1708,7 +1782,7 @@ function finishTrainingRound() {
   fixBtn.textContent = `🔁 Робота над помилками (${uniqueCount})`;
 
   const nextBtn = $("btn-train-next");
-  const hasNext = training.groupIndex + 1 < GROUPS.length;
+  const hasNext = training.groupIndex >= 0 && training.groupIndex + 1 < GROUPS.length;
   nextBtn.hidden = wrong.length > 0 || !hasNext;
   if (hasNext) nextBtn.textContent = `Наступна група: ${GROUPS[training.groupIndex + 1].label} →`;
 
@@ -2308,7 +2382,7 @@ async function submitScore(name, game, value) {
 function prepareSubmitForm() {
   const form = $("submit-form");
   // Турнірна таблиця — лише для ігор, які вже не в бета-версії
-  form.hidden = !leaderboardEnabled || score <= 0 || endless || !["naholosy", "leksychna", "klychnyi"].includes(currentGame);
+  form.hidden = !leaderboardEnabled || score <= 0 || endless || marathonTopic || !["naholosy", "leksychna", "klychnyi"].includes(currentGame);
   form.querySelector("button").disabled = false;
   $("player-name").disabled = false;
   $("player-name").value = storageGet("player_name") || "";
@@ -2471,8 +2545,89 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape") $("soon").hidden = true;
 });
 
+// ---------- Доступ до спецтем за посиланням (вебінари) ----------
+// Посилання: у Telegram — t.me/ukrmovych_bot/battle?startapp=w_КОД, на сайті — …/gym/?w=КОД.
+// Доступ видає функція Supabase topic-access лише Telegram-користувачам (до дедлайну посилання).
+function topicJoinCode() {
+  const query = new URLSearchParams(location.search);
+  if (query.get("w")) return query.get("w");
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const tgData = hash.get("tgWebAppData");
+  const tg = window.Telegram && Telegram.WebApp;
+  const start = query.get("tgWebAppStartParam") || hash.get("tgWebAppStartParam")
+    || (tgData ? new URLSearchParams(tgData).get("start_param") : "")
+    || (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || "";
+  return start.startsWith("w_") ? start.slice(2) : "";
+}
+
+function showTopicModal({ emoji, title, text, openLink = "", goTopic = "" }) {
+  $("topic-modal-emoji").textContent = emoji;
+  $("topic-modal-title").textContent = title;
+  $("topic-modal-text").textContent = text;
+  $("btn-topic-open").hidden = !openLink;
+  if (openLink) $("btn-topic-open").href = openLink;
+  $("btn-topic-go").hidden = !goTopic;
+  $("btn-topic-go").onclick = () => {
+    $("topic-modal").hidden = true;
+    currentTopic = goTopic;
+    showModes("naholosy");
+    setOpenPanel("groups");
+  };
+  $("topic-modal").hidden = false;
+}
+
+async function syncTopicAccess() {
+  const code = topicJoinCode().replace(/[^A-Za-z0-9]/g, "");
+  const initData = telegramInitData();
+  if (!initData) {
+    // на сайті доступ за посиланням не видаємо — лише в Telegram (власник має доступ і так)
+    if (code && !isOwner) {
+      showTopicModal({
+        emoji: "✈️", title: "Відкрий у Telegram",
+        text: "Доступ за цим посиланням відкривається в Telegram-мініапці @ukrmovych_bot.",
+        openLink: `${LB.telegramAppLink}?startapp=w_${code}`
+      });
+    }
+    return;
+  }
+  if (!leaderboardEnabled) return;
+  try {
+    const res = await fetch(`${LB.url}/functions/v1/topic-access`, {
+      method: "POST",
+      headers: { apikey: LB.anonKey, Authorization: `Bearer ${LB.anonKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(code ? { initData, join: code } : { initData })
+    });
+    const data = await res.json();
+    if (!Array.isArray(data.topics)) return;
+    topicAccess = new Set(data.topics);
+    storageSet("topic_access", JSON.stringify(data.topics));
+    if (!screens.modes.hidden) showModes();
+    if (data.joined && SPECIAL[data.joined.topic]) {
+      const t = SPECIAL[data.joined.topic];
+      showTopicModal({
+        emoji: "🎉", title: `${t.icon} ${t.name}`,
+        text: "Доступ відкрито назавжди! Шукай у «Наголоси» → «Тренування». А ще ці слова можна вибрати для марафону, онлайн-гри з друзями й гри для класу.",
+        goTopic: data.joined.topic
+      });
+    } else if (data.error) {
+      showTopicModal({
+        emoji: "⏰",
+        title: data.error === "expired" ? "Час дії посилання минув" : "Посилання не працює",
+        text: data.error === "expired"
+          ? "Доступ за цим посиланням можна було отримати лише до певного часу. Напиши Укрмовичу, якщо це помилка: @ukr_movych"
+          : "Можливо, посилання скасовано або в ньому помилка. Напиши Укрмовичу: @ukr_movych"
+      });
+    }
+  } catch (e) {
+    // немає зв'язку — лишаємо збережений доступ
+  }
+}
+
+$("btn-topic-close").addEventListener("click", () => { $("topic-modal").hidden = true; });
+$("btn-topic-open").addEventListener("click", openProLink);
+
 // PRO: перевіряємо після load, коли довантажився скрипт Telegram
-window.addEventListener("load", () => { checkPro(); });
+window.addEventListener("load", () => { checkPro(); syncTopicAccess(); });
 
 $("btn-pro-close").addEventListener("click", () => { $("pro").hidden = true; });
 $("pro").addEventListener("click", e => {

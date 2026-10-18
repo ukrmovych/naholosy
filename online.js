@@ -64,6 +64,17 @@ function onlineCard(idx, rand) {
   return { text: c.text, answer: c.answer, meaning: c.meaning || "", alts: c.alts || [], options: c.options };
 }
 
+// Номери питань для гри: усі або лише слова спецтеми (online.topic — тільки «Наголоси»)
+function poolIndices() {
+  const pool = G().pool();
+  const words = online && online.topic && gameKey() === "naholosy" ? TOPIC_WORDS[online.topic] : null;
+  if (words) {
+    const chosen = new Set(words);
+    return pool.map((q, i) => (chosen.has(q) ? i : -1)).filter(i => i >= 0);
+  }
+  return pool.map((_, i) => i);
+}
+
 function modeTitle(mode) {
   if (mode === "sprint") return G().sprint === 120 ? "⏱ Спринт 2 хвилини" : "⏱ Спринт 60 секунд";
   return ONLINE_MODES[mode].title;
@@ -114,8 +125,8 @@ const HOST_KEY = "online_host";
 
 function saveHostState() {
   if (!online || !online.isHost || online.mode !== "class") return;
-  const { mode, game, code, me, players, phase, classRounds, seed, startedAt, cls } = online;
-  storageSet(HOST_KEY, JSON.stringify({ mode, game, code, me, players, phase, classRounds, seed, startedAt, cls, at: Date.now() }));
+  const { mode, game, topic, code, me, players, phase, classRounds, seed, startedAt, cls } = online;
+  storageSet(HOST_KEY, JSON.stringify({ mode, game, topic, code, me, players, phase, classRounds, seed, startedAt, cls, at: Date.now() }));
 }
 
 function getHostState() {
@@ -512,7 +523,9 @@ async function createRoom(mode, name) {
   const code = makeRoomCode();
   const me = { id: ONLINE_ID, name };
   const game = gameKey();
-  online = { mode, game, code, me, isHost: true, phase: "lobby", players: [], rt: null };
+  // Спецтема (вебінар): лише в «Наголосах» і лише якщо в ведучого є доступ
+  const topic = game === "naholosy" && hasTopic(currentTopic) ? currentTopic : "";
+  online = { mode, game, topic, code, me, isHost: true, phase: "lobby", players: [], rt: null };
   if (ONLINE_MODES[mode].hostPlays) online.players.push(me);
   online.rt = await connectRoom(code, handleMessage);
   logOnline("create");
@@ -549,7 +562,7 @@ function leaveOnline(silent = false) {
 }
 
 function broadcastState() {
-  emit("state", { mode: online.mode, game: online.game, phase: online.phase, players: online.players, host: online.me.id });
+  emit("state", { mode: online.mode, game: online.game, topic: online.topic || "", phase: online.phase, players: online.players, host: online.me.id });
 }
 
 function onlinePlayerName(id) {
@@ -618,6 +631,7 @@ function handleMessage(event, data) {
       if (!host) {
         online.mode = data.mode;
         online.game = data.game || "naholosy";
+        online.topic = data.topic || "";
         online.hostId = data.host;
         const inRoom = data.players.some(p => p.id === online.me.id);
         if (online.joinWait && inRoom) {
@@ -682,7 +696,8 @@ function renderLobby() {
   const players = el("ul", { class: "online-players" },
     online.players.map(p => el("li", { class: p.id === online.me.id ? "me" : "" }, p.name)));
 
-  const children = [el("p", { class: "online-game" }, G().label)];
+  const topicName = online.topic && SPECIAL[online.topic] ? ` · ${SPECIAL[online.topic].icon} ${SPECIAL[online.topic].name}` : "";
+  const children = [el("p", { class: "online-game" }, G().label + topicName)];
   if (online.isHost) {
     const link = inviteLink(online.code);
     const share = el("button", { class: "btn-secondary", on: { click: () => shareInvite(link) } }, "📨 Надіслати");
@@ -835,8 +850,7 @@ function frazeoOnlineReveal(view, card, picked) {
 }
 
 function startDuelHost() {
-  const pool = G().pool();
-  online.duel = { order: seededShuffle(pool.map((_, i) => i), seededRandom(online.seed)), round: 0, scores: {}, answers: {} };
+  online.duel = { order: seededShuffle(poolIndices(), seededRandom(online.seed)), round: 0, scores: {}, answers: {} };
   online.players.forEach(p => { online.duel.scores[p.id] = 0; });
   nextDuelQuestion();
 }
@@ -955,9 +969,8 @@ function duelMessage(event, data) {
 function sprintMessage(event, data) {
   if (event === "sprint-start") {
     online.seed = data.seed;
-    const pool = G().pool();
     online.sprint = {
-      order: seededShuffle(pool.map((_, i) => i), seededRandom(data.seed)),
+      order: seededShuffle(poolIndices(), seededRandom(data.seed)),
       pos: 0, correct: 0, wrong: 0, timeLeft: window.__SPRINT_SECONDS || sprintSeconds(), finished: false,
       progress: {}
     };
@@ -1221,9 +1234,8 @@ function classLimit() {
 }
 
 function startClassHost() {
-  const pool = G().pool();
   online.cls = {
-    order: seededShuffle(pool.map((_, i) => i), seededRandom(online.seed)),
+    order: seededShuffle(poolIndices(), seededRandom(online.seed)),
     round: 0, total: online.classRounds || 10, scores: {}, answers: {}, correct: {}, answeredCount: {}
   };
   online.players.forEach(p => { online.cls.scores[p.id] = 0; });

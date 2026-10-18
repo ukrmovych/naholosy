@@ -3269,3 +3269,37 @@ body.level-flash::after {
   font-size: 22px;
   font-weight: 700;
 }
+
+/* ---------- Спецтеми за посиланням (вебінари) ---------- */
+.topic-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.topic-hint {
+  width: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.topic-chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: var(--surface-2);
+  font-size: 16px;
+}
+
+.topic-chip.on {
+  border-color: var(--orange);
+  background: var(--orange);
+  color: #fff;
+}
+
+.group-tile.topic-tile {
+  grid-column: 1 / -1;
+  border-color: var(--orange);
+}

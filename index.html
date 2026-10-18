@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261017f">
+<link rel="stylesheet" href="style.css?v=20261018a">
 </head>
 <body>
 
@@ -200,6 +200,9 @@
     </header>
 
     <p class="modes-lead">Обери режим</p>
+
+    <!-- Спецтеми (доступ за посиланням з вебінару): які слова в марафоні й онлайн-іграх -->
+    <div id="topic-picker" class="topic-picker" hidden></div>
 
     <section class="mode-panel">
       <div class="mode-head">
@@ -428,6 +431,18 @@
     </div>
   </div>
 
+  <!-- Доступ до спецтеми за посиланням з вебінару -->
+  <div id="topic-modal" class="modal" hidden>
+    <div class="modal-card">
+      <div id="topic-modal-emoji" class="over-emoji" aria-hidden="true">🎉</div>
+      <h2 id="topic-modal-title"></h2>
+      <p id="topic-modal-text"></p>
+      <a id="btn-topic-open" class="btn-primary pro-buy" href="#" hidden>Відкрити в Telegram</a>
+      <button id="btn-topic-go" class="btn-primary" hidden>До тренування →</button>
+      <button id="btn-topic-close" class="btn-secondary">Закрити</button>
+    </div>
+  </div>
+
   <!-- «‹ Попереднє»: копія картки попереднього завдання (лише для перегляду) -->
   <div id="prev-modal" class="modal" hidden>
     <div class="modal-card prev-modal-card">
@@ -468,12 +483,13 @@
     </a>
   </footer>
 
-  <script src="leaderboard-config.js?v=20261017f"></script>
-  <script src="klychnyi-data.js?v=20261017f"></script>
-  <script src="frazeo-data.js?v=20261017f"></script>
-  <script src="script.js?v=20261017f"></script>
-  <script src="online.js?v=20261017f"></script>
-  <script src="nmt-test.js?v=20261017f"></script>
+  <script src="leaderboard-config.js?v=20261018a"></script>
+  <script src="klychnyi-data.js?v=20261018a"></script>
+  <script src="frazeo-data.js?v=20261018a"></script>
+  <script src="topics.js?v=20261018a"></script>
+  <script src="script.js?v=20261018a"></script>
+  <script src="online.js?v=20261018a"></script>
+  <script src="nmt-test.js?v=20261018a"></script>
 
 </body>
 </html>
