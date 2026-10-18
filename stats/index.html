@@ -84,6 +84,16 @@ tr:last-child td { border-bottom: 0; }
 .fb-meta b { color: var(--text); font-weight: 600; }
 .fb-meta .tag { background: var(--surface-2); border-radius: 999px; padding: 2px 8px; }
 .fb-meta a.tag { color: inherit; }
+.access-new { display: grid; gap: 8px; margin-bottom: 14px; }
+.access-new label, .access-actions label { display: grid; gap: 4px; font-size: 14px; }
+.access-body { padding: 0 14px 12px; min-width: 0; }
+#access-list > .cl-game { min-width: 0; }
+.access-body .panel { overflow-x: auto; }
+.access-actions input { max-width: 100%; }
+.access-url code { word-break: break-all; font-size: 13px; }
+.access-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 8px 0 12px; }
+.cl-game summary .tag { font-size: 13px; background: var(--surface-2); border-radius: 999px; padding: 2px 8px; }
+.cl-game tr.muted td { opacity: 0.5; }
 .fb-meta .tag.ok { color: var(--green); }
 .fb-meta .tag.no { color: var(--red); }
 .fb-meta button { margin-left: auto; padding: 4px 12px; font-size: 13px; }
@@ -113,6 +123,7 @@ tr:last-child td { border-bottom: 0; }
       <button type="button" data-view="feedback">💬 Відгуки <span id="fb-count"></span></button>
       <button type="button" data-view="classes">🏫 Класи <span id="cl-count"></span></button>
       <button type="button" data-view="pro">🦆 PRO <span id="pro-count"></span></button>
+      <button type="button" data-view="access">🔑 Доступи</button>
     </div>
     <div id="stats-view">
     <div class="periods" id="periods">
@@ -146,13 +157,26 @@ tr:last-child td { border-bottom: 0; }
       <div id="cl-list" class="fb-list"></div>
     </div>
     <div id="pro-view" hidden>
-      <p class="muted small">Звернення «Підписка є, а доступу немає». Перевір підписку в Base і схвали заявку в каналі «НМТ-качки» (Учасники → Заявки на вступ). Потім познач звернення вирішеним.</p>
+      <p class="muted small">Звернення «Підписка є, а доступу немає». Перевір підписку в Base, зв'яжися з учнем (йому обіцяно відповідь протягом 24 годин) і познач звернення вирішеним.</p>
       <div id="pro-list" class="fb-list"></div>
+    </div>
+    <div id="access-view" hidden>
+      <p class="muted small">Посилання на спецтеми (вебінари). Хто відкрив посилання в Telegram до дедлайну — має доступ до теми назавжди (поки ти його не забереш). У цьому браузері всі теми відкриті для тебе й так.</p>
+      <form id="access-new" class="panel access-new">
+        <b>Нове посилання</b>
+        <label>Тема <select id="access-topic"></select></label>
+        <label>Назва (для себе) <input id="access-title" type="text" maxlength="120" placeholder="Вебінар …"></label>
+        <label>Діє до <input id="access-expires" type="datetime-local" required></label>
+        <button type="submit">Створити посилання</button>
+        <span id="access-new-status" class="muted small"></span>
+      </form>
+      <div id="access-list" class="fb-list"></div>
     </div>
   </main>
 
 </div>
 <script src="../leaderboard-config.js"></script>
+<script src="../topics.js"></script>
 <script>
 const CFG = window.LEADERBOARD_CONFIG || {};
 const GAME_NAMES = {
@@ -414,6 +438,108 @@ function renderProIssues() {
   }));
 }
 
+// ---------- Доступи за посиланнями (спецтеми, вебінари) ----------
+const TOPICS = window.SPECIAL_TOPICS || {};
+const BOT_APP = (CFG.telegramAppLink || "https://t.me/ukrmovych_bot/battle");
+let accessLinks = null;
+const kyivTime = iso => new Date(iso).toLocaleString("uk-UA", { timeZone: "Europe/Kyiv", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+// значення для <input type="datetime-local"> (час цього браузера)
+const localInput = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+async function loadAccess() {
+  try {
+    accessLinks = await proRpc("get_access_links", {});
+    renderAccess();
+  } catch (err) {
+    $("access-list").innerHTML = err.message === "nosql"
+      ? '<p class="note">У Supabase ще немає таблиць доступів (topic-access.sql).</p>'
+      : '<p class="note">Не вдалося завантажити посилання. Перевір інтернет.</p>';
+  }
+}
+
+function renderAccess() {
+  if (!accessLinks) return;
+  if (!accessLinks.length) {
+    $("access-list").innerHTML = '<p class="note">Посилань ще немає.</p>';
+    return;
+  }
+  const now = Date.now();
+  $("access-list").innerHTML = accessLinks.map((l, i) => {
+    const t = TOPICS[l.topic];
+    const open = !l.revoked && Date.parse(l.expires_at) > now;
+    const active = l.grants.filter(g => !g.revoked).length;
+    const url = `${BOT_APP}?startapp=w_${l.code}`;
+    const state = l.revoked ? '<span class="tag no">скасоване — доступу ні в кого немає</span>'
+      : open ? `<span class="tag ok">приймає до ${esc(kyivTime(l.expires_at))}</span>`
+        : `<span class="tag">закрите з ${esc(kyivTime(l.expires_at))} — доступ у тих, хто встиг</span>`;
+    return `<details class="cl-game" ${i === 0 ? "open" : ""}>
+      <summary>
+        <b>${esc(l.title || "Без назви")}</b>
+        <span>${t ? esc(t.icon + " " + t.name) : esc(l.topic)}</span>
+        <span class="muted small">з доступом: ${active}${l.grants.length > active ? ` (ще ${l.grants.length - active} забрано)` : ""}</span>
+        ${state}
+      </summary>
+      <div class="access-body">
+        <p class="access-url"><code>${esc(url)}</code> <button type="button" data-copy-url="${esc(url)}">Скопіювати</button></p>
+        <div class="access-actions">
+          <label>Приймати до <input type="datetime-local" data-exp="${l.code}" value="${localInput(new Date(l.expires_at))}"></label>
+          <button type="button" data-save-exp="${l.code}">Зберегти час</button>
+          ${open ? `<button type="button" data-close="${l.code}">Закрити зараз</button>` : ""}
+          <button type="button" data-revoke="${l.code}" data-to="${!l.revoked}">${l.revoked ? "Повернути доступ усім" : "Скасувати доступ усім"}</button>
+        </div>
+        ${l.grants.length ? `<div class="panel"><table>
+          <tr><th>#</th><th>Ім'я</th><th>Telegram</th><th>Коли</th><th></th></tr>
+          ${l.grants.map((g, k) => `<tr class="${g.revoked ? "muted" : ""}"><td>${k + 1}</td><td>${esc(g.name || "—")}</td>
+            <td>${g.username ? `<a href="https://t.me/${encodeURIComponent(g.username)}" target="_blank" rel="noopener">@${esc(g.username)}</a>` : `id ${g.tg_user_id}`}</td>
+            <td>${esc(kyivTime(g.created_at))}</td>
+            <td><button type="button" data-grant="${g.id}" data-to="${!g.revoked}">${g.revoked ? "Повернути" : "Забрати"}</button></td></tr>`).join("")}
+        </table></div>` : '<p class="note">Ще ніхто не перейшов за посиланням.</p>'}
+      </div>
+    </details>`;
+  }).join("");
+
+  const act = async (b, fn) => {
+    b.disabled = true;
+    try { await fn(); await loadAccess(); } catch (e) { b.disabled = false; b.textContent = "Помилка, ще раз"; }
+  };
+  const list = $("access-list");
+  list.querySelectorAll("[data-copy-url]").forEach(b => b.addEventListener("click", () => {
+    navigator.clipboard.writeText(b.dataset.copyUrl).then(() => { b.textContent = "Скопійовано ✓"; });
+  }));
+  list.querySelectorAll("[data-save-exp]").forEach(b => b.addEventListener("click", () => {
+    const v = list.querySelector(`[data-exp="${b.dataset.saveExp}"]`).value;
+    if (!v) return;
+    act(b, () => proRpc("update_access_link", { p_code: b.dataset.saveExp, p_expires: new Date(v).toISOString(), p_revoked: null }));
+  }));
+  list.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () =>
+    act(b, () => proRpc("update_access_link", { p_code: b.dataset.close, p_expires: new Date().toISOString(), p_revoked: null }))));
+  list.querySelectorAll("[data-revoke]").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.to === "true" && !confirm("Забрати доступ до теми в усіх, хто прийшов за цим посиланням?")) return;
+    act(b, () => proRpc("update_access_link", { p_code: b.dataset.revoke, p_expires: null, p_revoked: b.dataset.to === "true" }));
+  }));
+  list.querySelectorAll("[data-grant]").forEach(b => b.addEventListener("click", () =>
+    act(b, () => proRpc("set_access_grant", { p_id: Number(b.dataset.grant), p_revoked: b.dataset.to === "true" }))));
+}
+
+$("access-topic").innerHTML = Object.entries(TOPICS).map(([id, t]) => `<option value="${id}">${t.icon} ${t.name}</option>`).join("");
+$("access-expires").value = localInput(new Date(Date.now() + 3 * 3600 * 1000));
+$("access-new").addEventListener("submit", async e => {
+  e.preventDefault();
+  const status = $("access-new-status");
+  status.textContent = "Створюю…";
+  try {
+    await proRpc("create_access_link", {
+      p_topic: $("access-topic").value, p_title: $("access-title").value.trim(),
+      p_expires: new Date($("access-expires").value).toISOString()
+    });
+    status.textContent = "Готово ✓";
+    $("access-title").value = "";
+    await loadAccess();
+  } catch (err) {
+    status.textContent = "Не вдалося створити";
+  }
+});
+
 function setView(v) {
   view = v;
   store.set("stats_view", v);
@@ -422,6 +548,7 @@ function setView(v) {
   $("feedback-view").hidden = v !== "feedback";
   $("classes-view").hidden = v !== "classes";
   $("pro-view").hidden = v !== "pro";
+  $("access-view").hidden = v !== "access";
 }
 
 function showLogin(message = "") {
@@ -438,6 +565,7 @@ async function load() {
   loadFeedback();
   loadClasses();
   loadProIssues();
+  loadAccess();
   document.querySelectorAll("#periods [data-preset]").forEach(b => b.classList.toggle("on", b.dataset.preset === preset));
   $("from").value = range.from;
   $("to").value = range.to;
