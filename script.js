@@ -440,7 +440,10 @@ function renderMenu() {
 // (код — supabase/functions/pro-check/index.ts). Працює лише в Telegram-мініапці.
 // Поки що замочки PRO видно тільки в беті.
 // Для перевірки в беті: …/?b&pro — PRO-ігри відкриті без підписки (лише до запуску PRO для всіх).
-const PRO_ENABLED = BETA && !new URLSearchParams(location.search).has("pro");
+// ТИМЧАСОВО (за проханням власника): замочки PRO вимкнено й у беті — усі бета-ігри відкриті з будь-якого
+// пристрою. Перед запуском PRO в основній версії повернути: PRO_LOCKS = true (див. CLAUDE.md → «Тимчасове»).
+const PRO_LOCKS = false;
+const PRO_ENABLED = PRO_LOCKS && BETA && !new URLSearchParams(location.search).has("pro");
 let isPro = storageGet("pro_status") === "1";
 
 function telegramInitData() {
@@ -1748,7 +1751,8 @@ function showModes(game = modesGame) {
       ? `${FRAZEO_TOTAL} речень, як у НМТ · 3–5 варіантів · 3 життя`
       : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
   $("marathon-best").dataset.best = game;
-  $("btn-marathon-endless").hidden = !(isNaholosy && PRO_ENABLED && isPro);
+  // PRO-марафон без життів: поки замочки вимкнено — у беті для всіх
+  $("btn-marathon-endless").hidden = !(isNaholosy && (PRO_ENABLED ? isPro : BETA));
   $("groups-panel").hidden = !isNaholosy;
   // Онлайн-режими: у «Наголосах» і «Фразеологізмах»
   $("online-panel").hidden = false;
