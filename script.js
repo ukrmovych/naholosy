@@ -422,9 +422,7 @@ function renderMenu() {
         showPro(game);
       } else if (game.id === "nmttest") {
         startNmtTest(); // nmt-test.js
-      } else if (game.id === "slovospoluch") {
-        showSlovospoluchSetup(); // slovospoluch.js: вибір груп
-      } else if (game.id === "naholosy" || game.id === "klychnyi" || game.id === "frazeolohizmy") {
+      } else if (["naholosy", "klychnyi", "frazeolohizmy", "slovospoluch"].includes(game.id)) {
         showModes(game.id);
       } else {
         startGame(game.id);
@@ -1696,6 +1694,10 @@ function renderTopicPicker() {
     renderFrazeoPartPicker(box);
     return;
   }
+  if (modesGame === "slovospoluch") {
+    renderSlovoGroupPicker(box); // slovospoluch.js: галочки груп
+    return;
+  }
   const topics = modesGame === "naholosy" ? availableTopics() : [];
   if (!topics.includes(currentTopic)) currentTopic = "";
   box.hidden = !topics.length;
@@ -1758,7 +1760,9 @@ function showModes(game = modesGame) {
 
   const isNaholosy = game === "naholosy";
   const isFrazeo = game === "frazeolohizmy";
-  $("modes-title").textContent = isNaholosy ? "Наголоси" : isFrazeo ? "Фразеологізми" : "Кличний відмінок";
+  const isSlovo = game === "slovospoluch";
+  $("modes-title").textContent = isNaholosy ? "Наголоси" : isFrazeo ? "Фразеологізми"
+    : isSlovo ? "Словосполучення" : "Кличний відмінок";
   $("marathon-desc").textContent = isNaholosy
     ? `Усі ${TOTAL_WORDS} слова · 3 життя · турнірна таблиця`
     : isFrazeo
@@ -1766,7 +1770,7 @@ function showModes(game = modesGame) {
       : `Усі ${KLYCHNYI_TOTAL} ${plural(KLYCHNYI_TOTAL, "звертання", "звертання", "звертань")} · 3 життя · турнірна таблиця`;
   $("marathon-best").dataset.best = game;
   // PRO-марафон без життів: поки замочки вимкнено — у беті для всіх
-  $("btn-marathon-endless").hidden = !(isNaholosy && (PRO_ENABLED ? isPro : BETA));
+  $("btn-marathon-endless").hidden = !((isNaholosy || isSlovo) && (PRO_ENABLED ? isPro : BETA));
   $("groups-panel").hidden = !isNaholosy;
   // Онлайн-режими: у «Наголосах» і «Фразеологізмах»
   $("online-panel").hidden = false;
@@ -1774,6 +1778,7 @@ function showModes(game = modesGame) {
   $("online-desc").textContent = "Кожен на своєму телефоні: дуель, спринт, гра для класу";
   $("online-duel-desc").textContent = isFrazeo
     ? "Удвох. Однакове речення — хто правильно й швидше добере фразеологізм, тому бал"
+    : isSlovo ? "Удвох. Однакове словосполучення — хто правильно й швидше, тому бал"
     : isNaholosy ? "Удвох. Однакове слово — хто правильно й швидше, тому бал"
       : "Удвох. Однакове звертання — хто правильно й швидше, тому бал";
   $("online-sprint-title").textContent = isFrazeo ? "⏱ Спринт 2 хвилини" : "⏱ Спринт 60 секунд";
@@ -1781,7 +1786,7 @@ function showModes(game = modesGame) {
     ? "2–10 гравців. Хто добере більше фразеологізмів за 2 хвилини"
     : "2–10 гравців. Хто дасть більше правильних відповідей за хвилину";
   $("duel-num").textContent = isNaholosy ? "3" : "2";
-  $("duel-desc").textContent = `Один екран, 2–4 гравці: хто перший ${isNaholosy ? "натисне правильний наголос" : isFrazeo ? "добере фразеологізм" : "натисне правильну форму"}`;
+  $("duel-desc").textContent = `Один екран, 2–4 гравці: хто перший ${isNaholosy ? "натисне правильний наголос" : isFrazeo ? "добере фразеологізм" : isSlovo ? "правильно оцінить словосполучення" : "натисне правильну форму"}`;
 
   if (isNaholosy) renderGroups();
   renderTopicPicker();
@@ -2180,6 +2185,19 @@ function makeDuelRound(question) {
       render: (btn, word) => { btn.textContent = word; }
     };
   }
+  if (duel.game === "slovospoluch") {
+    // Словосполучення: «Правильно» / «Неправильно» в незмінному порядку
+    const card = SLOVO_CARDS[question];
+    return {
+      lead: card.text,
+      plainLead: true,
+      fixed: true,
+      card,
+      words: [...SLOVO_ANSWERS],
+      correct: [card.ok ? SLOVO_ANSWERS[0] : SLOVO_ANSWERS[1]],
+      render: (btn, word) => { btn.textContent = word; }
+    };
+  }
   if (duel.game === "klychnyi") {
     return {
       lead: klychnyiPrefix(question[0]),
@@ -2203,6 +2221,7 @@ function nextDuelRound() {
     // У дуелі «Кличного» — лише перші 3 рівні: найуживаніші слова
     duel.queue = duel.game === "klychnyi" ? klychnyiData.slice(0, KLYCHNYI_ONLINE_POOL)
       : duel.game === "frazeolohizmy" ? [...frazeoRows()]
+      : duel.game === "slovospoluch" ? slovoCardIndices()
       : [...naholosyData];
     shuffleArray(duel.queue);
   }
@@ -2223,7 +2242,9 @@ function nextDuelRound() {
 
     const leadEl = pane.querySelector(".duel-lead");
     leadEl.hidden = !lead;
-    if (lead) {
+    if (lead && duel.round.plainLead) {
+      leadEl.textContent = lead;
+    } else if (lead) {
       leadEl.innerHTML = "";
       const gap = document.createElement("span");
       gap.className = "address-gap";
@@ -2238,7 +2259,7 @@ function nextDuelRound() {
     }
     // Кожна частина екрана — зі своїм порядком варіантів, щоб не підглядали
     const paneWords = [...words];
-    shuffleArray(paneWords);
+    if (!duel.round.fixed) shuffleArray(paneWords);
     paneWords.forEach((word, k) => {
       const btn = document.createElement("button");
       btn.className = "answer duel-answer";
@@ -2265,7 +2286,7 @@ function nextDuelRound() {
 // Фразеологізми: довге речення + 3 вирази можуть не влізти в чверть телефона —
 // тоді пропорційно зменшуємо вміст частини, доки все не вміститься
 function fitDuelPanes() {
-  if (!duel || duel.game !== "frazeolohizmy") return;
+  if (!duel || !["frazeolohizmy", "slovospoluch"].includes(duel.game)) return;
   document.querySelectorAll(".duel-pane").forEach(pane => {
     const parts = [...pane.children].filter(c => !c.hidden);
     parts.forEach(c => { c.style.zoom = ""; });
@@ -2321,6 +2342,10 @@ function duelCorrectWords() {
 
 function revealDuelAnswer(blink) {
   const correct = duelCorrectWords();
+  if (duel.round.card) {
+    // Словосполучення: під ним — правильний варіант
+    document.querySelectorAll(".duel-lead").forEach(lead => lead.replaceChildren(slovoPairNode(duel.round.card)));
+  }
   document.querySelectorAll(".duel-lead .address-gap").forEach(gap => {
     gap.textContent = duel.round.fill || correct[0];
     gap.classList.add("filled-fix");
@@ -2643,7 +2668,7 @@ $("prev-modal").addEventListener("click", e => {
 });
 $("btn-duel").addEventListener("click", startDuel);
 $("btn-marathon").addEventListener("click", () => startGame(modesGame));
-$("btn-marathon-endless").addEventListener("click", () => startGame("naholosy", { endless: true }));
+$("btn-marathon-endless").addEventListener("click", () => startGame(modesGame, { endless: true }));
 $("btn-fix-mistakes").addEventListener("click", startMistakesRound);
 $("btn-train-next").addEventListener("click", () => startTraining(training.groupIndex + 1));
 $("btn-train-again").addEventListener("click", () => startTraining(training.groupIndex));

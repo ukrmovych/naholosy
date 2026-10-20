@@ -3372,7 +3372,7 @@ body.level-flash::after {
 .slovo-groups {
   display: grid;
   gap: 12px;
-  margin-bottom: 12px;
+  width: 100%;
 }
 
 .slovo-group {
@@ -3380,10 +3380,11 @@ body.level-flash::after {
   font-size: 17px;
 }
 
-.slovo-desc {
-  margin: 0 0 12px;
+.slovo-warn {
+  color: var(--red);
 }
 
-.slovo-desc.slovo-warn {
-  color: var(--red);
+.duel-lead .slovo-pair {
+  margin: 0;
+  font-size: inherit;
 }

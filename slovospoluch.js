@@ -1,9 +1,9 @@
 // ================== Лексична помилка (словосполучення) — бета, PRO ==================
 // Дані — slovospoluch-data.js. Учень бачить словосполучення й обирає «Правильно» / «Неправильно».
-// З кожного рядка — дві картки (помилкова й правильна). Перед грою — вибір груп (галочки),
-// вибір пам'ятається в localStorage (slovospoluch_groups). Марафон: 3 життя, рекорд best_slovospoluch.
-// Гачки в script.js: GAMES, DELAYS, renderMenu, startGame, nextQuestion, updateUI, gameOver,
-// renderMistakes, клавіші 1/2. Підключається після script.js.
+// З кожного рядка — дві картки (помилкова й правильна). На екрані режимів — вибір груп (галочки),
+// вибір пам'ятається в localStorage (slovospoluch_groups) і діє в усіх режимах.
+// Марафон: 3 життя, рекорд best_slovospoluch. Дуель на одному екрані — script.js (makeDuelRound),
+// онлайн-режими — online.js (ONLINE_GAMES.slovospoluch). Підключається після script.js.
 
 const SLOVO_GROUPS_KEY = "slovospoluch_groups";
 
@@ -71,18 +71,7 @@ function renderSlovospoluch() {
           else b.classList.add("dim");
         });
         // Правильний варіант і пояснення — щоб запам'ятати, а не лише вгадати
-        const pair = document.createElement("p");
-        pair.className = "slovo-pair";
-        if (q.ok) {
-          pair.textContent = `✓ ${q.right} — правильно`;
-        } else {
-          const was = document.createElement("s");
-          was.textContent = q.wrong;
-          const right = document.createElement("b");
-          right.textContent = q.right;
-          pair.append("✗ ", was, " → ✓ ", right);
-        }
-        sentenceEl.appendChild(pair);
+        sentenceEl.appendChild(slovoPairNode(q));
         const note = document.createElement("p");
         note.className = "frazeo-meaning";
         note.textContent = q.rule;
@@ -112,37 +101,21 @@ function slovoMistakeNodes(m) {
   return [was, arrow, right];
 }
 
-// ---------- Екран перед грою: вибір груп ----------
-const slovoSetup = document.createElement("main");
-slovoSetup.id = "slovospoluch-setup";
-slovoSetup.className = "screen";
-slovoSetup.hidden = true;
-slovoSetup.innerHTML = `
-  <header class="top-bar">
-    <button class="icon-btn" type="button" data-slovo="back" aria-label="В меню">‹ Меню</button>
-    <h2 class="screen-title">Словосполучення</h2>
-  </header>
-  <p class="modes-lead">Обери групи для гри</p>
-  <section class="mode-panel">
-    <div class="slovo-groups" data-slovo="groups"></div>
-    <p class="mode-desc slovo-desc" data-slovo="desc"></p>
-    <button class="btn-primary mode-start" type="button" data-slovo="start">
-      Почати марафон
-      <span class="mode-best" data-best="slovospoluch"></span>
-    </button>
-    <button class="btn-secondary mode-start endless-start" type="button" data-slovo="endless" hidden>
-      ♾ Без обмеження життів
-      <span class="mode-best">PRO · рекорд не зараховується</span>
-    </button>
-  </section>`;
-$("modes").after(slovoSetup);
-screens.slovospoluch = slovoSetup;
-
-const slovoEl = name => slovoSetup.querySelector(`[data-slovo="${name}"]`);
-
-function renderSlovoSetup() {
-  const box = slovoEl("groups");
+// ---------- Вибір груп на екрані режимів (для всіх режимів) ----------
+// Галочки малюються в #topic-picker (як вибір частини у «Фразеологізмах»).
+// Зняти останню галочку не можна — хоча б одна група завжди відмічена.
+function renderSlovoGroupPicker(box) {
+  box.hidden = false;
   box.innerHTML = "";
+  const hint = document.createElement("p");
+  hint.className = "topic-hint";
+  hint.textContent = "Які групи тренувати (для всіх режимів):";
+  const list = document.createElement("div");
+  list.className = "slovo-groups";
+  const warn = document.createElement("p");
+  warn.className = "topic-hint slovo-warn";
+  warn.hidden = true;
+  warn.textContent = "Хоча б одна група має бути відмічена";
   slovospoluchGroups.forEach(g => {
     const label = document.createElement("label");
     label.className = "feedback-check slovo-group";
@@ -150,42 +123,65 @@ function renderSlovoSetup() {
     input.type = "checkbox";
     input.checked = slovoGroups.includes(g.id);
     input.addEventListener("change", () => {
-      slovoGroups = slovospoluchGroups.map(o => o.id)
+      const next = slovospoluchGroups.map(o => o.id)
         .filter(id => (id === g.id ? input.checked : slovoGroups.includes(id)));
-      if (slovoGroups.length) saveSlovoGroups();
-      updateSlovoSetup();
+      if (!next.length) {
+        input.checked = true;
+        warn.hidden = false;
+        return;
+      }
+      slovoGroups = next;
+      saveSlovoGroups();
+      renderSlovoGroupPicker(box);
     });
     const text = document.createElement("span");
-    text.textContent = `${g.name} · ${g.rows.length * 2} ${plural(g.rows.length * 2, "картка", "картки", "карток")}`;
+    const n = g.rows.length * 2;
+    text.textContent = `${g.name} · ${n} ${plural(n, "картка", "картки", "карток")}`;
     label.append(input, text);
-    box.appendChild(label);
+    list.appendChild(label);
   });
-  updateSlovoSetup();
-}
-
-function updateSlovoSetup() {
+  box.append(hint, list, warn);
   const n = slovoTotal();
-  const none = slovoGroups.length === 0;
-  const desc = slovoEl("desc");
-  desc.classList.toggle("slovo-warn", none);
-  desc.textContent = none
-    ? "Відміть хоча б одну групу"
-    : `${n} ${plural(n, "словосполучення", "словосполучення", "словосполучень")} · 3 життя`;
-  slovoEl("start").disabled = none;
-  slovoEl("endless").disabled = none;
+  $("marathon-desc").textContent = `${n} ${plural(n, "словосполучення", "словосполучення", "словосполучень")} · 3 життя`;
 }
 
-function showSlovospoluchSetup() {
-  clearTimeout(nextTimer);
-  training = null;
-  questionToken++;
-  // PRO-марафон без життів: поки замочки вимкнено — у беті для всіх (як у «Наголосах»)
-  slovoEl("endless").hidden = !(PRO_ENABLED ? isPro : BETA);
-  renderSlovoSetup();
-  renderBestScores();
-  showScreen("slovospoluch");
+// ---------- Картки для дуелей і онлайн-режимів ----------
+// Усі картки в незмінному порядку (однаковому на всіх пристроях онлайн-гри)
+const SLOVO_CARDS = slovospoluchGroups.flatMap(g => g.rows.flatMap(([wrong, right, rule]) => [
+  { g: g.id, text: wrong, ok: false, wrong, right, rule },
+  { g: g.id, text: right, ok: true, wrong, right, rule }
+]));
+const SLOVO_ANSWERS = ["Правильно", "Неправильно"];
+
+// groups — список id груп; порожній = усі
+function slovoCardIndices(groups = slovoGroups) {
+  return SLOVO_CARDS.map((c, i) => (!groups.length || groups.includes(c.g) ? i : -1)).filter(i => i >= 0);
 }
 
-slovoEl("back").addEventListener("click", showMenu);
-slovoEl("start").addEventListener("click", () => { if (slovoGroups.length) startGame("slovospoluch"); });
-slovoEl("endless").addEventListener("click", () => { if (slovoGroups.length) startGame("slovospoluch", { endless: true }); });
+// Картка для онлайн-режимів (online.js): дві кнопки в незмінному порядку
+function slovoOnlineCard(c) {
+  return { text: c.text, answer: c.ok ? SLOVO_ANSWERS[0] : SLOVO_ANSWERS[1], meaning: c.rule, pair: [c.wrong, c.right], options: [...SLOVO_ANSWERS] };
+}
+
+// Назва вибраних груп для лобі онлайн-гри (topic — id через кому; порожньо = усі)
+function slovoGroupsName(topic) {
+  const ids = topic ? topic.split(",") : [];
+  if (!ids.length || ids.length === slovospoluchGroups.length) return "усі групи";
+  return slovospoluchGroups.filter(g => ids.includes(g.id)).map(g => g.name).join(", ");
+}
+
+// «✗ мішає працювати → ✓ заважає працювати» (або «✓ … — правильно»)
+function slovoPairNode(card) {
+  const pair = document.createElement("p");
+  pair.className = "slovo-pair";
+  if (card.ok) {
+    pair.textContent = `✓ ${card.right} — правильно`;
+  } else {
+    const was = document.createElement("s");
+    was.textContent = card.wrong;
+    const right = document.createElement("b");
+    right.textContent = card.right;
+    pair.append("✗ ", was, " → ✓ ", right);
+  }
+  return pair;
+}
