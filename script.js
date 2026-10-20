@@ -253,7 +253,8 @@ const DELAYS = {
   leksychna: [1000, 3000],
   klychnyi: [600, 2200],
   frazeolohizmy: [3000, 4500], // час прочитати значення фразеологізму (є й кнопка «Далі →»)
-  chyslivnyky: [2200, 4500]     // час прочитати правило (є й кнопка «Далі →»)
+  chyslivnyky: [2200, 4500],    // час прочитати правило (є й кнопка «Далі →»)
+  slovospoluch: [1800, 4500]    // час прочитати пояснення (є й кнопка «Далі →»)
 };
 
 // Бета-режим: ігри в розробці відкриваються лише за посиланням …/?beta, …/?b, …/beta/
@@ -306,6 +307,7 @@ const GAMES = [
   { id: "leksychna", name: "Лексична помилка", icon: "🔎", status: "beta" },
   { id: "klychnyi", name: "Кличний відмінок", icon: "📣", status: BETA ? "beta" : "soon", pro: true },
   { id: "chyslivnyky", name: "Числівники", icon: "🔢", status: BETA ? "beta" : "soon", pro: true },
+  { id: "slovospoluch", name: "Лексична помилка (словосполучення)", icon: "🧩", status: BETA ? "beta" : "soon", pro: true },
   { id: "frazeolohizmy", name: "Фразеологізми", icon: "💬", status: BETA ? "beta" : "soon", pro: true },
   { id: "inshomovni", name: "Іншомовні слова", icon: "🌍", status: "soon", pro: true },
   { id: "nmttest", name: "Рандомний тест НМТ", icon: "🎲", status: BETA ? "beta" : "soon", pro: true }
@@ -420,6 +422,8 @@ function renderMenu() {
         showPro(game);
       } else if (game.id === "nmttest") {
         startNmtTest(); // nmt-test.js
+      } else if (game.id === "slovospoluch") {
+        showSlovospoluchSetup(); // slovospoluch.js: вибір груп
       } else if (game.id === "naholosy" || game.id === "klychnyi" || game.id === "frazeolohizmy") {
         showModes(game.id);
       } else {
@@ -568,8 +572,9 @@ function updateUI() {
   } else if (currentGame === "klychnyi") {
     // у «Кличному» лінія прогресу — у межах рівня (updateKlychnyiLevelUI)
     scoreEl.textContent = score;
-  } else if (currentGame === "frazeolohizmy" || currentGame === "chyslivnyky") {
-    const total = currentGame === "chyslivnyky" ? CHYS_TOTAL : frazeoRows().length;
+  } else if (["frazeolohizmy", "chyslivnyky", "slovospoluch"].includes(currentGame)) {
+    const total = currentGame === "chyslivnyky" ? CHYS_TOTAL
+      : currentGame === "slovospoluch" ? slovoTotal() : frazeoRows().length;
     scoreEl.textContent = score >= total ? `${score} 🏆` : `${score}/${total}`;
     progressEl.hidden = false;
     progressFill.style.width = `${Math.min(score / total, 1) * 100}%`;
@@ -647,16 +652,17 @@ function startGame(gameType, opts = {}) {
     : gameType === "klychnyi" ? klychnyiQueue()
     : gameType === "frazeolohizmy" ? frazeoQueue()
     : gameType === "chyslivnyky" ? chysQueue()
+    : gameType === "slovospoluch" ? slovoQueue()
     : [];
   klychnyiAsked = 0;
   $("level-line").hidden = true;
   setPrevCard(null);
   showScreen("game");
   $("test-note").hidden = gameType === "naholosy";
-  $("test-note").textContent = ["klychnyi", "frazeolohizmy", "chyslivnyky"].includes(gameType)
+  $("test-note").textContent = ["klychnyi", "frazeolohizmy", "chyslivnyky", "slovospoluch"].includes(gameType)
     ? "🧪 Бета-версія тренажера. Помітили неточність — напишіть @ukr_movych."
     : "🧪 Розділ працює в тестовому режимі: деякі речення ще потребують доопрацювання.";
-  hintEl.textContent = ["naholosy", "klychnyi", "frazeolohizmy", "chyslivnyky"].includes(gameType)
+  hintEl.textContent = ["naholosy", "klychnyi", "frazeolohizmy", "chyslivnyky", "slovospoluch"].includes(gameType)
     ? "Підказка: можна відповідати клавішами 1, 2, 3"
     : "";
   nextQuestion();
@@ -806,6 +812,10 @@ function nextQuestion() {
     if (remainingQuestions.length === 0) remainingQuestions = chysQueue();
     currentQuestion = remainingQuestions.shift();
     renderChyslivnyky();
+  } else if (currentGame === "slovospoluch") {
+    if (remainingQuestions.length === 0) remainingQuestions = slovoQueue();
+    currentQuestion = remainingQuestions.shift();
+    renderSlovospoluch(); // slovospoluch.js
   }
 }
 
@@ -1495,6 +1505,7 @@ function gameOver() {
     : currentGame === "klychnyi" ? `${score} · рівень ${klychnyiLevelOf(Math.max(1, klychnyiAsked))}`
     : currentGame === "frazeolohizmy" ? `${score}/${frazeoRows().length}`
     : currentGame === "chyslivnyky" ? `${score}/${CHYS_TOTAL}`
+    : currentGame === "slovospoluch" ? `${score}/${slovoTotal()}`
     : score;
   $("over-best").textContent = endless
     ? "♾ Гра без обмеження життів: рекорд і турнірна таблиця не зараховуються"
@@ -1529,6 +1540,9 @@ function renderMistakes(items = mistakes, list = $("mistakes-list"), section = $
         p.appendChild(document.createTextNode(" "));
       });
       li.appendChild(p);
+    } else if (m.slovo) {
+      // Словосполучення: неправильне -> правильне (slovospoluch.js)
+      li.append(...slovoMistakeNodes(m));
     } else if (m.frazeo) {
       // Фразеологізми: речення з правильним фразеологізмом і що означає обраний
       const right = document.createElement("span");
@@ -2647,7 +2661,7 @@ document.querySelectorAll(".tab").forEach(tab => {
 
 // Клавіші 1–4 для вибору варіанта в «Наголосах»
 document.addEventListener("keydown", e => {
-  if (screens.game.hidden || !["naholosy", "klychnyi", "frazeolohizmy", "chyslivnyky"].includes(currentGame) || !$("celebrate").hidden) return;
+  if (screens.game.hidden || !["naholosy", "klychnyi", "frazeolohizmy", "chyslivnyky", "slovospoluch"].includes(currentGame) || !$("celebrate").hidden) return;
   if (e.target.tagName === "INPUT") return;
   const btn = answersEl.children[Number(e.key) - 1];
   if (btn) btn.click();

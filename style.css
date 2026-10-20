@@ -3339,3 +3339,51 @@ body.level-flash::after {
   color: var(--muted);
   font-size: 14px;
 }
+
+/* ---------- Лексична помилка (словосполучення): slovospoluch.js ---------- */
+
+.slovo-phrase {
+  margin: 0;
+  padding: 6px 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.slovo-phrase.slovo-ok { color: var(--green); }
+.slovo-phrase.slovo-bad { color: var(--red); text-decoration: line-through; }
+
+.slovo-pair {
+  margin: 8px 0 0;
+  font-size: 18px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.slovo-pair s { color: var(--red); }
+.slovo-pair b { color: var(--green); }
+
+.slovo-answer {
+  font-size: 22px;
+}
+
+.slovo-groups {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.slovo-group {
+  color: inherit;
+  font-size: 17px;
+}
+
+.slovo-desc {
+  margin: 0 0 12px;
+}
+
+.slovo-desc.slovo-warn {
+  color: var(--red);
+}
