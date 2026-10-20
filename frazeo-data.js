@@ -1,6 +1,7 @@
 // Дані для гри «Фразеологізми» (бета).
 //
-// frazeoPhrases: { id, t: тип (без t — дієслівний; "yak" — порівняння «як…»; "clause" — «язик без кісток»,
+// frazeoPhrases: { id, part: частина («НМТ: частина 1» — без part, «НМТ: частина 2» — part: 2;
+//   гравець обирає частину перед грою), t: тип (без t — дієслівний; "yak" — порівняння «як…»; "clause" — «язик без кісток»,
 //   «ні пари з вуст», «слова не видавиш», «хоч мак сій» та інші «хоч…»), p: фразеологізм (як у варіантах відповіді), m: значення,
 //   fam: «родина» за спільним словом (руки, ходити, бити…) — з неї беруться найхитріші
 //   неправильні варіанти, як у НМТ; cl: група за значенням — фразеологізми з однієї групи
@@ -22,6 +23,7 @@
 //    у цитаті («кажуть: «___»») і змішуються лише з «як…».
 
 const frazeoPhrases = [
+  // ==================== НМТ: частина 1 (без part) ====================
   // ---------- Руки ----------
   { id: "udaryty", a: "p", o: [""], p: "ударити по руках", m: "дійти згоди, укласти угоду", fam: "ruky", cl: "zghoda" },
   { id: "mozolyty", a: "i", o: [""], p: "мозолити руки", m: "тяжко працювати", fam: "ruky", cl: "pratsia" },
@@ -90,60 +92,61 @@ const frazeoPhrases = [
   { id: "techiia", a: "i", o: [""], p: "плисти за течією", m: "пасивно підкорятися обставинам", fam: "zhyttia", cl: "shablon" },
   { id: "sukhe", a: "p", o: [""], p: "вискочити на сухе", m: "уникнути покарання чи небезпеки", fam: "zhyttia", cl: "riatunok" },
   { id: "doroha", a: "i", o: [""], p: "іти своєю дорогою", m: "діяти незалежно від інших", fam: "zhyttia", cl: "nezalezhno" },
+  // ==================== НМТ: частина 2 (part: 2) ====================
   // ---------- Брати / взяти ----------
-  { id: "vtiamky", a: "p", o: ["", "acc"], p: "взяти втямки", m: "зрозуміти, осмислити", fam: "braty", cl: "pamiataty" },
-  { id: "holovuvruky", a: "p", o: [""], p: "взяти голову в руки", m: "глибоко замислитися (часто у відчаї)", fam: "braty", cl: "rozpach" },
-  { id: "nohy", a: "i", o: [""], p: "брати ноги на плечі", m: "швидко тікати", fam: "braty", cl: "tikaty" },
-  { id: "nasebe", a: "p", o: ["acc"], p: "взяти на себе", m: "взяти відповідальність", fam: "braty", cl: "vidpovidalnist" },
-  { id: "sertse", a: "i", o: ["", "acc"], p: "брати близько до серця", m: "сильно переживати, надавати великого значення", fam: "braty", cl: "perezhyvaty" },
+  { id: "vtiamky", part: 2, a: "p", o: ["", "acc"], p: "взяти втямки", m: "зрозуміти, осмислити", fam: "braty", cl: "pamiataty" },
+  { id: "holovuvruky", part: 2, a: "p", o: [""], p: "взяти голову в руки", m: "глибоко замислитися (часто у відчаї)", fam: "braty", cl: "rozpach" },
+  { id: "nohy", part: 2, a: "i", o: [""], p: "брати ноги на плечі", m: "швидко тікати", fam: "braty", cl: "tikaty" },
+  { id: "nasebe", part: 2, a: "p", o: ["acc"], p: "взяти на себе", m: "взяти відповідальність", fam: "braty", cl: "vidpovidalnist" },
+  { id: "sertse", part: 2, a: "i", o: ["", "acc"], p: "брати близько до серця", m: "сильно переживати, надавати великого значення", fam: "braty", cl: "perezhyvaty" },
   // ---------- Хоч… (як «язик без кісток»: змішуються лише з такими самими й «як…») ----------
-  { id: "kilok", t: "clause", p: "хоч кілок на голові теши", m: "про дуже вперту або нетямущу людину", fam: "khoch", cl: "vpertyi" },
-  { id: "hreblia", t: "clause", p: "хоч греблю гати", m: "дуже багато, надлишок", fam: "khoch", cl: "bahato" },
-  { id: "vukho", t: "clause", p: "хоч у вухо бгай", m: "про дуже лагідну, сумирну людину", fam: "khoch", cl: "movchaty" },
-  { id: "mak", t: "clause", p: "хоч мак сій", m: "тихо, безвітряно", fam: "khoch", cl: "tykho" },
-  { id: "oko", t: "clause", p: "хоч в око стрель", m: "дуже темно", fam: "khoch", cl: "temno" },
-  { id: "ramka", t: "clause", p: "хоч у рамку вправ", m: "дуже красивий", fam: "khoch", cl: "harnyi" },
-  { id: "holky", t: "clause", p: "хоч голки збирай", m: "ясно, видно (при повному місяці)", fam: "khoch", cl: "yasno" },
-  { id: "rak", t: "yak", p: "як рак свисне", m: "ніколи", fam: "yak", cl: "nikoly" },
+  { id: "kilok", part: 2, t: "clause", p: "хоч кілок на голові теши", m: "про дуже вперту або нетямущу людину", fam: "khoch", cl: "vpertyi" },
+  { id: "hreblia", part: 2, t: "clause", p: "хоч греблю гати", m: "дуже багато, надлишок", fam: "khoch", cl: "bahato" },
+  { id: "vukho", part: 2, t: "clause", p: "хоч у вухо бгай", m: "про дуже лагідну, сумирну людину", fam: "khoch", cl: "movchaty" },
+  { id: "mak", part: 2, t: "clause", p: "хоч мак сій", m: "тихо, безвітряно", fam: "khoch", cl: "tykho" },
+  { id: "oko", part: 2, t: "clause", p: "хоч в око стрель", m: "дуже темно", fam: "khoch", cl: "temno" },
+  { id: "ramka", part: 2, t: "clause", p: "хоч у рамку вправ", m: "дуже красивий", fam: "khoch", cl: "harnyi" },
+  { id: "holky", part: 2, t: "clause", p: "хоч голки збирай", m: "ясно, видно (при повному місяці)", fam: "khoch", cl: "yasno" },
+  { id: "rak", part: 2, t: "yak", p: "як рак свисне", m: "ніколи", fam: "yak", cl: "nikoly" },
   // ---------- Дивитися ----------
-  { id: "rozhevi", a: "i", o: [""], p: "дивитися крізь рожеві окуляри", m: "сприймати все ідеалізовано, не помічати негативного", fam: "dyvytysia", cl: "optymizm" },
-  { id: "kyshenia", a: "i", o: [""], p: "дивитися в кишеню", m: "очікувати матеріальної вигоди, хабаря", fam: "dyvytysia", cl: "vyhoda" },
-  { id: "temniokuliary", a: "i", o: [""], p: "дивитися крізь темні окуляри", m: "сприймати все песимістично", fam: "dyvytysia", cl: "zneviria" },
-  { id: "korin", a: "i", o: [""], p: "дивитися в корінь", m: "розуміти суть справи", fam: "dyvytysia", cl: "pamiataty" },
-  { id: "zgory", a: "i", o: [""], p: "дивитися згори вниз", m: "зневажати, поводитися зверхньо", fam: "dyvytysia", cl: "holovnyi" },
+  { id: "rozhevi", part: 2, a: "i", o: [""], p: "дивитися крізь рожеві окуляри", m: "сприймати все ідеалізовано, не помічати негативного", fam: "dyvytysia", cl: "optymizm" },
+  { id: "kyshenia", part: 2, a: "i", o: [""], p: "дивитися в кишеню", m: "очікувати матеріальної вигоди, хабаря", fam: "dyvytysia", cl: "vyhoda" },
+  { id: "temniokuliary", part: 2, a: "i", o: [""], p: "дивитися крізь темні окуляри", m: "сприймати все песимістично", fam: "dyvytysia", cl: "zneviria" },
+  { id: "korin", part: 2, a: "i", o: [""], p: "дивитися в корінь", m: "розуміти суть справи", fam: "dyvytysia", cl: "pamiataty" },
+  { id: "zgory", part: 2, a: "i", o: [""], p: "дивитися згори вниз", m: "зневажати, поводитися зверхньо", fam: "dyvytysia", cl: "holovnyi" },
   // ---------- Ловити ----------
-  { id: "gav", a: "i", o: [""], p: "ловити ґав", m: "ледарювати, бути неуважним", fam: "lovyty", cl: "ledar" },
-  { id: "slovo", a: "i", o: [""], p: "ловити кожне слово", m: "дуже уважно слухати", fam: "lovyty", cl: "pamiataty" },
-  { id: "myt", a: "i", o: [""], p: "ловити кожну мить", m: "цінувати час", fam: "lovyty", cl: "chas" },
-  { id: "moment", a: "i", o: [""], p: "ловити момент", m: "встигати скористатися нагодою", fam: "lovyty", cl: "chas" },
+  { id: "gav", part: 2, a: "i", o: [""], p: "ловити ґав", m: "ледарювати, бути неуважним", fam: "lovyty", cl: "ledar" },
+  { id: "slovo", part: 2, a: "i", o: [""], p: "ловити кожне слово", m: "дуже уважно слухати", fam: "lovyty", cl: "pamiataty" },
+  { id: "myt", part: 2, a: "i", o: [""], p: "ловити кожну мить", m: "цінувати час", fam: "lovyty", cl: "chas" },
+  { id: "moment", part: 2, a: "i", o: [""], p: "ловити момент", m: "встигати скористатися нагодою", fam: "lovyty", cl: "chas" },
   // ---------- Маска, викриття ----------
-  { id: "maska", a: "i", o: ["", "z"], p: "зривати маску", m: "викривати справжню сутність", fam: "maska", cl: "vidkryty" },
-  { id: "lychyna", a: "i", o: ["", "z"], p: "зривати личину", m: "викривати справжню сутність", fam: "maska", cl: "vidkryty" },
-  { id: "mashkara", a: "i", o: [""], p: "надягати машкару", m: "прикидатися", fam: "maska", cl: "khytrist" },
-  { id: "chystavoda", a: "i", o: ["acc"], p: "виводити на чисту воду", m: "викривати чиїсь нечесні вчинки", fam: "liudy", cl: "vidkryty" },
-  { id: "dusha", a: "p", o: ["", "dat"], p: "відкрити душу", m: "довіритися", fam: "liudy", cl: "vidkryty" },
+  { id: "maska", part: 2, a: "i", o: ["", "z"], p: "зривати маску", m: "викривати справжню сутність", fam: "maska", cl: "vidkryty" },
+  { id: "lychyna", part: 2, a: "i", o: ["", "z"], p: "зривати личину", m: "викривати справжню сутність", fam: "maska", cl: "vidkryty" },
+  { id: "mashkara", part: 2, a: "i", o: [""], p: "надягати машкару", m: "прикидатися", fam: "maska", cl: "khytrist" },
+  { id: "chystavoda", part: 2, a: "i", o: ["acc"], p: "виводити на чисту воду", m: "викривати чиїсь нечесні вчинки", fam: "liudy", cl: "vidkryty" },
+  { id: "dusha", part: 2, a: "p", o: ["", "dat"], p: "відкрити душу", m: "довіритися", fam: "liudy", cl: "vidkryty" },
   // ---------- Раки ----------
-  { id: "pekty", a: "i", o: [""], p: "пекти раків", m: "червоніти від сорому", fam: "raky", cl: "nevdacha" },
-  { id: "zymuiut", a: "p", o: ["", "dat"], p: "показати, де раки зимують", m: "суворо покарати", fam: "raky", cl: "karaty" },
+  { id: "pekty", part: 2, a: "i", o: [""], p: "пекти раків", m: "червоніти від сорому", fam: "raky", cl: "nevdacha" },
+  { id: "zymuiut", part: 2, a: "p", o: ["", "dat"], p: "показати, де раки зимують", m: "суворо покарати", fam: "raky", cl: "karaty" },
   // ---------- Невдачі ----------
-  { id: "kaliuzha", a: "p", o: [""], p: "сісти в калюжу", m: "зазнати невдачі, опинитися в незручному становищі", fam: "zhyttia", cl: "nevdacha" },
-  { id: "oblyzen", a: "p", o: [""], p: "облизня піймати", m: "залишитися ні з чим, зазнати невдачі", fam: "pobut", cl: "nevdacha" },
-  { id: "shylo", a: "p", o: [""], p: "ухопити шилом патоки", m: "зазнати невдачі (спробувати зробити неможливе)", fam: "pobut", cl: "nevdacha" },
+  { id: "kaliuzha", part: 2, a: "p", o: [""], p: "сісти в калюжу", m: "зазнати невдачі, опинитися в незручному становищі", fam: "zhyttia", cl: "nevdacha" },
+  { id: "oblyzen", part: 2, a: "p", o: [""], p: "облизня піймати", m: "залишитися ні з чим, зазнати невдачі", fam: "pobut", cl: "nevdacha" },
+  { id: "shylo", part: 2, a: "p", o: [""], p: "ухопити шилом патоки", m: "зазнати невдачі (спробувати зробити неможливе)", fam: "pobut", cl: "nevdacha" },
   // ---------- Різне ----------
-  { id: "chub", a: "i", o: [""], p: "гріти чуба", m: "тяжко працювати", fam: "holova", cl: "pratsia" },
-  { id: "shkura", a: "i", o: [""], p: "зі шкури пнутися", m: "дуже старатися", fam: "pobut", cl: "pratsia" },
-  { id: "vysoko", a: "i", o: [""], p: "високо літати", m: "займати високе становище", fam: "zhyttia", cl: "holovnyi" },
-  { id: "lykho", a: "i", o: [""], p: "бити лихом об землю", m: "не зважати на неприємності, бути оптимістом", fam: "byty", cl: "optymizm" },
-  { id: "nis", a: "p", o: ["", "acc"], p: "зарубати на носі", m: "добре запам'ятати", fam: "holova", cl: "pamiataty" },
-  { id: "buvaltsi", a: "i", o: [""], p: "бувати в бувальцях", m: "багато бачити, мати досвід", fam: "zhyttia", cl: "dosvid" },
-  { id: "stelytysia", a: "i", o: ["", "dat"], p: "стелитися під ноги", m: "догоджати комусь", fam: "liudy", cl: "dohodzhaty" },
-  { id: "pivnia", a: "p", o: ["", "dat"], p: "пустити червоного півня", m: "вчинити підпал", fam: "pobut", cl: "pidpal" },
-  { id: "khymery", a: "i", o: [""], p: "плести химери", m: "говорити дурниці, вигадувати щось фантастичне", fam: "mova", cl: "bazikaty" },
-  { id: "palets", a: "p", o: [""], p: "пальцем не ворухнути", m: "нічого не зробити (не допомогти)", fam: "ruky", cl: "ledar" },
-  { id: "shkaralushcha", a: "p", o: [""], p: "сховатися у шкаралущу", m: "замкнутися в собі", fam: "liudy", cl: "movchaty" },
-  { id: "teneta", a: "p", o: [""], p: "попасти в тенета", m: "опинитися в залежності", fam: "zhyttia", cl: "zalezhnist" },
-  { id: "berehty", a: "i", o: [""], p: "берегти нерви", m: "не хвилюватися", fam: "hraty", cl: "spokii" },
-  { id: "struna", a: "i", o: [""], p: "грати на болючій струні", m: "навмисне торкатися теми, яка хвилює або ображає", fam: "hraty", cl: "drativaty" }
+  { id: "chub", part: 2, a: "i", o: [""], p: "гріти чуба", m: "тяжко працювати", fam: "holova", cl: "pratsia" },
+  { id: "shkura", part: 2, a: "i", o: [""], p: "зі шкури пнутися", m: "дуже старатися", fam: "pobut", cl: "pratsia" },
+  { id: "vysoko", part: 2, a: "i", o: [""], p: "високо літати", m: "займати високе становище", fam: "zhyttia", cl: "holovnyi" },
+  { id: "lykho", part: 2, a: "i", o: [""], p: "бити лихом об землю", m: "не зважати на неприємності, бути оптимістом", fam: "byty", cl: "optymizm" },
+  { id: "nis", part: 2, a: "p", o: ["", "acc"], p: "зарубати на носі", m: "добре запам'ятати", fam: "holova", cl: "pamiataty" },
+  { id: "buvaltsi", part: 2, a: "i", o: [""], p: "бувати в бувальцях", m: "багато бачити, мати досвід", fam: "zhyttia", cl: "dosvid" },
+  { id: "stelytysia", part: 2, a: "i", o: ["", "dat"], p: "стелитися під ноги", m: "догоджати комусь", fam: "liudy", cl: "dohodzhaty" },
+  { id: "pivnia", part: 2, a: "p", o: ["", "dat"], p: "пустити червоного півня", m: "вчинити підпал", fam: "pobut", cl: "pidpal" },
+  { id: "khymery", part: 2, a: "i", o: [""], p: "плести химери", m: "говорити дурниці, вигадувати щось фантастичне", fam: "mova", cl: "bazikaty" },
+  { id: "palets", part: 2, a: "p", o: [""], p: "пальцем не ворухнути", m: "нічого не зробити (не допомогти)", fam: "ruky", cl: "ledar" },
+  { id: "shkaralushcha", part: 2, a: "p", o: [""], p: "сховатися у шкаралущу", m: "замкнутися в собі", fam: "liudy", cl: "movchaty" },
+  { id: "teneta", part: 2, a: "p", o: [""], p: "попасти в тенета", m: "опинитися в залежності", fam: "zhyttia", cl: "zalezhnist" },
+  { id: "berehty", part: 2, a: "i", o: [""], p: "берегти нерви", m: "не хвилюватися", fam: "hraty", cl: "spokii" },
+  { id: "struna", part: 2, a: "i", o: [""], p: "грати на болючій струні", m: "навмисне торкатися теми, яка хвилює або ображає", fam: "hraty", cl: "drativaty" }
 ];
 
 const frazeoSentences = [

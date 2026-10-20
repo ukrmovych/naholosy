@@ -30,7 +30,8 @@ const ONLINE_GAMES = {
     label: "💬 Гра: Фразеологізми", what: "у фразеологізми", unit: "Речення", next: "Наступне речення",
     card: true, duelLimit: 25000, duelPause: 4500, sprint: 120, penalty: 3, classLimit: 30000,
     pool: () => frazeoSentences,
-    makeCard: (row, rand) => makeFrazeoCard(row, false, rand)
+    // online.topic у «Фразеологізмах» — частина ("1", "2" або "" — обидві), її обирає ведучий
+    makeCard: (row, rand) => makeFrazeoCard(row, false, rand, online ? online.topic || "" : frazeoPart)
   },
   klychnyi: {
     label: "📣 Гра: Кличний відмінок", what: "у кличний відмінок", unit: "Звертання", next: "Наступне звертання",
@@ -64,9 +65,12 @@ function onlineCard(idx, rand) {
   return { text: c.text, answer: c.answer, meaning: c.meaning || "", alts: c.alts || [], options: c.options };
 }
 
-// Номери питань для гри: усі або лише слова спецтеми (online.topic — тільки «Наголоси»)
+// Номери питань для гри: усі, лише слова спецтеми («Наголоси») або речення вибраної частини («Фразеологізми»)
 function poolIndices() {
   const pool = G().pool();
+  if (online && online.topic && gameKey() === "frazeolohizmy") {
+    return pool.map((row, i) => (frazeoPartOf(FRAZEO_BY_ID[row[0]]) === online.topic ? i : -1)).filter(i => i >= 0);
+  }
   const words = online && online.topic && gameKey() === "naholosy" ? TOPIC_WORDS[online.topic] : null;
   if (words) {
     const chosen = new Set(words);
@@ -523,8 +527,10 @@ async function createRoom(mode, name) {
   const code = makeRoomCode();
   const me = { id: ONLINE_ID, name };
   const game = gameKey();
-  // Спецтема (вебінар): лише в «Наголосах» і лише якщо в ведучого є доступ
-  const topic = game === "naholosy" && hasTopic(currentTopic) ? currentTopic : "";
+  // Спецтема (вебінар): лише в «Наголосах» і лише якщо в ведучого є доступ;
+  // у «Фразеологізмах» — вибрана частина
+  const topic = game === "naholosy" && hasTopic(currentTopic) ? currentTopic
+    : game === "frazeolohizmy" ? frazeoPart : "";
   online = { mode, game, topic, code, me, isHost: true, phase: "lobby", players: [], rt: null };
   if (ONLINE_MODES[mode].hostPlays) online.players.push(me);
   online.rt = await connectRoom(code, handleMessage);
@@ -696,7 +702,8 @@ function renderLobby() {
   const players = el("ul", { class: "online-players" },
     online.players.map(p => el("li", { class: p.id === online.me.id ? "me" : "" }, p.name)));
 
-  const topicName = online.topic && SPECIAL[online.topic] ? ` · ${SPECIAL[online.topic].icon} ${SPECIAL[online.topic].name}` : "";
+  const topicName = gameKey() === "frazeolohizmy" ? ` · ${frazeoPartName(online.topic || "")}`
+    : online.topic && SPECIAL[online.topic] ? ` · ${SPECIAL[online.topic].icon} ${SPECIAL[online.topic].name}` : "";
   const children = [el("p", { class: "online-game" }, G().label + topicName)];
   if (online.isHost) {
     const link = inviteLink(online.code);

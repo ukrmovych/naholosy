@@ -566,7 +566,7 @@ function updateUI() {
     // у «Кличному» лінія прогресу — у межах рівня (updateKlychnyiLevelUI)
     scoreEl.textContent = score;
   } else if (currentGame === "frazeolohizmy" || currentGame === "chyslivnyky") {
-    const total = currentGame === "chyslivnyky" ? CHYS_TOTAL : FRAZEO_TOTAL;
+    const total = currentGame === "chyslivnyky" ? CHYS_TOTAL : frazeoRows().length;
     scoreEl.textContent = score >= total ? `${score} 🏆` : `${score}/${total}`;
     progressEl.hidden = false;
     progressFill.style.width = `${Math.min(score / total, 1) * 100}%`;
@@ -990,12 +990,36 @@ const FRAZEO_KINDS = [
 ];
 const FRAZEO_DUEL = { options: 3, family: 1 };
 
+// Частини фразеологізмів (part у frazeo-data.js). Гравець обирає частину на екрані режимів —
+// вибір діє в усіх режимах: марафон, дуель, онлайн. "" — обидві частини.
+const FRAZEO_PARTS = [["1", "НМТ: частина 1"], ["2", "НМТ: частина 2"], ["", "Обидві частини"]];
+let frazeoPart = storageGet("frazeo_part") || "";
+if (!FRAZEO_PARTS.some(([id]) => id === frazeoPart)) frazeoPart = "";
+
+function frazeoPartOf(ph) {
+  return String(ph.part || 1);
+}
+
+function frazeoPartName(part) {
+  return (FRAZEO_PARTS.find(([id]) => id === part) || FRAZEO_PARTS[2])[1];
+}
+
+// Речення вибраної частини
+function frazeoRows(part = frazeoPart) {
+  return part ? frazeoSentences.filter(row => frazeoPartOf(FRAZEO_BY_ID[row[0]]) === part) : frazeoSentences;
+}
+
+// Рекорд марафону — окремо для кожної частини (обидві — старий ключ best_frazeolohizmy)
+function frazeoBestKey(part = frazeoPart) {
+  return part ? `frazeolohizmy_p${part}` : "frazeolohizmy";
+}
+
 // Спершу по одному реченню на кожен фразеологізм, потім решта — усе вперемішку
 function frazeoQueue() {
   const first = [];
   const rest = [];
   const seen = new Set();
-  const all = [...frazeoSentences];
+  const all = [...frazeoRows()];
   shuffleArray(all);
   all.forEach(row => {
     if (seen.has(row[0])) rest.push(row);
@@ -1012,8 +1036,9 @@ function frazeoFits(ph, req = "") {
   return (!aspect || ph.a === aspect) && (ph.o || [""]).includes(object);
 }
 
-// rand — своє джерело випадковості (в онлайн-спринті однакове в усіх гравців)
-function makeFrazeoCard(row, forDuel = false, rand = Math.random) {
+// rand — своє джерело випадковості (в онлайн-спринті однакове в усіх гравців);
+// part — вибрана частина: неправильні варіанти беремо з неї, а якщо їх замало — з усіх
+function makeFrazeoCard(row, forDuel = false, rand = Math.random, part = frazeoPart) {
   const [id, text, req = ""] = row;
   const ph = FRAZEO_BY_ID[id];
   const cfg = forDuel ? FRAZEO_DUEL : pickOne(FRAZEO_KINDS, rand);
@@ -1022,7 +1047,9 @@ function makeFrazeoCard(row, forDuel = false, rand = Math.random) {
   const sameType = ph.t === "yak" ? o => o.t === "yak"
     : ph.t === "clause" ? o => o.t === "yak" || o.t === "clause"
     : o => !o.t && frazeoFits(o, req);
-  const pool = frazeoPhrases.filter(o => o.cl !== ph.cl && sameType(o));
+  const fitting = frazeoPhrases.filter(o => o.cl !== ph.cl && sameType(o));
+  const inPart = part ? fitting.filter(o => frazeoPartOf(o) === part) : fitting;
+  const pool = inPart.length >= cfg.options - 1 ? inPart : fitting;
   const family = pool.filter(o => o.fam === ph.fam);
   const others = pool.filter(o => o.fam !== ph.fam);
   shuffleArray(family, rand);
@@ -1455,14 +1482,15 @@ function gameOver() {
   });
 
   // рекорд спецтеми — окремо (best_topic_<id>), у турнірну таблицю не йде
-  const bestKey = marathonTopic ? `topic_${marathonTopic}` : currentGame;
+  const bestKey = marathonTopic ? `topic_${marathonTopic}`
+    : currentGame === "frazeolohizmy" ? frazeoBestKey() : currentGame;
   const best = getBest(bestKey);
   const isRecord = !endless && score > best;
   if (isRecord) storageSet(`best_${bestKey}`, String(score));
 
   $("over-score").textContent = currentGame === "naholosy" ? `${score}/${marathonPool().length}`
     : currentGame === "klychnyi" ? `${score} · рівень ${klychnyiLevelOf(Math.max(1, klychnyiAsked))}`
-    : currentGame === "frazeolohizmy" ? `${score}/${FRAZEO_TOTAL}`
+    : currentGame === "frazeolohizmy" ? `${score}/${frazeoRows().length}`
     : currentGame === "chyslivnyky" ? `${score}/${CHYS_TOTAL}`
     : score;
   $("over-best").textContent = endless
@@ -1647,6 +1675,10 @@ let modesGame = "naholosy";
 // Вибір слів для марафону й онлайн-ігор: «Усі слова» або спецтема (якщо є доступ)
 function renderTopicPicker() {
   const box = $("topic-picker");
+  if (modesGame === "frazeolohizmy") {
+    renderFrazeoPartPicker(box);
+    return;
+  }
   const topics = modesGame === "naholosy" ? availableTopics() : [];
   if (!topics.includes(currentTopic)) currentTopic = "";
   box.hidden = !topics.length;
@@ -1673,6 +1705,32 @@ function renderTopicPicker() {
     $("marathon-best").dataset.best = currentTopic ? `topic_${currentTopic}` : "naholosy";
     renderBestScores();
   }
+}
+
+// «Фразеологізми»: вибір частини (НМТ: частина 1 / 2 / обидві) — для всіх режимів
+function renderFrazeoPartPicker(box) {
+  box.hidden = false;
+  box.innerHTML = "";
+  const hint = document.createElement("p");
+  hint.className = "topic-hint";
+  hint.textContent = "Які фразеологізми тренувати (для всіх режимів):";
+  box.appendChild(hint);
+  FRAZEO_PARTS.forEach(([id, text]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "topic-chip" + (id === frazeoPart ? " on" : "");
+    b.textContent = text;
+    b.addEventListener("click", () => {
+      frazeoPart = id;
+      storageSet("frazeo_part", id);
+      renderTopicPicker();
+    });
+    box.appendChild(b);
+  });
+  const n = frazeoRows().length;
+  $("marathon-desc").textContent = `${frazeoPartName(frazeoPart)}: ${n} ${plural(n, "речення", "речення", "речень")}, як у НМТ · 3–5 варіантів · 3 життя`;
+  $("marathon-best").dataset.best = frazeoBestKey();
+  renderBestScores();
 }
 
 function showModes(game = modesGame) {
@@ -2126,7 +2184,7 @@ function nextDuelRound() {
   if (duel.queue.length === 0) {
     // У дуелі «Кличного» — лише перші 3 рівні: найуживаніші слова
     duel.queue = duel.game === "klychnyi" ? klychnyiData.slice(0, KLYCHNYI_ONLINE_POOL)
-      : duel.game === "frazeolohizmy" ? [...frazeoSentences]
+      : duel.game === "frazeolohizmy" ? [...frazeoRows()]
       : [...naholosyData];
     shuffleArray(duel.queue);
   }
