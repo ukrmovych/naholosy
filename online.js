@@ -6,7 +6,7 @@
 //  ⏱ sprint — 2–10 гравців: за 60 секунд якомога більше правильних відповідей
 //  🏫 class  — учитель веде гру (не грає), учні відповідають, бали за правильність і швидкість
 //
-// Тема (online.game) — див. ONLINE_GAMES: наголоси, фразеологізми, кличний відмінок.
+// Тема (online.game) — див. ONLINE_GAMES: наголоси, фразеологізми, кличний відмінок, словосполучення.
 // Нова тема = новий запис в ONLINE_GAMES, і в неї одразу є всі три режими.
 
 const ONLINE_MODES = {
@@ -42,6 +42,13 @@ const ONLINE_GAMES = {
       const r = resolveKlychnyi(row, rand);
       return { text: `${klychnyiPrefix(r[0])} ___!`, answer: r[2], alts: r.alts, options: klychnyiOptions(r, rand) };
     }
+  },
+  slovospoluch: {
+    label: "🧩 Гра: Словосполучення", what: "у словосполучення", unit: "Словосполучення", next: "Наступне словосполучення",
+    card: true, duelLimit: 10000, duelPause: 4000, sprint: 60, penalty: 2, classLimit: 15000,
+    // картки й вибір груп — slovospoluch.js; online.topic — id вибраних груп через кому ("" — усі)
+    pool: () => SLOVO_CARDS,
+    makeCard: c => slovoOnlineCard(c)
   }
 };
 
@@ -62,12 +69,13 @@ function cardCorrect(card) {
 // Картка для надсилання гравцям (лише потрібні поля)
 function onlineCard(idx, rand) {
   const c = G().makeCard(G().pool()[idx], rand);
-  return { text: c.text, answer: c.answer, meaning: c.meaning || "", alts: c.alts || [], options: c.options };
+  return { text: c.text, answer: c.answer, meaning: c.meaning || "", alts: c.alts || [], options: c.options, ...(c.pair ? { pair: c.pair } : {}) };
 }
 
 // Номери питань для гри: усі, лише слова спецтеми («Наголоси») або речення вибраної частини («Фразеологізми»)
 function poolIndices() {
   const pool = G().pool();
+  if (gameKey() === "slovospoluch") return slovoCardIndices(online && online.topic ? online.topic.split(",") : []);
   if (online && online.topic && gameKey() === "frazeolohizmy") {
     return pool.map((row, i) => (frazeoPartOf(FRAZEO_BY_ID[row[0]]) === online.topic ? i : -1)).filter(i => i >= 0);
   }
@@ -530,7 +538,8 @@ async function createRoom(mode, name) {
   // Спецтема (вебінар): лише в «Наголосах» і лише якщо в ведучого є доступ;
   // у «Фразеологізмах» — вибрана частина
   const topic = game === "naholosy" && hasTopic(currentTopic) ? currentTopic
-    : game === "frazeolohizmy" ? frazeoPart : "";
+    : game === "frazeolohizmy" ? frazeoPart
+    : game === "slovospoluch" && slovoGroups.length < slovospoluchGroups.length ? slovoGroups.join(",") : "";
   online = { mode, game, topic, code, me, isHost: true, phase: "lobby", players: [], rt: null };
   if (ONLINE_MODES[mode].hostPlays) online.players.push(me);
   online.rt = await connectRoom(code, handleMessage);
@@ -703,6 +712,7 @@ function renderLobby() {
     online.players.map(p => el("li", { class: p.id === online.me.id ? "me" : "" }, p.name)));
 
   const topicName = gameKey() === "frazeolohizmy" ? ` · ${frazeoPartName(online.topic || "")}`
+    : gameKey() === "slovospoluch" ? ` · ${slovoGroupsName(online.topic || "")}`
     : online.topic && SPECIAL[online.topic] ? ` · ${SPECIAL[online.topic].icon} ${SPECIAL[online.topic].name}` : "";
   const children = [el("p", { class: "online-game" }, G().label + topicName)];
   if (online.isHost) {
@@ -838,10 +848,12 @@ function duelLimit() {
 function frazeoOnlineQuestion(card, onPick) {
   const [before, after] = card.text.split("___");
   const gap = el("span", { class: "address-gap" }, "…");
-  const sentence = el("p", { class: "frazeo-sentence" }, before, gap, after);
+  // Словосполучення (card.pair): саме словосполучення без пропуску, кнопки в незмінному порядку
+  const sentence = card.pair ? el("p", { class: "slovo-phrase" }, card.text)
+    : el("p", { class: "frazeo-sentence" }, before, gap, after);
   const box = el("div", { class: "answers frazeo-answers" });
   const shown = [...card.options];
-  shuffleArray(shown); // у кожного гравця свій порядок варіантів
+  if (!card.pair) shuffleArray(shown); // у кожного гравця свій порядок варіантів
   shown.forEach(phrase => {
     const btn = el("button", { class: "answer frazeo-answer" }, phrase);
     btn.dataset.word = phrase;
@@ -854,6 +866,15 @@ function frazeoOnlineQuestion(card, onPick) {
 
 function frazeoOnlineReveal(view, card, picked) {
   const right = cardCorrect(card);
+  if (card.pair) {
+    // Словосполучення: правильний варіант і пояснення
+    const [wrong, fixed] = card.pair;
+    const ok = card.answer === "Правильно";
+    view.sentence.classList.add(ok ? "slovo-ok" : "slovo-bad");
+    view.meaning.innerHTML = "";
+    view.meaning.append(slovoPairNode({ ok, wrong, right: fixed }), el("p", { class: "frazeo-meaning" }, card.meaning));
+    return;
+  }
   const ok = right.includes(picked);
   view.gap.textContent = ok ? picked : card.answer;
   view.gap.classList.add(ok ? "filled-ok" : "filled-fix");
