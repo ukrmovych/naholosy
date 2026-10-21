@@ -27,7 +27,7 @@ jobs:
           if printf '%s' "$KEY" | grep -q 'BEGIN'; then printf '%s\n' "$KEY" | tr -d '\r' > ~/.ssh/k
           else printf '%s' "$KEY" | tr -d ' \r\n' | base64 -d > ~/.ssh/k; fi
           chmod 600 ~/.ssh/k
-          rsync -rlz --delete --exclude='.git*' --exclude='*.sql' --exclude='*.md' \
+          rsync -rlz --delete --exclude='.git*' --exclude='*.sql' --exclude='*.md' --exclude='promo/' \
             -e "ssh -i $HOME/.ssh/k -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20" ./ deploy@"$HOST":./
       - name: Перевірка
         run: |
