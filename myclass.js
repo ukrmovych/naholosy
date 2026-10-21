@@ -53,6 +53,28 @@ function el2(tag, cls, text) {
   return n;
 }
 
+// ---------- Кнопка в меню ----------
+// Перший тиждень після запуску кнопка стоїть угорі (одразу під «Наголосами») з позначкою «НОВЕ!»,
+// потім сама повертається на звичне місце над «Турнірною таблицею».
+const MYCLASS_NEW_UNTIL = new Date("2026-10-29T00:00:00+02:00");
+
+function placeMyClassBtn() {
+  const btn = $("btn-myclass"), list = $("game-list");
+  const isNew = new Date() < MYCLASS_NEW_UNTIL;
+  btn.classList.toggle("is-new", isNew);
+  let badge = btn.querySelector(".badge-new");
+  if (isNew) {
+    if (!badge) {
+      badge = el2("span", "badge badge-new", "НОВЕ!");
+      btn.insertBefore(badge, btn.querySelector(".mode-arrow"));
+    }
+    list.insertBefore(btn, list.children[1] || null);
+  } else {
+    if (badge) badge.remove();
+    $("btn-leaders").before(btn);
+  }
+}
+
 // ---------- Екран «Мій клас» ----------
 async function showMyClass(opts = {}) {
   showScreen("myclass");
@@ -71,6 +93,23 @@ async function showMyClass(opts = {}) {
 function renderClassStart(canBack) {
   myClassBody.innerHTML = "";
   const name = storageGet("player_name") || "";
+
+  // Коротко: що це за режим і чим він крутий
+  if (!canBack) {
+    const intro = el2("section", "card class-intro");
+    intro.append(el2("h3", "class-intro-title", "👥 Змагайся з однокласниками!"));
+    const ul = el2("ul", "class-intro-list");
+    [["🏆", "Своя таблиця рекордів — лише для твого класу"],
+     ["⚡", "Нічого не треба надсилати: просто грай, рекорди потрапляють у таблицю самі"],
+     ["🎮", "Окремо по кожній грі — видно, хто король наголосів, а хто — тесту НМТ"],
+     ["📨", "Друзів кличеш одним посиланням або QR-кодом"]].forEach(([icon, text]) => {
+      const li = el2("li");
+      li.append(el2("span", "class-intro-icon", icon), el2("span", "", text));
+      ul.appendChild(li);
+    });
+    intro.append(ul, el2("p", "class-intro-cta", "Приєднайся за кодом від друга або створи свій клас 👇"));
+    myClassBody.appendChild(intro);
+  }
 
   const join = el2("section", "card class-card");
   join.append(el2("h3", "class-h", "Приєднатися до класу"),
@@ -339,3 +378,5 @@ window.addEventListener("load", () => {
   const code = classJoinCode();
   if (code) showMyClass({ joinCode: code });
 });
+
+placeMyClassBtn();

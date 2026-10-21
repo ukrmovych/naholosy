@@ -3515,3 +3515,80 @@ body.level-flash::after {
   color: #7fd483;
   font-size: 15px;
 }
+
+/* ---------- 👥 Мій клас: «НОВЕ!» у меню й пояснення на першому екрані ---------- */
+
+.myclass-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.myclass-sub {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.myclass-btn .badge-new {
+  flex: none;
+  background: var(--orange);
+  color: #fff;
+  font-weight: 700;
+  animation: new-pulse 1.6s ease-in-out infinite;
+}
+
+.game-grid .myclass-btn.is-new {
+  grid-column: 1 / -1;
+  margin-top: 0;
+  background: linear-gradient(135deg, rgba(255, 121, 0, .22), rgba(255, 121, 0, .06)), var(--surface-2);
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(255, 121, 0, .18);
+}
+
+.myclass-btn.is-new > span:first-child {
+  font-size: 26px;
+}
+
+@keyframes new-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.class-intro {
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, rgba(255, 121, 0, .18), rgba(255, 121, 0, .04)), var(--surface);
+  border: 2px solid var(--orange);
+}
+
+.class-intro-title {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+
+.class-intro-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.class-intro-list li {
+  display: flex;
+  gap: 10px;
+}
+
+.class-intro-icon {
+  flex: none;
+  width: 22px;
+  text-align: center;
+}
+
+.class-intro-cta {
+  margin: 12px 0 0;
+  color: var(--orange);
+  font-size: 15px;
+}

@@ -433,6 +433,7 @@ function renderMenu() {
 
   // Блок відгуку — одразу під головною грою, щоб його було видно
   list.insertBefore($("btn-feedback"), list.children[1] || null);
+  if (typeof placeMyClassBtn === "function") placeMyClassBtn(); // 👥 «НОВЕ!» — myclass.js
   renderBestScores();
 }
 
