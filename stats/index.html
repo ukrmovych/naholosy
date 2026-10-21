@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<script src="../migrate.js?v=1"></script>
+<script src="../migrate.js?v=2"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
@@ -192,6 +192,13 @@ tr:last-child td { border-bottom: 0; }
 <script src="../topics.js"></script>
 <script>
 const CFG = window.LEADERBOARD_CONFIG || {};
+// На github.io з ?stay (мережа блокує duckdns) — посилання на гру теж лишаються тут
+if (/[?&]stay(=|&|$)/.test(location.search)) {
+  document.querySelectorAll(".game-link").forEach(a => {
+    const h = a.getAttribute("href");
+    a.setAttribute("href", h + (h.includes("?") ? "&stay" : "?stay"));
+  });
+}
 const GAME_NAMES = {
   naholosy: "🗣️ Наголоси", leksychna: "🔎 Лексична помилка", klychnyi: "📣 Кличний відмінок",
   chyslivnyky: "🔢 Числівники", frazeolohizmy: "💬 Фразеологізми", slovospoluch: "🧩 Словосполучення", inshomovni: "🌍 Іншомовні слова",

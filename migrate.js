@@ -13,7 +13,9 @@
   var KEYS = /^(best_|train_|player_|duel_|qr_target_|stats_|modes_open$|feedback_sent$)/;
 
   // ---------- Стара адреса: зібрати дані й переїхати ----------
-  if (location.hostname === OLD_HOST && location.pathname.indexOf(OLD_BASE) === 0) {
+  // …?stay — лишитися на github.io (коли мережа блокує duckdns): гра працює й тут
+  if (location.hostname === OLD_HOST && location.pathname.indexOf(OLD_BASE) === 0
+      && !/[?&]stay(=|&|$)/.test(location.search)) {
     var data = {};
     try {
       for (var i = 0; i < localStorage.length; i++) {
