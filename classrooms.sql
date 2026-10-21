@@ -122,8 +122,7 @@ $$;
 create or replace function public.classroom_table(p_player uuid, p_code text, p_game text)
 returns jsonb language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object(
-    'name', m.name, 'score', s.score, 'me', m.player_id = p_player,
-    'id', case when (select owner_player from classrooms where code = p_code) = p_player then m.id end
+    'name', m.name, 'score', s.score, 'me', m.player_id = p_player
   ) order by s.score desc nulls last, s.updated_at, m.name), '[]'::jsonb)
   from classroom_members m
   left join classroom_scores s on s.code = m.code and s.player_id = m.player_id and s.game = p_game
@@ -156,7 +155,7 @@ begin
     select coalesce(jsonb_agg(jsonb_build_object(
       'code', c.code, 'name', c.name, 'created_at', c.created_at,
       'members', (select coalesce(jsonb_agg(jsonb_build_object(
-          'name', m.name, 'joined_at', m.joined_at, 'owner', m.player_id = c.owner_player, 'active', m.active,
+          'id', m.id, 'name', m.name, 'joined_at', m.joined_at, 'owner', m.player_id = c.owner_player, 'active', m.active,
           'scores', (select coalesce(jsonb_object_agg(s.game, s.score), '{}'::jsonb)
                      from classroom_scores s where s.code = m.code and s.player_id = m.player_id)
         ) order by m.joined_at), '[]'::jsonb) from classroom_members m where m.code = c.code)
@@ -179,8 +178,21 @@ grant execute on function public.create_classroom(uuid, text, text) to anon;
 grant execute on function public.classroom_info(text) to anon;
 grant execute on function public.join_classroom(uuid, text, text) to anon;
 grant execute on function public.leave_classroom(uuid, text) to anon;
-grant execute on function public.kick_classroom_member(uuid, text, bigint) to anon;
 grant execute on function public.my_classrooms(uuid) to anon;
 grant execute on function public.classroom_table(uuid, text, text) to anon;
 grant execute on function public.submit_classroom_score(uuid, text, integer) to anon;
 grant execute on function public.get_classrooms_admin(text) to anon;
+
+-- Творці класів учнів НЕ прибирають (власник так вирішив): kick_classroom_member закрито для гри.
+revoke execute on function public.kick_classroom_member(uuid, text, bigint) from anon, public;
+
+-- Власник (сторінка статистики): прибрати / повернути будь-якого учасника будь-якого класу
+create or replace function public.set_classroom_member_admin(p_password text, p_member bigint, p_active boolean)
+returns void language plpgsql volatile security definer set search_path = public as $$
+begin
+  if not stats_password_ok(p_password) then raise exception 'wrong password'; end if;
+  update classroom_members set active = p_active where id = p_member;
+end;
+$$;
+revoke all on function public.set_classroom_member_admin(text, bigint, boolean) from public;
+grant execute on function public.set_classroom_member_admin(text, bigint, boolean) to anon;

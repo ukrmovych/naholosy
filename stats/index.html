@@ -563,13 +563,26 @@ async function loadRooms() {
           <span class="muted small">учнів: ${active.length} · створено ${new Date(r.created_at).toLocaleDateString("uk-UA", { day: "numeric", month: "long" })}</span>
         </summary>
         <div class="panel"><table>
-          <tr><th>Ім'я</th>${games.map(g => `<th>${esc(GAME_NAMES[g] || g)}</th>`).join("")}<th>Приєднався</th></tr>
+          <tr><th>Ім'я</th>${games.map(g => `<th>${esc(GAME_NAMES[g] || g)}</th>`).join("")}<th>Приєднався</th><th></th></tr>
           ${sorted.map(m => `<tr class="${m.active === false ? "muted" : ""}"><td>${esc(m.name)}${m.owner ? " 👑" : ""}${m.active === false ? " (вийшов)" : ""}</td>
             ${games.map(g => `<td>${m.scores && m.scores[g] != null ? num(m.scores[g]) : "—"}</td>`).join("")}
-            <td>${new Date(m.joined_at).toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}</td></tr>`).join("")}
+            <td>${new Date(m.joined_at).toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}</td>
+            <td><button type="button" data-room-member="${m.id}" data-to="${m.active === false}" data-name="${esc(m.name)}">${m.active === false ? "Повернути" : "Прибрати"}</button></td></tr>`).join("")}
         </table>${games.length ? "" : '<p class="note">Ще ніхто не зіграв після вступу до класу.</p>'}</div>
       </details>`;
     }).join("");
+    // Прибрати / повернути учасника (лише тут, у статистиці)
+    $("room-list").querySelectorAll("[data-room-member]").forEach(b => b.addEventListener("click", async () => {
+      const back = b.dataset.to === "true";
+      if (!back && !confirm(`Прибрати ${b.dataset.name} з класу?`)) return;
+      b.disabled = true;
+      try {
+        await proRpc("set_classroom_member_admin", { p_member: Number(b.dataset.roomMember), p_active: back });
+        const open = [...$("room-list").querySelectorAll("details")].map(d => d.open);
+        await loadRooms();
+        $("room-list").querySelectorAll("details").forEach((d, i) => { d.open = Boolean(open[i]); });
+      } catch (e) { b.disabled = false; b.textContent = "Помилка, ще раз"; }
+    }));
   } catch (err) {
     $("room-list").innerHTML = err.message === "nosql"
       ? '<p class="note">У Supabase ще немає класів (classrooms.sql).</p>'

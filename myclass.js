@@ -257,18 +257,6 @@ async function renderClassTable() {
       const name = el2("span", "name", r.name);
       const points = el2("span", "points", r.score == null ? "—" : String(r.score));
       li.append(name, points);
-      if (r.id && !r.me) {
-        const kick = el2("button", "class-kick", "✕");
-        kick.title = "Прибрати з класу";
-        kick.addEventListener("click", async () => {
-          if (!confirm(`Прибрати ${r.name} з класу?`)) return;
-          try {
-            await classRpc("kick_classroom_member", { p_owner: getPlayerId(), p_code: cls.code, p_member: r.id });
-            await showMyClass();
-          } catch (e) { alert(classError(e)); }
-        });
-        li.appendChild(kick);
-      }
       list.appendChild(li);
     });
     status.textContent = rows.some(r => r.score != null) ? "" : "Ще ніхто не грав у цю гру. Зіграй першим — результат з'явиться тут автоматично!";
