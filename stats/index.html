@@ -87,7 +87,8 @@ tr:last-child td { border-bottom: 0; }
 .access-new { display: grid; gap: 8px; margin-bottom: 14px; }
 .access-new label, .access-actions label { display: grid; gap: 4px; font-size: 14px; }
 .access-body { padding: 0 14px 12px; min-width: 0; }
-#access-list > .cl-game { min-width: 0; }
+#access-list > .cl-game, #room-list > .cl-game { min-width: 0; }
+#room-list .panel { overflow-x: auto; }
 .access-body .panel { overflow-x: auto; }
 .access-actions input { max-width: 100%; }
 .access-url code { word-break: break-all; font-size: 13px; }
@@ -153,6 +154,10 @@ tr:last-child td { border-bottom: 0; }
       <div id="fb-list" class="fb-list"></div>
     </div>
     <div id="classes-view" hidden>
+      <h2>👥 Класи учнів («Мій клас»)</h2>
+      <p class="muted small">Класи, які створили учні чи вчителі: учасники і їхні найкращі результати в кожній грі. Натисни на клас, щоб побачити таблицю.</p>
+      <div id="room-list" class="fb-list"></div>
+      <h2>🏫 Ігри для класу (онлайн)</h2>
       <p class="muted small">Ігри для класу: підсумки кожної гри з нікнеймами учнів, датою й часом. Натисни на гру, щоб побачити результати.</p>
       <div id="cl-list" class="fb-list"></div>
     </div>
@@ -181,7 +186,8 @@ tr:last-child td { border-bottom: 0; }
 const CFG = window.LEADERBOARD_CONFIG || {};
 const GAME_NAMES = {
   naholosy: "🗣️ Наголоси", leksychna: "🔎 Лексична помилка", klychnyi: "📣 Кличний відмінок",
-  chyslivnyky: "🔢 Числівники", frazeolohizmy: "💬 Фразеологізми", slovospoluch: "🧩 Словосполучення", inshomovni: "🌍 Іншомовні слова"
+  chyslivnyky: "🔢 Числівники", frazeolohizmy: "💬 Фразеологізми", slovospoluch: "🧩 Словосполучення", inshomovni: "🌍 Іншомовні слова",
+  nmttest: "🎲 Рандомний тест НМТ"
 };
 const ONLINE_NAMES = { duel: "⚔️ Онлайн-дуель", sprint: "⏱ Спринт 60 с", class: "🏫 Гра для класу" };
 const $ = id => document.getElementById(id);
@@ -540,6 +546,37 @@ $("access-new").addEventListener("submit", async e => {
   }
 });
 
+// ---------- 👥 Класи учнів («Мій клас», classrooms.sql) ----------
+async function loadRooms() {
+  try {
+    const rooms = await proRpc("get_classrooms_admin", {});
+    if (!rooms.length) { $("room-list").innerHTML = '<p class="note">Ще ніхто не створив клас.</p>'; return; }
+    $("room-list").innerHTML = rooms.map(r => {
+      const active = r.members.filter(m => m.active !== false);
+      const games = [...new Set(r.members.flatMap(m => Object.keys(m.scores || {})))];
+      const sorted = [...r.members].sort((a, b) => (b.active !== false) - (a.active !== false)
+        || Math.max(0, ...Object.values(b.scores || {})) - Math.max(0, ...Object.values(a.scores || {})));
+      return `<details class="cl-game">
+        <summary>
+          <b>${esc(r.name)}</b>
+          <span>код ${esc(r.code)}</span>
+          <span class="muted small">учнів: ${active.length} · створено ${new Date(r.created_at).toLocaleDateString("uk-UA", { day: "numeric", month: "long" })}</span>
+        </summary>
+        <div class="panel"><table>
+          <tr><th>Ім'я</th>${games.map(g => `<th>${esc(GAME_NAMES[g] || g)}</th>`).join("")}<th>Приєднався</th></tr>
+          ${sorted.map(m => `<tr class="${m.active === false ? "muted" : ""}"><td>${esc(m.name)}${m.owner ? " 👑" : ""}${m.active === false ? " (вийшов)" : ""}</td>
+            ${games.map(g => `<td>${m.scores && m.scores[g] != null ? num(m.scores[g]) : "—"}</td>`).join("")}
+            <td>${new Date(m.joined_at).toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}</td></tr>`).join("")}
+        </table>${games.length ? "" : '<p class="note">Ще ніхто не зіграв після вступу до класу.</p>'}</div>
+      </details>`;
+    }).join("");
+  } catch (err) {
+    $("room-list").innerHTML = err.message === "nosql"
+      ? '<p class="note">У Supabase ще немає класів (classrooms.sql).</p>'
+      : '<p class="note">Не вдалося завантажити класи. Перевір інтернет.</p>';
+  }
+}
+
 function setView(v) {
   view = v;
   store.set("stats_view", v);
@@ -564,6 +601,7 @@ async function load() {
   setView(view);
   loadFeedback();
   loadClasses();
+  loadRooms();
   loadProIssues();
   loadAccess();
   document.querySelectorAll("#periods [data-preset]").forEach(b => b.classList.toggle("on", b.dataset.preset === preset));

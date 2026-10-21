@@ -1515,6 +1515,8 @@ function gameOver() {
 
   renderMistakes();
   prepareSubmitForm();
+  // 👥 Мій клас (myclass.js): результат — у таблицю класу
+  if (typeof classOnGameOver === "function") classOnGameOver(currentGame, score, { endless, topic: marathonTopic });
   showScreen("over");
 }
 

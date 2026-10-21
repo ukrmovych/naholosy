@@ -179,6 +179,7 @@ function finishNmtTest() {
       <p class="nmt-source">Джерело: ${h.task.s}</p>
     </article>`).join("") : (total ? '<p class="nmt-no-mistakes">Без жодної помилки! 🎉</p>' : "");
   if (isRecord && right > 0) launchConfetti();
+  if (typeof submitClassScore === "function" && right > 0) submitClassScore("nmttest", right); // 👥 таблиця класу
   window.scrollTo(0, 0);
 }
 

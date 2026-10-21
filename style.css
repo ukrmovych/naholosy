@@ -3388,3 +3388,114 @@ body.level-flash::after {
   margin: 0;
   font-size: inherit;
 }
+
+/* ---------- 👥 Мій клас (myclass.js) ---------- */
+.myclass-btn {
+  margin-top: 10px;
+}
+
+.class-card {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.class-h {
+  margin: 0;
+  font-size: 22px;
+}
+
+.class-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.class-input,
+.class-code-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 18px;
+}
+
+.class-code-input {
+  text-align: center;
+  font-size: 30px;
+  letter-spacing: 4px;
+}
+
+.class-code {
+  margin: 0;
+  color: var(--orange);
+  font-size: 40px;
+  letter-spacing: 4px;
+  text-align: center;
+}
+
+.class-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.class-actions .btn-secondary {
+  padding: 12px;
+  font-size: 17px;
+}
+
+.class-qr {
+  width: 220px;
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.class-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.class-invite {
+  text-align: center;
+}
+
+.class-tabs {
+  flex-wrap: wrap;
+}
+
+.class-kick {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.class-leave {
+  display: block;
+  margin: 14px auto 0;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+.class-back {
+  margin-top: 4px;
+}
+
+.over-class {
+  margin: 6px 0 0;
+  color: #7fd483;
+  font-size: 15px;
+}

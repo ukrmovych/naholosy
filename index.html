@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/balsamiq-sans-cyrillic-700-normal.woff2" as="font" type="font/woff2" crossorigin>
 <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=20261020e">
+<link rel="stylesheet" href="style.css?v=20261021a">
 </head>
 <body>
 
@@ -38,6 +38,12 @@
     <button id="btn-rejoin" class="rejoin-btn" hidden>🔄 <span id="rejoin-label">Повернутися в гру · кімната</span> <b id="rejoin-code"></b></button>
 
     <div id="game-list" class="game-grid"></div>
+
+    <button id="btn-myclass" class="leaders-btn myclass-btn">
+      <span aria-hidden="true">👥</span>
+      <span>Мій клас</span>
+      <span class="mode-arrow" aria-hidden="true">›</span>
+    </button>
 
     <button id="btn-leaders" class="leaders-btn">
       <span aria-hidden="true">🏆</span>
@@ -367,6 +373,7 @@
       <h2>Гру закінчено!</h2>
       <p class="over-score"><span id="over-score">0</span></p>
       <p id="over-best" class="over-best"></p>
+      <p id="over-class" class="over-class" hidden></p>
 
       <form id="submit-form" class="submit-form" hidden>
         <label for="player-name">Твоє ім'я для турнірної таблиці</label>
@@ -406,6 +413,21 @@
       <ol id="leaders-list" class="leaders-list"></ol>
       <p id="leaders-status" class="leaders-status"></p>
     </section>
+
+    <button id="btn-leaders-class" class="leaders-btn myclass-btn">
+      <span aria-hidden="true">👥</span>
+      <span>Таблиця мого класу</span>
+      <span class="mode-arrow" aria-hidden="true">›</span>
+    </button>
+  </main>
+
+  <!-- 👥 Мій клас: логіка — myclass.js -->
+  <main id="myclass" class="screen" hidden>
+    <header class="top-bar">
+      <button id="btn-myclass-back" class="icon-btn" aria-label="В меню">‹ Меню</button>
+      <h2 class="screen-title">👥 Мій клас</h2>
+    </header>
+    <div id="myclass-body"></div>
   </main>
 
   <!-- Святкування -->
@@ -489,10 +511,11 @@
   <script src="frazeo-data.js?v=20261020b"></script>
   <script src="topics.js?v=20261020a"></script>
   <script src="slovospoluch-data.js?v=20261020e"></script>
-  <script src="script.js?v=20261020e"></script>
+  <script src="script.js?v=20261021a"></script>
   <script src="slovospoluch.js?v=20261020e"></script>
   <script src="online.js?v=20261020e"></script>
-  <script src="nmt-test.js?v=20261020a"></script>
+  <script src="nmt-test.js?v=20261021a"></script>
+  <script src="myclass.js?v=20261021a"></script>
 
 </body>
 </html>
