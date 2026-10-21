@@ -2699,6 +2699,30 @@ renderMenu();
 // Вкладка «Кличний» у турнірній таблиці — поки гра в бета-версії, лише за бета-посиланням
 document.querySelector('.tab[data-game="klychnyi"]').hidden = !BETA;
 
+// ---------- Таємний вхід у статистику ----------
+// Логотип унизу: 5 натискань, пауза щонайменше 1,5 с, ще 5 натискань → сторінка статистики (там пароль).
+// Сам логотип тому більше не відкриває канал (напис «@ukr_movych» поруч — відкриває).
+const secretTaps = [];
+document.addEventListener("click", e => {
+  const logo = e.target instanceof Element && e.target.closest("footer .brand img");
+  if (!logo) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const now = Date.now();
+  if (secretTaps.length && now - secretTaps[secretTaps.length - 1] > 6000) secretTaps.length = 0;
+  secretTaps.push(now);
+  // групи натискань, розділені паузою ≥ 1,5 с
+  const groups = [1];
+  for (let i = 1; i < secretTaps.length; i++) {
+    if (secretTaps[i] - secretTaps[i - 1] >= 1500) groups.push(1);
+    else groups[groups.length - 1]++;
+  }
+  if (groups.length >= 2 && groups[groups.length - 2] === 5 && groups[groups.length - 1] === 5) {
+    secretTaps.length = 0;
+    location.href = "stats/";
+  }
+}, true);
+
 // Посилання @ukr_movych: у Telegram відкриваємо через Telegram, на сайті — у новій вкладці
 document.addEventListener("click", e => {
   const link = e.target instanceof Element && e.target.closest("[data-tg-link]");

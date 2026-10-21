@@ -84,6 +84,9 @@ tr:last-child td { border-bottom: 0; }
 .fb-meta b { color: var(--text); font-weight: 600; }
 .fb-meta .tag { background: var(--surface-2); border-radius: 999px; padding: 2px 8px; }
 .fb-meta a.tag { color: inherit; }
+.game-links { display: flex; gap: 8px; flex-wrap: wrap; margin: -4px 0 12px; }
+.game-link { display: inline-block; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); color: var(--text); text-decoration: none; font-size: 15px; }
+.login .game-link { margin-top: 12px; }
 .access-new { display: grid; gap: 8px; margin-bottom: 14px; }
 .access-new label, .access-actions label { display: grid; gap: 4px; font-size: 14px; }
 .access-body { padding: 0 14px 12px; min-width: 0; }
@@ -111,6 +114,7 @@ tr:last-child td { border-bottom: 0; }
     <button class="on" type="submit">Увійти</button>
     <p id="login-error" class="error"></p>
     <p class="muted small">Пароль показується внизу, коли запускаєш <b>stats.sql</b> у Supabase.</p>
+    <a class="game-link" href="../">‹ До гри</a>
   </form>
 
   <main id="dash" hidden>
@@ -119,6 +123,10 @@ tr:last-child td { border-bottom: 0; }
       <h1>Статистика гри</h1>
       <button id="logout" type="button">Вийти</button>
     </header>
+    <nav class="game-links">
+      <a class="game-link" href="../?b">🧪 Бета гри</a>
+      <a class="game-link" href="../">🎮 Основна гра</a>
+    </nav>
     <div class="views" id="views">
       <button type="button" data-view="stats" class="on">📊 Статистика</button>
       <button type="button" data-view="feedback">💬 Відгуки <span id="fb-count"></span></button>
