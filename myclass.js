@@ -233,6 +233,11 @@ async function renderClassTable() {
     t.addEventListener("click", () => { myClassGame = g.id; renderClassTable(); });
     tabs.appendChild(t);
   });
+  // вибрана гра — у полі зору (панель гортається вбік)
+  requestAnimationFrame(() => {
+    const on = tabs.querySelector(".tab.active");
+    if (on) tabs.scrollLeft = on.offsetLeft - tabs.offsetLeft - 8;
+  });
   const list = el2("ol", "leaders-list");
   const status = el2("p", "leaders-status", "Завантажую…");
   table.append(tabs, list, status);

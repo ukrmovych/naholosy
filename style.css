@@ -3468,8 +3468,24 @@ body.level-flash::after {
   text-align: center;
 }
 
+/* Ігри в таблиці класу: одним рядком, гортаються вбік */
 .class-tabs {
-  flex-wrap: wrap;
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.class-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.class-tabs .tab {
+  flex: none;
+  padding: 10px 14px;
+  white-space: nowrap;
+  scroll-snap-align: start;
 }
 
 .class-kick {
