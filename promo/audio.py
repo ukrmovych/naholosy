@@ -1,6 +1,6 @@
 # Фонова музика (легкий lo-fi/поп, 100 BPM) + звуки натискань/переходів → audio.wav
 import numpy as np, json, wave, os
-W = os.path.dirname(os.path.abspath(__file__)) + '/work/v/'
+W = os.path.dirname(os.path.abspath(__file__)) + ('/work/m/' if os.environ.get('PROMO') == 'm' else '/work/v/')
 SR = 44100; DUR = float(open(W + 'duration.txt').read()); N = int(SR * DUR)
 rng = np.random.default_rng(7)
 def t_(d): return np.arange(int(SR * d)) / SR
@@ -46,8 +46,9 @@ for b in range(nbars):
         for i in range(4): add(music, kick(), t0 + i * beat, .55 if i % 2 == 0 else .25)
         for i in range(8): add(music, hat(), t0 + i * beat / 2 + (beat / 2 * .08 if i % 2 else 0), .04 if i % 2 else .06)
         for i in (1, 3): add(music, snap(), t0 + i * beat, .22)
-# фінальний акорд
-add(music, pad([48, 55, 60, 64, 67], 4), 31.7, .5)
+# фінальний акорд — разом із «тада»
+EV = json.load(open(W + 'events.json'))
+add(music, pad([48, 55, 60, 64, 67], 4), next((e['t'] for e in EV if e['type'] == 'tada'), 31.7), .5)
 tt = np.arange(N) / SR
 fade = np.minimum(1, tt / 1.0) * np.clip((DUR - tt) / 2.2, 0, 1)
 music *= fade
@@ -85,9 +86,16 @@ def tada():
     return out * .6
 def cap():
     t = t_(.12); f = 700 + 500 * (t / .12); return np.sin(2 * np.pi * np.cumsum(f) / SR) * env(len(t), .003, .03)
-S = {'tap': (tap(), .55), 'key': (None, .25), 'whoosh': (whoosh(), .14), 'soft': (soft(), .35), 'chime': (chime(), .35),
+def rise(d=4.6):  # «перемотка»: шум, що наростає вгору
+    x = rng.standard_normal(int(SR * d)); t = np.arange(len(x)) / SR
+    a = .02 + .3 * (t / d) ** 2
+    y = np.empty_like(x); acc = 0.0
+    for i in range(len(x)): acc += a[i] * (x[i] - acc); y[i] = acc
+    y = y - lowpass(y, .02)
+    return y * np.minimum(1, t / .3) * np.minimum(1, (d - t) / .25) * (.4 + .6 * t / d)
+S = {'tick': (tap() * .6, .35), 'rise': (rise(), .5), 'tap': (tap(), .55), 'key': (None, .25), 'whoosh': (whoosh(), .14), 'soft': (soft(), .35), 'chime': (chime(), .35),
      'pop': (pop(), .45), 'tada': (tada(), .5), 'cap': (cap(), .12)}
-for e in json.load(open(W + 'events.json')):
+for e in EV:
     x, g = S[e['type']]
     if e['type'] == 'key': x = key()
     if e['type'] == 'whoosh': add(sfx, x, e['t'] - .2, g)

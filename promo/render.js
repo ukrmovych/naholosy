@@ -1,13 +1,15 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
-const D = __dirname + '/'; const W = D + 'work/v/';
+// PROMO=m — відео «233/233» (compose-marathon.html, work/m/); без нього — гайд «Мій клас»
+const M = process.env.PROMO === 'm';
+const D = __dirname + '/'; const W = D + (M ? 'work/m/' : 'work/v/'); const SRC = M ? 'compose-marathon' : 'compose';
 const FPS = 30, ONLY = process.argv[2]; // node render.js 5,11,22 — лише окремі секунди для перевірки
 (async () => {
-  const html = fs.readFileSync(D + 'compose.html', 'utf8').replace('META_JSON', fs.readFileSync(W + 'meta.json', 'utf8'));
-  fs.writeFileSync(D + 'compose.gen.html', html);
+  const html = fs.readFileSync(D + SRC + '.html', 'utf8').replace('META_JSON', fs.readFileSync(W + 'meta.json', 'utf8'));
+  fs.writeFileSync(D + SRC + '.gen.html', html);
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1080, height: 1920 } });
-  p.on('console', m => console.log(m.text())); await p.goto('file://' + D + 'compose.gen.html');
+  p.on('console', m => console.log(m.text())); await p.goto('file://' + D + SRC + '.gen.html');
   await p.evaluate(async () => { await document.fonts.ready; const bad = []; await Promise.all([...document.images].map(i => i.decode().catch(() => bad.push(i.src)))); if (bad.length) console.log("BAD", bad); });
   fs.writeFileSync(W + 'events.json', JSON.stringify(await p.evaluate(() => EVENTS)));
   const dur = await p.evaluate(() => DURATION);
