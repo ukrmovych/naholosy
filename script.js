@@ -2491,8 +2491,20 @@ function normalizeName(name) {
   return name.trim().replace(/\s+/g, " ");
 }
 
+// Російська заборонена (бажання власника): букви ы э ъ ё або типові російські слова, яких немає в українській.
+// Те саме правило на сервері — lang-check.sql (is_russian_text).
+const RU_WORDS = new Set(("и его ее что чтобы кто как или этот эта эти они она оно мой мои твой твои свой свои наши ваши " +
+  "лучший лучшая лучшие самый самая самые класс друзья привет пока спасибо очень тоже только нет где здесь сейчас " +
+  "хорошо игра ученики ребята сегодня всем какой еще меня тебя себя").split(" "));
+
+function isRussianText(text) {
+  const lower = String(text || "").toLowerCase();
+  return /[ыэъё]/.test(lower) || lower.split(/[^а-яіїєґa-z'’ʼ]+/).some(w => RU_WORDS.has(w));
+}
+
 function checkName(name) {
   if (name.length < 2) return "Ім'я має бути хоча б з 2 літер";
+  if (isRussianText(name)) return "Ім'я має бути українською мовою або латиницею";
   if (name.length > 20) return "Ім'я задовге (до 20 символів)";
   const lower = name.toLowerCase();
   if (/https?:|www\.|\.(com|net|org|ua|ru|io|me|site|online|shop)\b|t\.me|@|\d{4,}/.test(lower)) {
@@ -2516,7 +2528,8 @@ async function lbRequest(path, options = {}) {
     }
   });
   if (!res.ok) {
-    const err = new Error(`HTTP ${res.status}`);
+    // текст відповіді — у повідомленні, щоб розрізняти помилки сервера (напр. «notfound», «lang»)
+    const err = new Error(`HTTP ${res.status} ${await res.text().catch(() => "")}`);
     err.status = res.status;
     throw err;
   }
@@ -2971,6 +2984,11 @@ async function sendFeedback(e) {
   const message = $("feedback-text").value.trim();
   if (message.length < 3) {
     feedbackError("Напиши хоч кілька слів 🙂");
+    $("feedback-text").focus();
+    return;
+  }
+  if (isRussianText(message) || isRussianText($("feedback-name").value)) {
+    feedbackError("Відгук має бути українською мовою або латиницею");
     $("feedback-text").focus();
     return;
   }

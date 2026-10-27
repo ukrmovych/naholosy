@@ -31,6 +31,7 @@ const prettyCode = code => `${code.slice(0, 3)} ${code.slice(3)}`;
 function classError(err) {
   const msg = String(err && err.message || "");
   if (err && err.status === 404) return "Функція класів ще не готова на сервері";
+  if (/\blang\b/.test(msg)) return "Назва має бути українською мовою або латиницею";
   return /notfound/.test(msg) ? "Клас із таким кодом не знайдено. Перевір цифри"
     : /full/.test(msg) ? "У цьому класі вже немає місць"
     : /too many/.test(msg) ? "Сьогодні створено забагато класів. Спробуй завтра"
@@ -200,6 +201,7 @@ async function doJoin(code, rawName, status, btn) {
 async function doCreate(rawClass, rawName, status, btn) {
   const cls = String(rawClass || "").replace(/\s+/g, " ").trim();
   if (cls.length < 2) { status.textContent = "Назва класу — хоча б 2 символи"; status.className = "submit-status bad"; return; }
+  if (isRussianText(cls)) { status.textContent = "Назва має бути українською мовою або латиницею"; status.className = "submit-status bad"; return; }
   const name = checkClassName(rawName, status);
   if (!name) return;
   btn.disabled = true;
